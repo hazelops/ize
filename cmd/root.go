@@ -62,13 +62,44 @@ var listContainers = &cobra.Command{
 	},
 }
 
-var runWaypoint = &cobra.Command{
+var waypointCmd = &cobra.Command{
 	Use:   "waypoint",
 	Short: "Run Waypoint",
 	Long:  `Runs Waypoint`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Running Waypoint")
-		docker.RunWaypoint()
+		fmt.Println("Waypoint Command")
+		//docker.WaypointInit()
+	},
+}
+
+var runWaypointInit = &cobra.Command{
+	Use:   "init",
+	Short: "Run Waypoint init",
+	Long:  `Runs Waypoint init`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Running Waypoint init")
+		docker.WaypointInit()
+	},
+}
+
+
+var terraformCmd = &cobra.Command{
+	Use:   "terraform",
+	Short: "Run Terraform Init",
+	Long:  `Run Terraform Init`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Terraform Command")
+		//docker.TerraformInit()
+	},
+}
+
+var runTerraformInit = &cobra.Command{
+	Use:   "init",
+	Short: "Run Terraform Init",
+	Long:  `Run Terraform Init`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Running Terraform Init")
+		docker.TerraformInit()
 	},
 }
 
@@ -94,7 +125,12 @@ func init() {
 
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(listContainers)
-	rootCmd.AddCommand(runWaypoint)
+	rootCmd.AddCommand(waypointCmd)
+	rootCmd.AddCommand(terraformCmd)
+
+	waypointCmd.AddCommand(runWaypointInit)
+	terraformCmd.AddCommand(runTerraformInit)
+
 }
 
 // initConfig reads in config file and ENV variables if set.
