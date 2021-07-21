@@ -16,6 +16,12 @@ func TerraformInit()  {
 
 }
 
+func TerraformPlan()  {
+	command := "plan"
+	runTerraform(command)
+
+}
+
 func runTerraform(command string)  {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
@@ -36,6 +42,7 @@ func runTerraform(command string)  {
 			OpenStdin: true,
 
 		},
+
 		&container.HostConfig{
 			AutoRemove: false,
 		}, nil, nil, "")
@@ -51,6 +58,17 @@ func runTerraform(command string)  {
 
 	io.Copy(os.Stdout, out)
 
-
-
+	//
+	//--user "$(CURRENT_USER_ID)":"$(CURRENT_USERGROUP_ID)" \
+	//--rm \
+	//--hostname="$(USER)-icmk-terraform" \
+	//-v "$(ENV_DIR)":"$(ENV_DIR)" \
+	//-v "$(INFRA_DIR)":"$(INFRA_DIR)" \
+	//-v "$(HOME)/.aws/":"/.aws:ro" \
+	//-w "$(ENV_DIR)" \
+	//-e AWS_PROFILE="$(AWS_PROFILE)" \
+	//-e ENV="$(ENV)" \
+	//-e TF_LOG="$(TF_LOG_LEVEL)" \
+	//-e TF_LOG_PATH="$(TF_LOG_PATH)" \
+	//hashicorp/terraform:$(TERRAFORM_VERSION)
 }

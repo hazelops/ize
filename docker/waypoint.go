@@ -39,6 +39,7 @@ func RunWaypoint(command string)  {
 			OpenStdin: true,
 
 		},
+
 		&container.HostConfig{
 			AutoRemove: true,
 		}, nil, nil, "")

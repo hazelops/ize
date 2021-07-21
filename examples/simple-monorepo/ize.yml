@@ -1,0 +1,28 @@
+# TODO: This is WIP, doesn't really work ;-)
+# Setting params via env vars: https://github.com/spf13/viper#working-with-environment-variables
+
+global:
+  projects_path: projects/
+  terraform_version: 0.12.29
+
+#  docker_registry_name: docker.io/hazelops
+
+projects:
+  infra:
+    type: terraform
+
+  goblin:
+    type: ecs
+    depends_on: infra
+    enable_buildkit: true
+    image_name: hazelops/goblin
+    environment:
+      AAA: 123
+      BBB: 333
+#      docker_registry_name: ...
+
+
+#      build:
+#        env: ...
+#        cmd: ...
+

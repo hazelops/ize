@@ -140,14 +140,15 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		// Find home directory.
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
+		//home, err := os.UserHomeDir()
+		//cobra.CheckErr(err)
 
 		// Search config in home directory with name ".ize" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigType("yaml")
+		viper.AddConfigPath(".")
 
-		viper.SetConfigName(".ize")
+
+		viper.SetConfigName("ize")
+		viper.SetConfigType("yaml")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match

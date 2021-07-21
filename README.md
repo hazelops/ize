@@ -10,8 +10,8 @@ This tool is using configuration file that describes the workflows.
 ### Application Lifecycle
 
 ```shell
-ize build <app>
-ize deploy <app>
+ize build <goblin>
+ize deploy <goblin>
 ```
 
 ### Operations Lifecycle
