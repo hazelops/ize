@@ -139,7 +139,7 @@ func initConfig() {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Find home directory.
+		//// Find home directory.
 		//home, err := os.UserHomeDir()
 		//cobra.CheckErr(err)
 
@@ -151,10 +151,33 @@ func initConfig() {
 		viper.SetConfigType("yaml")
 	}
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error getting current directory")
+	}
+
+	// Find home directory.
+	home, err := os.UserHomeDir()
+	cobra.CheckErr(err)
+
+
 	viper.AutomaticEnv() // read in environment variables that match
+
+	//TODO ensure values of the variables are checked for nil before passing down to docker.
+
+	// Global
+	viper.SetDefault("ROOT_DIR", cwd)
+	viper.SetDefault("INFRA_DIR", fmt.Sprintf("%v/.infra", cwd))
+	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, viper.Get("ENV")))
+	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
+	viper.SetDefault("TF_LOG", fmt.Sprintf(""))
+	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt",viper.Get("ENV_DIR")  ))
+	viper.SetDefault("TERRAFORM_VERSION", fmt.Sprintf("0.12.29"))
+
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
+
 }
