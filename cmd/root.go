@@ -102,6 +102,16 @@ var runTerraformInit = &cobra.Command{
 		docker.TerraformInit()
 	},
 }
+var runTerraformPlan = &cobra.Command{
+	Use:   "plan",
+	Short: "Run Terraform Plan",
+	Long:  `Run Terraform Plan`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Running Terraform Plan")
+		docker.TerraformPlan()
+	},
+}
+
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
@@ -130,6 +140,7 @@ func init() {
 
 	waypointCmd.AddCommand(runWaypointInit)
 	terraformCmd.AddCommand(runTerraformInit)
+	terraformCmd.AddCommand(runTerraformPlan)
 
 }
 
@@ -155,6 +166,7 @@ func initConfig() {
 	if err != nil {
 		fmt.Println("Error getting current directory")
 	}
+
 
 	// Find home directory.
 	home, err := os.UserHomeDir()

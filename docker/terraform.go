@@ -7,6 +7,8 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
+	"github.com/hazelops/ize/tpl"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"io"
 	"os"
@@ -14,15 +16,15 @@ import (
 )
 
 func TerraformInit()  {
-	command := "init"
-	runTerraform(command)
-
+	//command := "init"
+	tpl.GenerateBackendTf()
+	//runTerraform(command)
 }
 
 func TerraformPlan()  {
 	command := "plan"
-	runTerraform(command)
 
+	runTerraform(command)
 }
 
 func runTerraform(command string)  {
@@ -84,7 +86,9 @@ func runTerraform(command string)  {
 		panic(err)
 	}
 
-	io.Copy(os.Stdout, out)
+	_, err = io.Copy(os.Stdout, out)
+	cobra.CheckErr(err)
+
 
 	if err := cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{}); err != nil {
 		panic(err)
@@ -95,6 +99,7 @@ func runTerraform(command string)  {
 		panic(err)
 	}
 
-	io.Copy(os.Stdout, out)
+	_, err = io.Copy(os.Stdout, out)
+	cobra.CheckErr(err)
 
 }
