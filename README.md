@@ -6,6 +6,9 @@ It combines build and deploy workflows in one.
 This tool is using configuration file that describes the workflows.
 
 ## Quickstart
+- GO version should be 1.16+
+- `GOPATH` environment variable is set to `~/go` 
+
 (acts as an ideation doc, stuff is not working)
 ### Application Lifecycle
 
