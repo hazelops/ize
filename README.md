@@ -9,6 +9,12 @@ This tool is using configuration file that describes the workflows.
 - GO version should be 1.16+
 - `GOPATH` environment variable is set to `~/go` 
 
+### Ize initialization
+```shell
+go mod download
+make install
+```
+
 (acts as an ideation doc, stuff is not working)
 ### Application Lifecycle
 
