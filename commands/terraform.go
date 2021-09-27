@@ -1,9 +1,8 @@
-package docker
+package commands
 
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 
@@ -11,22 +10,48 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/hazelops/ize/pkg/logger"
+	"github.com/moby/term"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"go.uber.org/zap/zapcore"
 )
 
-func TerraformInit() {
-	command := "init"
-	runTerraform(command)
-
+type terraformCmd struct {
+	*baseBuilderCmd
 }
 
-func TerraformPlan() {
-	command := "plan"
-	runTerraform(command)
+func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
+	cc := &terraformCmd{}
 
+	cmd := &cobra.Command{
+		Use:   "terraform",
+		Short: "Terraform management.",
+		Long:  `This command contains subcommands for work with terraform.`,
+		RunE:  nil,
+	}
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "init",
+		Short: "Download terraform docker image",
+		Long:  `This command download terraform docker image of the specified version.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			runTerraform()
+			return nil
+		},
+	})
+
+	cc.baseBuilderCmd = b.newBuilderBasicCdm(cmd)
+
+	return cc
 }
 
-func runTerraform(command string) {
+func runTerraform() {
+	l := logger.NewSugaredLogger(zapcore.Level(0))
+
+	fmt.Println("Init docker client")
+
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		panic(err)
@@ -34,13 +59,24 @@ func runTerraform(command string) {
 
 	imageName := "hashicorp/terraform"
 	imageTag := viper.Get("TERRAFORM_VERSION")
+	termFd, _ := term.GetFdInfo(os.Stderr)
+
+	fmt.Printf("Started pull terraform image %v:%v", imageName, imageTag)
 
 	out, err := cli.ImagePull(context.Background(), fmt.Sprintf("%v:%v", imageName, imageTag), types.ImagePullOptions{})
 	if err != nil {
 		panic(err)
 	}
 
-	io.Copy(os.Stdout, out)
+	err = jsonmessage.DisplayJSONMessagesStream(out, &l, termFd, true, nil)
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Finished pulling terraform image %v:%v \n", imageName, imageTag)
+
+	fmt.Printf("Start creating terraform container from image %v:%v \n", imageName, imageTag)
 
 	//TODO: Add Auto Pull Docker image
 	//TODO: Check if such container exists to use fixed name
@@ -49,7 +85,7 @@ func runTerraform(command string) {
 		&container.Config{
 			Image:        fmt.Sprintf("%v:%v", imageName, imageTag),
 			Tty:          true,
-			Cmd:          strings.Split(command, " "),
+			Cmd:          strings.Split("init", " "),
 			AttachStdin:  true,
 			AttachStdout: true,
 			AttachStderr: true,
@@ -84,15 +120,11 @@ func runTerraform(command string) {
 			},
 		}, nil, nil, "")
 
+	fmt.Println("Finished creating terraform container from image", fmt.Sprintf("%v:%v", imageName, imageTag))
+
 	if err := cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{}); err != nil {
 		panic(err)
 	}
 
-	out, err = cli.ContainerLogs(context.Background(), cont.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Follow: true, Timestamps: false})
-	if err != nil {
-		panic(err)
-	}
-
-	io.Copy(os.Stdout, out)
-
+	fmt.Println("Terraform container started!", cont.ID)
 }

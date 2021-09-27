@@ -15,8 +15,12 @@ limitations under the License.
 */
 package main
 
-import "github.com/hazelops/ize/cmd"
+import (
+	"os"
+
+	"github.com/hazelops/ize/commands"
+)
 
 func main() {
-	cmd.Execute()
+	commands.Execute(os.Args[1:])
 }
