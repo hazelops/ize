@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hazelops/ize/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -36,7 +37,6 @@ func newCommandBuilder() *commandsBuilder {
 
 func (b *commandsBuilder) newBuilderCmd(cmd *cobra.Command) *baseBuilderCmd {
 	bcmd := &baseBuilderCmd{commandsBuilder: b, baseCmd: &baseCmd{cmd: cmd}}
-	bcmd.izeBuilderCommon.handleFlags(cmd)
 	return bcmd
 }
 
@@ -53,7 +53,6 @@ func (b *commandsBuilder) addAll() *commandsBuilder {
 
 func (b *commandsBuilder) newBuilderBasicCdm(cmd *cobra.Command) *baseBuilderCmd {
 	bcmd := &baseBuilderCmd{baseCmd: &baseCmd{cmd: cmd}, commandsBuilder: b}
-	bcmd.izeBuilderCommon.handleCommonBuilderFlags(cmd)
 	return bcmd
 }
 
@@ -71,20 +70,10 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	})
 
-	if cc.cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cc.cfgFile)
-	} else {
-		//// Find home directory.
-		//home, err := os.UserHomeDir()
-		//cobra.CheckErr(err)
+	cc.cmd.PersistentFlags().BoolVarP(&cc.logging, "", "v", false, "enable debug message")
+	cc.cmd.PersistentFlags().StringVarP(&cc.cfgFile, "config-file", "c", "", "set config file name")
 
-		// Search config in home directory with name ".ize" (without extension).
-		viper.AddConfigPath(".")
-
-		viper.SetConfigName("ize")
-		viper.SetConfigType("yaml")
-	}
+	// Load config file
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -113,9 +102,6 @@ to quickly create a Cobra application.`,
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
 
-	cc.cmd.PersistentFlags().StringVarP(&cc.cfgFile, "config", "c", "", "config file (default is $HOME/.ize.yaml)")
-	cc.cmd.PersistentFlags().BoolVarP(&cc.logging, "", "v", false, "enable debug message")
-
 	return cc
 }
 
@@ -141,12 +127,17 @@ func (b *commandsBuilder) build() *izeCmd {
 
 type izeBuilderCommon struct {
 	cfgFile string
+	cfg     *config.Config
 	logging bool
 }
 
-func (cc *izeBuilderCommon) handleCommonBuilderFlags(cmd *cobra.Command) {
-}
+func (cc *izeBuilderCommon) Init() error {
+	cfg, err := cc.initConfig(cc.cfgFile)
+	if err != nil {
+		return err
+	}
 
-func (cc *izeBuilderCommon) handleFlags(cmd *cobra.Command) {
-	cc.handleCommonBuilderFlags(cmd)
+	cc.cfg = cfg
+
+	return nil
 }

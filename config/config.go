@@ -1,1 +1,64 @@
 package config
+
+import (
+	"os"
+	"path/filepath"
+
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclsimple"
+)
+
+const Filename = "ize.hcl"
+
+type Config struct {
+	AwsConfig        string `hcl:"aws_config,optional"`
+	TerraformVersion string `hcl:"terraform_version"`
+	Env              string `hcl:"env"`
+	AwsRegion        string `hcl:"aws_region"`
+	AwsProfile       string `hcl:"aws_profile"`
+
+	Service []*struct {
+		Type string `hcl:"type,label"`
+		Name string `hcl:"name,label"`
+	} `hcl:"service,block"`
+}
+
+func FindPath(filename string) (string, error) {
+	var err error
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	if filename == "" {
+		filename = Filename
+	}
+
+	path := filepath.Join(wd, filename)
+	if _, err := os.Stat(path); err == nil {
+		return path, nil
+	} else {
+		return "", err
+	}
+}
+
+func Load(path string) (*Config, error) {
+	var ctx *hcl.EvalContext
+
+	// We require an absolute path for the path so we can set the path vars
+	if !filepath.IsAbs(path) {
+		var err error
+		path, err = filepath.Abs(path)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Decode
+	var cfg Config
+	if err := hclsimple.DecodeFile(path, ctx, &cfg); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
+}

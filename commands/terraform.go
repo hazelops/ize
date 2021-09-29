@@ -37,6 +37,11 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 		Short: "Download terraform docker image",
 		Long:  `This command download terraform docker image of the specified version.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			err := cc.Init()
+			if err != nil {
+				return err
+			}
+
 			runTerraform()
 			return nil
 		},
