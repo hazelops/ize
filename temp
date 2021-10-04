@@ -13,18 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package commands
 
 import (
 	"fmt"
-	"github.com/hazelops/ize/docker"
-	"github.com/spf13/cobra"
 	"os"
+
+	"github.com/hazelops/ize/docker"
+	"github.com/hazelops/ize/pkg/logger"
+
+	"github.com/spf13/cobra"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/spf13/viper"
 )
 
 var cfgFile string
+var debug bool
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -40,8 +45,6 @@ to quickly create a Cobra application.`,
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
 }
-
-
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
@@ -82,7 +85,6 @@ var runWaypointInit = &cobra.Command{
 	},
 }
 
-
 var terraformCmd = &cobra.Command{
 	Use:   "terraform",
 	Short: "Run Terraform Init",
@@ -99,7 +101,19 @@ var runTerraformInit = &cobra.Command{
 	Long:  `Run Terraform Init`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Running Terraform Init")
-		docker.TerraformInit()
+
+		logLevel := zapcore.InfoLevel
+
+		if debug {
+			logLevel = zapcore.DebugLevel
+
+		}
+
+		l := logger.NewSugaredLogger(logLevel)
+
+		l.Infof("err")
+
+		docker.TerraformInit(l)
 	},
 }
 var runTerraformPlan = &cobra.Command{
@@ -108,10 +122,12 @@ var runTerraformPlan = &cobra.Command{
 	Long:  `Run Terraform Plan`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Running Terraform Plan")
-		docker.TerraformPlan()
+
+		var log logger.StandartLogger
+
+		docker.TerraformPlan(log)
 	},
 }
-
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
@@ -128,6 +144,7 @@ func init() {
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ize.yaml)")
+	rootCmd.PersistentFlags().BoolVarP(&debug, "", "v", false, "enable debug message")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -157,7 +174,6 @@ func initConfig() {
 		// Search config in home directory with name ".ize" (without extension).
 		viper.AddConfigPath(".")
 
-
 		viper.SetConfigName("ize")
 		viper.SetConfigType("yaml")
 	}
@@ -167,11 +183,9 @@ func initConfig() {
 		fmt.Println("Error getting current directory")
 	}
 
-
 	// Find home directory.
 	home, err := os.UserHomeDir()
 	cobra.CheckErr(err)
-
 
 	viper.AutomaticEnv() // read in environment variables that match
 
@@ -183,9 +197,8 @@ func initConfig() {
 	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, viper.Get("ENV")))
 	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
 	viper.SetDefault("TF_LOG", fmt.Sprintf(""))
-	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt",viper.Get("ENV_DIR")  ))
+	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
 	viper.SetDefault("TERRAFORM_VERSION", fmt.Sprintf("0.12.29"))
-
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
