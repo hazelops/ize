@@ -4,4 +4,4 @@ install: bin
 
 .PHONY: bin
 bin: 
-	go build -o ./ize
+	go build -o ./ize ./cmd 
