@@ -50,6 +50,32 @@ func NewStandardLogger(logLevel zapcore.Level) (l *zap.Logger, err error) {
 
 // NewStandardZapConfig returns a sensible [config](https://godoc.org/go.uber.org/zap#Config) for a Zap logger.
 func NewStandardZapConfig(logLevel zapcore.Level) zap.Config {
+	if logLevel.String() == "info" || logLevel.String() == "debug" {
+		return zap.Config{
+			Level:       zap.NewAtomicLevelAt(logLevel),
+			Development: false,
+			Sampling: &zap.SamplingConfig{
+				Initial:    100,
+				Thereafter: 100,
+			},
+			Encoding: "console",
+			EncoderConfig: zapcore.EncoderConfig{
+				TimeKey:        "timestamp",
+				LevelKey:       "level",
+				NameKey:        "logger",
+				CallerKey:      "caller",
+				MessageKey:     "message",
+				StacktraceKey:  "stacktrace",
+				EncodeLevel:    zapcore.LowercaseLevelEncoder,
+				EncodeTime:     zapcore.ISO8601TimeEncoder,
+				EncodeDuration: zapcore.SecondsDurationEncoder,
+				EncodeCaller:   zapcore.ShortCallerEncoder,
+			},
+			OutputPaths:      []string{"stdout"},
+			ErrorOutputPaths: []string{"stderr"},
+		}
+	}
+
 	return zap.Config{
 		Level:       zap.NewAtomicLevelAt(logLevel),
 		Development: false,
@@ -58,19 +84,5 @@ func NewStandardZapConfig(logLevel zapcore.Level) zap.Config {
 			Thereafter: 100,
 		},
 		Encoding: "console",
-		EncoderConfig: zapcore.EncoderConfig{
-			TimeKey:        "timestamp",
-			LevelKey:       "level",
-			NameKey:        "logger",
-			CallerKey:      "caller",
-			MessageKey:     "message",
-			StacktraceKey:  "stacktrace",
-			EncodeLevel:    zapcore.LowercaseLevelEncoder,
-			EncodeTime:     zapcore.ISO8601TimeEncoder,
-			EncodeDuration: zapcore.SecondsDurationEncoder,
-			EncodeCaller:   zapcore.ShortCallerEncoder,
-		},
-		OutputPaths:      []string{"stdout"},
-		ErrorOutputPaths: []string{"stderr"},
 	}
 }
