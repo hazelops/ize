@@ -5,8 +5,14 @@ import (
 	"os"
 
 	"github.com/hazelops/ize/config"
+	"github.com/hazelops/ize/pkg/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"go.uber.org/zap/zapcore"
+)
+
+var (
+	ll string
 )
 
 type baseCmd struct {
@@ -70,37 +76,23 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	})
 
-	cc.cmd.PersistentFlags().BoolVarP(&cc.logging, "", "v", false, "enable debug message")
+	cc.cmd.PersistentFlags().StringVarP(&ll, "log-level", "l", "warn", "enable debug message")
 	cc.cmd.PersistentFlags().StringVarP(&cc.cfgFile, "config-file", "c", "", "set config file name")
 
-	// Load config file
+	var logLevel zapcore.Level
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		fmt.Println("Error getting current directory")
+	// TODO: Fix
+	switch ll {
+	case "info":
+		logLevel = zapcore.InfoLevel
+
+	case "debug":
+		logLevel = zapcore.DebugLevel
+	default:
+		logLevel = zapcore.WarnLevel
 	}
 
-	// Find home directory.
-	home, err := os.UserHomeDir()
-	cobra.CheckErr(err)
-
-	viper.AutomaticEnv() // read in environment variables that match
-
-	//TODO ensure values of the variables are checked for nil before passing down to docker.
-
-	// Global
-	viper.SetDefault("ROOT_DIR", cwd)
-	viper.SetDefault("INFRA_DIR", fmt.Sprintf("%v/.infra", cwd))
-	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, viper.Get("ENV")))
-	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
-	viper.SetDefault("TF_LOG", fmt.Sprintf(""))
-	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
-	viper.SetDefault("TERRAFORM_VERSION", fmt.Sprintf("0.12.29"))
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-	}
+	cc.log = logger.NewSugaredLogger(logLevel)
 
 	return cc
 }
@@ -128,7 +120,7 @@ func (b *commandsBuilder) build() *izeCmd {
 type izeBuilderCommon struct {
 	cfgFile string
 	cfg     *config.Config
-	logging bool
+	log     logger.StandartLogger
 }
 
 func (cc *izeBuilderCommon) Init() error {
@@ -138,6 +130,27 @@ func (cc *izeBuilderCommon) Init() error {
 	}
 
 	cc.cfg = cfg
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error getting current directory")
+	}
+
+	// Find home directory.
+	home, err := os.UserHomeDir()
+	cobra.CheckErr(err)
+
+	viper.AutomaticEnv() // read in environment variables that match
+
+	//TODO ensure values of the variables are checked for nil before passing down to docker.
+
+	// Global
+	viper.SetDefault("ROOT_DIR", cwd)
+	viper.SetDefault("INFRA_DIR", fmt.Sprintf("%v/.infra", cwd))
+	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, cc.cfg.Env))
+	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
+	viper.SetDefault("TF_LOG", fmt.Sprintf(""))
+	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
 
 	return nil
 }
