@@ -18,7 +18,7 @@ package main
 import (
 	"os"
 
-	"github.com/hazelops/ize/commands"
+	"github.com/hazelops/ize/internal/commands"
 )
 
 func main() {

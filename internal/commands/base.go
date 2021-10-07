@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hazelops/ize/config"
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/gohcl"
+	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -136,6 +138,23 @@ func (cc *izeBuilderCommon) Init() error {
 		fmt.Println("Error getting current directory")
 	}
 
+	var app interface{}
+
+	for _, s := range cfg.Service {
+		switch serviceType := s.Type; serviceType {
+		case "ecs":
+			ecsCfg := Ecs{}
+			if s.Body != nil {
+				if diag := gohcl.DecodeBody(s.Body, &hcl.EvalContext{}, &ecsCfg); diag.HasErrors() {
+					return fmt.Errorf("error: %w", diag)
+				}
+			}
+			app = ecsCfg
+		}
+
+	}
+
+	fmt.Println(app)
 	// Find home directory.
 	home, err := os.UserHomeDir()
 	cobra.CheckErr(err)
@@ -153,4 +172,8 @@ func (cc *izeBuilderCommon) Init() error {
 	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
 
 	return nil
+}
+
+type Ecs struct {
+	TerraformStateBucketName string `hcl:"terraform_state_bucket_name"`
 }

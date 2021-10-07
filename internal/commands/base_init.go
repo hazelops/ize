@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hazelops/ize/config"
+	"github.com/hazelops/ize/internal/config"
 )
 
 func (c *izeBuilderCommon) initConfig(filename string) (*config.Config, error) {
