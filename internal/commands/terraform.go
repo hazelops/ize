@@ -148,6 +148,31 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 		},
 	})
 
+	cmd.AddCommand(&cobra.Command{
+		Use:   "destroy",
+		Short: "Run terraform destroy",
+		Long:  `This command run terraform destroy command.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := cc.Init()
+
+			if err != nil {
+				return err
+			}
+
+			opts := TerraformRunOption{
+				ContainerName: "terraform-destroy",
+				Cmd:           []string{"destroy"},
+			}
+
+			err = runTerraform(cc, opts)
+
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	})
 
 	cc.baseBuilderCmd = b.newBuilderBasicCdm(cmd)
 
