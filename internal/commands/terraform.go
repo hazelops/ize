@@ -14,7 +14,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/hazelops/ize/internal/aws/utils"
-	"github.com/hazelops/ize/pkg/gomplate"
+	"github.com/hazelops/ize/internal/template"
 	"github.com/moby/term"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -40,36 +40,44 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 		Short: "Download terraform docker image",
 		Long:  `This command download terraform docker image of the specified version.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cc.log.Debug("Init Run Terrafrom Init")
 			err := cc.Init()
 			if err != nil {
 				return err
 			}
 
+			pterm.DefaultSection.Println("Generating terraform files")
+
+			err = template.GenereateBackendTf(template.BackendOpts{
+				ENV:                            cc.config.Env,
+				LOCALSTACK_ENDPOINT:            "",
+				TERRAFORM_STATE_BUCKET_NAME:    fmt.Sprintf("%s-tf-state", cc.config.Namespace),
+				TERRAFORM_STATE_KEY:            fmt.Sprintf("%v/terraform.tfstate", cc.config.Env),
+				TERRAFORM_STATE_REGION:         cc.config.AwsRegion,
+				TERRAFORM_STATE_PROFILE:        cc.config.AwsProfile,
+				TERRAFORM_STATE_DYNAMODB_TABLE: "tf-state-lock", // So?
+				TERRAFORM_AWS_PROVIDER_VERSION: "",
+			},
+				viper.GetString("ENV_DIR"),
+			)
+
+			pterm.Success.Println("backend.tf generated")
+
+			if err != nil {
+				pterm.Error.Println("backend.tf not generated")
+				return err
+			}
+
 			sess, err := utils.GetSession(&utils.SessionConfig{
-				Region: cc.cfg.AwsRegion,
+				Region: cc.config.AwsRegion,
 			})
 			if err != nil {
 				return err
 			}
 
-			err = gomplate.RunGomplate(gomplate.GomplateOptions{
-				OutputFileDir:  viper.GetString("ENV_DIR"),
-				InputFileDir:   fmt.Sprintf("%v/terraform/template/", viper.GetString("INFRA_DIR")),
-				InputFileName:  "backend.tf.gotmpl",
-				OutputFileName: "backend.tf",
-				Env: []string{
-					fmt.Sprintf("TERRAFORM_STATE_KEY=%v/terraform.tfstate", cc.cfg.Env),
-					fmt.Sprintf("TERRAFORM_STATE_BUCKET_NAME=%v-tf-state", cc.cfg.Namespace),
-					fmt.Sprintf("TERRAFORM_STATE_REGION=%v", cc.cfg.AwsRegion),
-					fmt.Sprintf("TERRAFORM_STATE_PROFILE=%v", cc.cfg.AwsProfile),
-					fmt.Sprintf("TERRAFORM_STATE_DYNAMODB_TABLE=%v", "tf-state-lock"),
-					fmt.Sprintf("ENV=%v", viper.Get("ENV")),
-					fmt.Sprintf("AWS_PROFILE=%v", viper.Get("AWS_PROFILE")),
-					fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-					fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-				},
-			}, cc.log)
+			pterm.Success.Printfln("Read SSH public key")
+			cc.log.Debug("Read SSH public key")
+
+			key, err := ioutil.ReadFile("/home/psih/.ssh/id_rsa.pub")
 			if err != nil {
 				return err
 			}
@@ -84,39 +92,41 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 				return err
 			}
 
-			key, err := ioutil.ReadFile("/home/psih/.ssh/id_rsa.pub")
+			err = template.GenerateVarsTf(template.VarsOpts{
+				ENV:               cc.config.Env,
+				AWS_PROFILE:       cc.config.AwsProfile,
+				AWS_REGION:        cc.config.AwsRegion,
+				EC2_KEY_PAIR_NAME: fmt.Sprintf("%v-%v", cc.config.Env, cc.config.Namespace),
+				TAG:               cc.config.Env,
+				SSH_PUBLIC_KEY:    string(key)[:len(string(key))-1],
+				DOCKER_REGISTRY:   fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, cc.config.AwsRegion),
+				NAMESPACE:         cc.config.Namespace,
+			},
+				viper.GetString("ENV_DIR"),
+			)
+
 			if err != nil {
+				pterm.Error.Println("terraform.tfvars not generated")
 				return err
 			}
 
-			err = gomplate.RunGomplate(gomplate.GomplateOptions{
-				OutputFileDir:  viper.GetString("ENV_DIR"),
-				InputFileDir:   fmt.Sprintf("%v/terraform/template/", viper.GetString("INFRA_DIR")),
-				InputFileName:  "terraform.tfvars.gotmpl",
-				OutputFileName: "terraform.tfvars",
-				Env: []string{
-					fmt.Sprintf("ENV=%v", cc.cfg.Env),
-					fmt.Sprintf("AWS_PROFILE=%v", cc.cfg.AwsProfile),
-					fmt.Sprintf("AWS_REGION=%v", cc.cfg.AwsRegion),
-					fmt.Sprintf("EC2_KEY_PAIR_NAME=%v-%v", cc.cfg.Env, cc.cfg.Namespace),
-					fmt.Sprintf("DOCKER_REGISTRY=%v.dkr.ecr.%v.amazonaws.com", *resp.Account, cc.cfg.AwsRegion),
-					fmt.Sprintf("TAG=%v", cc.cfg.Env),
-					fmt.Sprintf("SSH_PUBLIC_KEY=%s", string(key)[:len(string(key))-1]),
-					fmt.Sprintf("NAMESPACE=%v", cc.cfg.Namespace),
-					fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-					fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-				},
-			}, cc.log)
-			if err != nil {
-				return err
-			}
+			pterm.Success.Println("terraform.tfvars generated")
 
 			opts := TerraformRunOption{
 				ContainerName: "terraform-init",
 				Cmd:           []string{"init", "-input=true"},
 			}
 
-			runTerraform(cc, opts)
+			pterm.DefaultSection.Println("Starting Terraform init")
+
+			err = runTerraform(cc, opts)
+			if err != nil {
+				pterm.DefaultSection.Println("Terraform init not completed")
+				return err
+			}
+
+			pterm.DefaultSection.Println("Terraform init completed")
+
 			return nil
 		},
 	})
