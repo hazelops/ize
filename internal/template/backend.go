@@ -1,8 +1,6 @@
-package tpl
+package template
 
-var BackendTfTemplate = `
-{{if or (.ENV | strings.Contains "localstack") (.ENV | strings.Contains "local") }}
-terraform {
+var backendTemplate = `{{if or (.ENV | strings.Contains "localstack") (.ENV | strings.Contains "local") }}terraform {
   backend "local" {}
 }
 
@@ -40,12 +38,9 @@ provider "aws" {
     ecs            = "{{ .LOCALSTACK_ENDPOINT }}"
     ecr            = "{{ .LOCALSTACK_ENDPOINT }}"
   }
-}
-{{else}}
-provider "aws" {
+}{{else}}provider "aws" {
   profile = var.aws_profile
   region  = var.aws_region
-  version = "{{ .TERRAFORM_AWS_PROVIDER_VERSION }}"
 }
 
 terraform {
@@ -56,7 +51,4 @@ terraform {
     profile        = "{{if .TERRAFORM_STATE_PROFILE}}{{ .TERRAFORM_STATE_PROFILE }}{{else}}nutcorp-dev{{end}}"
     dynamodb_table = "{{if .TERRAFORM_STATE_DYNAMODB_TABLE}}{{ .TERRAFORM_STATE_DYNAMODB_TABLE }}{{else}}tf-state-lock{{end}}"
   }
-}
-{{end}}
-
-`
+}{{end}}`
