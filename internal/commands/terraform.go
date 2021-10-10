@@ -148,12 +148,20 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 				Cmd:           []string{"apply", "-input=false", fmt.Sprintf("%v/.terraform/tfplan", viper.Get("ENV_DIR"))},
 			}
 
+			pterm.DefaultSection.Println("Starting Terraform apply")
+
 			err = runTerraform(cc, opts)
 
 			if err != nil {
+				pterm.DefaultSection.Println("Terraform apply not completed")
 				return err
 			}
 
+			pterm.DefaultSection.Println("Terraform apply completed")
+
+			return nil
+		},
+	})
 			return nil
 		},
 	})
