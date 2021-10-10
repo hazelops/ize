@@ -182,11 +182,16 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 				Cmd:           []string{"destroy"},
 			}
 
+			pterm.DefaultSection.Println("Starting Terraform destroy")
+
 			err = runTerraform(cc, opts)
 
 			if err != nil {
+				pterm.DefaultSection.Println("Terraform destroy not completed")
 				return err
 			}
+
+			pterm.DefaultSection.Println("Terraform destroy completed")
 
 			return nil
 		},
