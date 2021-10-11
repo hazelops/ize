@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
@@ -134,7 +134,7 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 	cmd.AddCommand(&cobra.Command{
 		Use:   "apply",
 		Short: "Run terraform apply",
-		Long: `This command run terraform apply command. Terraform apply 
+		Long: `This command run terraform apply command. Terraform apply
 		command executes the actions proposed in a Terraform plan`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := cc.Init()
@@ -162,6 +162,35 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 			return nil
 		},
 	})
+
+	cmd.AddCommand(&cobra.Command{
+		Use:   "plan",
+		Short: "Run terraform plan",
+		Long: `This command run terraform plan command.
+		The terraform plan command creates an execution plan.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := cc.Init()
+
+			if err != nil {
+				return err
+			}
+
+			opts := TerraformRunOption{
+				ContainerName: "terraform-plan",
+				Cmd:           []string{"plan", fmt.Sprintf("-out=%v/.terraform/tfplan", viper.Get("ENV_DIR")), "-input=false"},
+			}
+
+			pterm.DefaultSection.Println("Starting Terraform plan")
+
+			err = runTerraform(cc, opts)
+
+			if err != nil {
+				pterm.DefaultSection.Println("Terraform plan not completed")
+				return err
+			}
+
+			pterm.DefaultSection.Println("Terraform plan completed")
+
 			return nil
 		},
 	})
@@ -208,62 +237,31 @@ type TerraformRunOption struct {
 }
 
 func runTerraform(cc *terraformCmd, opts TerraformRunOption) error {
-	pterm.Success.Println("Init docker client")
-	cc.log.Debug("Init docker client")
-
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
+		pterm.Error.Println("Docker Clinet initialization")
 		return err
 	}
 
-	imageName := "hashicorp/terraform"
-	pterm.Info.Printfln("cfg", *(cc.cfg))
-	imageTag := cc.cfg.TerraformVersion
-	termFd, _ := term.GetFdInfo(os.Stderr)
+	pterm.Success.Println("Docker Clinet initialization")
 
-	pterm.Success.Printfln("Started pull terraform image %v:%v", imageName, imageTag)
+	imageName := "hashicorp/terraform"
+	imageTag := cc.config.TerraformVersion
+	termFd, _ := term.GetFdInfo(os.Stderr)
 
 	out, err := cli.ImagePull(context.Background(), fmt.Sprintf("%v:%v", imageName, imageTag), types.ImagePullOptions{})
 	if err != nil {
+		pterm.Error.Printfln("Pulling terraform image %v:%v/n", imageName, imageTag)
 		return err
 	}
+
+	pterm.Success.Printfln("Pulling terraform image %v:%v/n", imageName, imageTag)
 
 	err = jsonmessage.DisplayJSONMessagesStream(out, &cc.log, termFd, true, nil)
 
 	if err != nil {
 		return err
 	}
-
-	ps, err := pterm.DefaultSpinner.Start("Check existing container")
-	if err != nil {
-		return err
-	}
-
-	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{
-		All: true, // include stopped containers
-		Filters: filters.NewArgs(filters.KeyValuePair{
-			Key:   "name",
-			Value: opts.ContainerName,
-		}),
-	})
-	if err != nil {
-		return err
-	}
-
-	if len(containers) > 0 {
-		ps.Success("Start exist container")
-
-		if err := cli.ContainerStart(context.Background(), containers[0].ID, types.ContainerStartOptions{}); err != nil {
-			pterm.Error.Printfln("Container start:", err)
-			return err
-		}
-
-		return nil
-	}
-
-	pterm.Success.Printfln("Finished pulling terraform image %v:%v", imageName, imageTag)
-
-	pterm.Success.Printfln("Start creating terraform container from image %v:%v", imageName, imageTag)
 
 	//TODO: Add Auto Pull Docker image
 	cont, err := cli.ContainerCreate(
@@ -278,8 +276,8 @@ func runTerraform(cc *terraformCmd, opts TerraformRunOption) error {
 			OpenStdin:    true,
 			WorkingDir:   fmt.Sprintf("%v", viper.Get("ENV_DIR")),
 			Env: []string{
-				fmt.Sprintf("ENV=%v", cc.cfg.Env),
-				fmt.Sprintf("AWS_PROFILE=%v", cc.cfg.AwsProfile),
+				fmt.Sprintf("ENV=%v", cc.config.Env),
+				fmt.Sprintf("AWS_PROFILE=%v", cc.config.AwsProfile),
 				fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
 				fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
 			},
@@ -307,18 +305,42 @@ func runTerraform(cc *terraformCmd, opts TerraformRunOption) error {
 		}, nil, nil, opts.ContainerName)
 
 	if err != nil {
-		fmt.Println(err)
+		pterm.Error.Printfln("Creating terraform container from image %v:%v", imageName, imageTag)
 		return err
 	}
 
-	pterm.Success.Printfln("Finished creating terraform container from image %v:%v", imageName, imageTag)
+	pterm.Success.Printfln("Creating terraform container from image %v:%v", imageName, imageTag)
 
 	if err := cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{}); err != nil {
-		pterm.Error.Printfln("Container start:", err)
+		pterm.Error.Printfln("Terraform container started:", cont.ID)
 		return err
 	}
 
-	pterm.Success.Printfln("Terraform container started!", cont.ID)
+	statusCh, errCh := cli.ContainerWait(context.Background(), cont.ID, container.WaitConditionNextExit)
+	select {
+	case err := <-errCh:
+		if err != nil {
+			return err
+		}
+	case status := <-statusCh:
+		if status.StatusCode != 0 {
+			out, err = cli.ContainerLogs(context.Background(), cont.ID, types.ContainerLogsOptions{
+				ShowStdout: true,
+				ShowStderr: true,
+			})
+			if err != nil {
+				return err
+			}
+
+			defer out.Close()
+			content, _ := ioutil.ReadAll(out)
+			pterm.Error.Printfln("Terraform container started: %s", cont.ID)
+
+			return errors.New(string(content))
+		}
+	}
+
+	pterm.Success.Printfln("Terraform container started: %s", cont.ID)
 
 	return nil
 }
