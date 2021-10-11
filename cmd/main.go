@@ -19,8 +19,12 @@ import (
 	"os"
 
 	"github.com/hazelops/ize/internal/commands"
+	"github.com/pterm/pterm"
 )
 
 func main() {
-	commands.Execute(os.Args[1:])
+	resp := commands.Execute(os.Args[1:])
+	if resp.Err != nil {
+		pterm.Error.Print(resp.Err)
+	}
 }
