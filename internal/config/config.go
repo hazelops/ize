@@ -11,16 +11,34 @@ import (
 const Filename = "ize.hcl"
 
 type Config struct {
+	hclConfig
+	pathData map[string]string
+}
+
+type hclConfig struct {
 	AwsConfig        string `hcl:"aws_config,optional"`
 	TerraformVersion string `hcl:"terraform_version"`
 	Env              string `hcl:"env"`
 	AwsRegion        string `hcl:"aws_region"`
 	AwsProfile       string `hcl:"aws_profile"`
+	Namespace        string `hcl:"namespace"`
 
 	Service []*struct {
-		Type string `hcl:"type,label"`
-		Name string `hcl:"name,label"`
+		Type string   `hcl:"type,label"`
+		Name string   `hcl:"name,label"`
+		Body hcl.Body `hcl:",remain"`
 	} `hcl:"service,block"`
+}
+
+type Service struct {
+	Use    *Use     `hcl:"use,block"`
+	Body   hcl.Body `hcl:",body"`
+	Remain hcl.Body `hcl:",remain"`
+}
+
+type Use struct {
+	Type string   `hcl:",label"`
+	Body hcl.Body `hcl:",remain"`
 }
 
 func FindPath(filename string) (string, error) {
@@ -55,10 +73,16 @@ func Load(path string) (*Config, error) {
 	}
 
 	// Decode
-	var cfg Config
+	var cfg hclConfig
 	if err := hclsimple.DecodeFile(path, ctx, &cfg); err != nil {
 		return nil, err
 	}
 
-	return &cfg, nil
+	return &Config{
+		hclConfig: cfg,
+	}, nil
+}
+
+type Ecs struct {
+	TerraformStateBucketName string `hcl:"terraform_state_bucket_name"`
 }
