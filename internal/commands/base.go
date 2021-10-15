@@ -48,7 +48,10 @@ func (b *commandsBuilder) addCommands(commands ...cmder) *commandsBuilder {
 }
 
 func (b *commandsBuilder) addAll() *commandsBuilder {
-	b.addCommands(b.newTerraformCmd())
+	b.addCommands(
+		b.newTerraformCmd(),
+		b.newConfigCmd(),
+	)
 
 	return b
 }
