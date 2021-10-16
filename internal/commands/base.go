@@ -51,6 +51,7 @@ func (b *commandsBuilder) addAll() *commandsBuilder {
 	b.addCommands(
 		b.newTerraformCmd(),
 		b.newConfigCmd(),
+		b.newEnvCmd(),
 	)
 
 	return b
@@ -77,7 +78,7 @@ to quickly create a Cobra application.`,
 
 	cc.cmd.SilenceErrors = true
 	cc.cmd.SilenceUsage = true
-	cc.cmd.PersistentFlags().StringVarP(&cc.ll, "log-level", "l", "", "enable debug message")
+	cc.cmd.PersistentFlags().StringVarP(&cc.ll, "log-level", "l", "infa", "enable debug message")
 	cc.cmd.PersistentFlags().StringVarP(&cc.cfgFile, "config-file", "c", "", "set config file name")
 
 	var logLevel zapcore.Level
