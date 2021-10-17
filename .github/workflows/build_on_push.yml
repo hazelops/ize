@@ -1,5 +1,4 @@
 name: "Build IZE on push"
-
 env:
   GOPATH: ~/go
 on:
@@ -7,6 +6,7 @@ on:
     branches:
       - main
   workflow_dispatch:
+  
 jobs:
   Build:
     strategy:
