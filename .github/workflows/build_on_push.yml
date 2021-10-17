@@ -9,7 +9,7 @@ on:
       - main
   workflow_dispatch:
 jobs:
-  test:
+  Build:
     strategy:
       matrix:
         go-version: [1.16.x]
@@ -26,6 +26,6 @@ jobs:
       run: go build -o ./ize ./cmd
     - name: Upload bin to artifacts
       uses: actions/upload-artifact@v1
-        with:
+      with:
         name: digest
         path: ./ize.*
