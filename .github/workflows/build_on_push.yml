@@ -1,5 +1,6 @@
 name: "Build IZE on push"
 
+on:
   push:
     branches:
       - main
