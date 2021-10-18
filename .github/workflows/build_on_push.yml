@@ -24,4 +24,3 @@ jobs:
       with:
         name: ${{ runner.os }}
         path: ize
-        
