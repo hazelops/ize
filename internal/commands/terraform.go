@@ -7,14 +7,11 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/hazelops/ize/internal/aws/utils"
-	"github.com/hazelops/ize/internal/template"
 	"github.com/moby/term"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -46,71 +43,6 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 			}
 
 			pterm.DefaultSection.Println("Generating terraform files")
-
-			err = template.GenereateBackendTf(template.BackendOpts{
-				ENV:                            cc.config.Env,
-				LOCALSTACK_ENDPOINT:            "",
-				TERRAFORM_STATE_BUCKET_NAME:    fmt.Sprintf("%s-tf-state", cc.config.Namespace),
-				TERRAFORM_STATE_KEY:            fmt.Sprintf("%v/terraform.tfstate", cc.config.Env),
-				TERRAFORM_STATE_REGION:         cc.config.AwsRegion,
-				TERRAFORM_STATE_PROFILE:        cc.config.AwsProfile,
-				TERRAFORM_STATE_DYNAMODB_TABLE: "tf-state-lock", // So?
-				TERRAFORM_AWS_PROVIDER_VERSION: "",
-			},
-				viper.GetString("ENV_DIR"),
-			)
-
-			pterm.Success.Println("backend.tf generated")
-
-			if err != nil {
-				pterm.Error.Println("backend.tf not generated")
-				return err
-			}
-
-			sess, err := utils.GetSession(&utils.SessionConfig{
-				Region: cc.config.AwsRegion,
-			})
-			if err != nil {
-				return err
-			}
-
-			pterm.Success.Printfln("Read SSH public key")
-			cc.log.Debug("Read SSH public key")
-
-			key, err := ioutil.ReadFile("/home/psih/.ssh/id_rsa.pub")
-			if err != nil {
-				return err
-			}
-
-			stsSvc := sts.New(sess)
-
-			resp, err := stsSvc.GetCallerIdentity(
-				&sts.GetCallerIdentityInput{},
-			)
-
-			if err != nil {
-				return err
-			}
-
-			err = template.GenerateVarsTf(template.VarsOpts{
-				ENV:               cc.config.Env,
-				AWS_PROFILE:       cc.config.AwsProfile,
-				AWS_REGION:        cc.config.AwsRegion,
-				EC2_KEY_PAIR_NAME: fmt.Sprintf("%v-%v", cc.config.Env, cc.config.Namespace),
-				TAG:               cc.config.Env,
-				SSH_PUBLIC_KEY:    string(key)[:len(string(key))-1],
-				DOCKER_REGISTRY:   fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, cc.config.AwsRegion),
-				NAMESPACE:         cc.config.Namespace,
-			},
-				viper.GetString("ENV_DIR"),
-			)
-
-			if err != nil {
-				pterm.Error.Println("terraform.tfvars not generated")
-				return err
-			}
-
-			pterm.Success.Println("terraform.tfvars generated")
 
 			opts := TerraformRunOption{
 				ContainerName: "terraform-init",
@@ -262,6 +194,8 @@ func runTerraform(cc *terraformCmd, opts TerraformRunOption) error {
 	if err != nil {
 		return err
 	}
+
+	cc.log.Debugf(fmt.Sprintf("%v", viper.Get("ENV_DIR")))
 
 	//TODO: Add Auto Pull Docker image
 	cont, err := cli.ContainerCreate(
