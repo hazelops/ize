@@ -1,14 +1,15 @@
 name: "Build IZE on push"
-
 on:
   push:
     branches:
       - main
   workflow_dispatch:
-
 jobs:
-  Ubuntu:
-    runs-on: ubuntu-latest
+  Build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
     - name: Install Go
       uses: actions/setup-go@v2
@@ -21,39 +22,6 @@ jobs:
     - name: Upload bin to artifacts
       uses: actions/upload-artifact@v1
       with:
-        name: ize-ubuntu
+        name: ${{ runner.os }}
         path: ize
-
-  MacOS:
-    runs-on: macos-latest
-    steps:
-    - name: Install Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.16.x
-    - name: Checkout code
-      uses: actions/checkout@v2
-    - name: Build
-      run: go build -o ./ize ./cmd
-    - name: Upload bin to artifacts
-      uses: actions/upload-artifact@v1
-      with:
-        name: ize-mac
-        path: ize
-
-  Windows:
-    runs-on: windows-latest
-    steps:
-    - name: Install Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.16.x
-    - name: Checkout code
-      uses: actions/checkout@v2
-    - name: Build
-      run: go build -o ./ize.exe ./cmd
-    - name: Upload bin to artifacts
-      uses: actions/upload-artifact@v1
-      with:
-        name: ize.exe
-        path: ize.exe
+        
