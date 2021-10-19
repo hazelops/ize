@@ -39,7 +39,7 @@ func (b *commandsBuilder) newEnvCmd() *envCmd {
 
 			pterm.DefaultSection.Printfln("Starting generate terrafrom files")
 
-			err = template.GenereateBackendTf(template.BackendOpts{
+			err = template.GenerateBackendTf(template.BackendOpts{
 				ENV:                            cc.config.Env,
 				LOCALSTACK_ENDPOINT:            "",
 				TERRAFORM_STATE_BUCKET_NAME:    fmt.Sprintf("%s-tf-state", cc.config.Namespace),
