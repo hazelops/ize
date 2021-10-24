@@ -52,6 +52,7 @@ func (b *commandsBuilder) addAll() *commandsBuilder {
 		b.newTerraformCmd(),
 		b.newConfigCmd(),
 		b.newEnvCmd(),
+		b.newTunnelCmd(),
 	)
 
 	return b
