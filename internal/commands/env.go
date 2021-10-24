@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hazelops/ize/internal/aws/utils"
@@ -70,8 +71,8 @@ func (b *commandsBuilder) newEnvCmd() *envCmd {
 			pterm.Success.Printfln("Read SSH public key")
 			cc.log.Debug("Read SSH public key")
 
-			// TODO: FIX
-			key, err := ioutil.ReadFile("/home/psih/.ssh/id_rsa.pub")
+			home, _ := os.UserHomeDir()
+			key, err := ioutil.ReadFile(fmt.Sprintf("%s/.ssh/id_rsa.pub", home))
 			if err != nil {
 				pterm.DefaultSection.Println("Generate terrafrom file not completed")
 				return err
