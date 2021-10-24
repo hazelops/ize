@@ -162,7 +162,7 @@ func (c *tunnelCmd) SSHKeyEnsurePresent() error {
 	ssmSvc := ssm.New(sess)
 
 	out, err := ssmSvc.GetParameter(&ssm.GetParameterInput{
-		Name:           aws.String(fmt.Sprintf("/%s/terraform-output", "dev")),
+		Name:           aws.String(fmt.Sprintf("/%s/terraform-output", c.config.Env)),
 		WithDecryption: aws.Bool(true),
 	})
 	if err != nil {
