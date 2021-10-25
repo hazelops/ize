@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/pterm/pterm"
@@ -19,6 +21,7 @@ type configCmd struct {
 
 	vaultType string
 	filePath  string
+	path      string
 }
 
 func (b *commandsBuilder) newConfigCmd() *configCmd {
@@ -44,8 +47,11 @@ func (b *commandsBuilder) newConfigCmd() *configCmd {
 
 			pterm.DefaultSection.Printfln("Starting config setting")
 
+			basename := filepath.Base(cc.filePath)
+			svc := strings.TrimSuffix(basename, filepath.Ext(basename))
+
 			if cc.vaultType == "ssm" {
-				err = Set(cc.config.AwsRegion, cc.filePath, fmt.Sprintf("/%s/%s", cc.config.Env, cc.config.Namespace))
+				err = Set(cc.config.AwsRegion, cc.filePath, fmt.Sprintf("/%s/%s", cc.config.Env, svc), svc)
 				if err != nil {
 					pterm.DefaultSection.Println("Config setting not completed")
 					return err
@@ -61,17 +67,99 @@ func (b *commandsBuilder) newConfigCmd() *configCmd {
 		},
 	}
 
+	removeCmd := &cobra.Command{
+		Use:   "remove",
+		Short: "Remove secrets from storage",
+		Long:  "This command remove sercrets from storage",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := cc.Init()
+			if err != nil {
+				return err
+			}
+
+			pterm.DefaultSection.Printfln("Starting remove secrets")
+
+			if cc.vaultType == "ssm" {
+				err = Remove(cc.config.AwsRegion, cc.path)
+				if err != nil {
+					pterm.DefaultSection.Println("Remove secrets not completed")
+					return err
+				}
+			} else {
+				pterm.DefaultSection.Println("Remove secrets not completed")
+				return fmt.Errorf("vault with type %s not found or not supported", cc.vaultType)
+			}
+
+			pterm.DefaultSection.Printfln("Remove secrets completed")
+
+			return nil
+		},
+	}
+
+	removeCmd.Flags().StringVar(&cc.vaultType, "type", "", "vault type")
+	removeCmd.Flags().StringVar(&cc.path, "path", "", "path to secrets")
+
 	setCmd.Flags().StringVar(&cc.vaultType, "type", "", "vault type")
 	setCmd.Flags().StringVar(&cc.filePath, "file", "", "file with sercrets")
 
-	cmd.AddCommand(setCmd)
+	cmd.AddCommand(setCmd, removeCmd)
 
 	cc.baseBuilderCmd = b.newBuilderBasicCdm(cmd)
 
 	return cc
 }
 
-func Set(region string, file string, path string) error {
+func Remove(region string, path string) error {
+	if path == "" {
+		pterm.Info.Printfln("Path were not set")
+		return nil
+	}
+
+	sess, err := utils.GetSession(&utils.SessionConfig{
+		Region: region,
+	})
+	if err != nil {
+		return err
+	}
+	pterm.Success.Printfln("Geting AWS session")
+
+	ssmSvc := ssm.New(sess)
+
+	out, err := ssmSvc.GetParametersByPath(&ssm.GetParametersByPathInput{
+		Path: &path,
+	})
+	if err != nil {
+		return err
+	}
+
+	pterm.Success.Printfln("Getting secrets from path")
+
+	if len(out.Parameters) == 0 {
+		pterm.Info.Printfln("No values ​​found along the path")
+		pterm.Success.Printfln("Deleting secrets from path")
+		return nil
+	}
+
+	var names []*string
+
+	for _, p := range out.Parameters {
+		names = append(names, p.Name)
+	}
+
+	_, err = ssmSvc.DeleteParameters(&ssm.DeleteParametersInput{
+		Names: names,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	pterm.Success.Printfln("Deleting secrets from path")
+
+	return nil
+}
+
+func Set(region string, file string, path string, svc string) error {
 	sess, err := utils.GetSession(&utils.SessionConfig{
 		Region: region,
 	})
@@ -98,6 +186,10 @@ func Set(region string, file string, path string) error {
 			Value: aws.String(value),
 			Type:  aws.String(ssm.ParameterTypeSecureString),
 			Tags: []*ssm.Tag{
+				{
+					Key:   aws.String("Application"),
+					Value: &svc,
+				},
 				{
 					Key:   aws.String("EnvVarName"),
 					Value: &key,
