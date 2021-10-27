@@ -172,6 +172,11 @@ func (cc *izeBuilderCommon) Init() error {
 	viper.SetDefault("TF_LOG", fmt.Sprintf(""))
 	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
 
+	//Check Docker and SSM Agent
+	err = CheckCommand("docker", []string{"info"})
+	if err != nil {
+		return errors.New("docker is not running or is not installed")
+	}
 	return nil
 }
 
