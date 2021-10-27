@@ -1,11 +1,13 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/logger"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap/zapcore"
@@ -128,7 +130,6 @@ type izeBuilderCommon struct {
 }
 
 func (cc *izeBuilderCommon) Init() error {
-
 	config, err := cc.initConfig(cc.cfgFile)
 	if err != nil {
 		return err
@@ -177,6 +178,40 @@ func (cc *izeBuilderCommon) Init() error {
 	if err != nil {
 		return errors.New("docker is not running or is not installed")
 	}
+
+	err = CheckCommand("session-manager-plugin", []string{})
+	if err != nil {
+		pterm.Warning.Println("SSM Agent is not installed. Trying to install SSM Agent")
+
+		pterm.DefaultSection.Println("Installing SSM Agent")
+
+		err := DownloadSSMAgent()
+		if err != nil {
+			return fmt.Errorf("download SSM Agent error: %v", err)
+		}
+
+		pterm.Success.Println("Downloading SSM Agent")
+
+		err = InstallSSMAgent()
+		if err != nil {
+			return fmt.Errorf("install SSM Agent error: %v", err)
+		}
+
+		pterm.Success.Println("Installing SSM Agent")
+
+		err = CleanupSSMAgent()
+		if err != nil {
+			return fmt.Errorf("cleanup SSM Agent error: %v", err)
+		}
+
+		pterm.Success.Println("Cleanup Session Manager installation package")
+
+		err = CheckCommand("session-manager-plugin", []string{})
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
