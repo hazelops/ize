@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"syscall"
 
@@ -265,6 +266,11 @@ func (c *tunnelCmd) SSHTunnelConfigCreate() error {
 		return err
 	}
 
+	re, err := regexp.Compile(`LocalForward\s(?P<localPort>\d+)\s(?P<remoteHost>.+):(?P<remotePort>\d+)`)
+	if err != nil {
+		return err
+	}
+
 	var config string
 
 	defer f.Close()
@@ -279,7 +285,15 @@ func (c *tunnelCmd) SSHTunnelConfigCreate() error {
 
 	pterm.Success.Printfln("Writing SSH Tunnel config to file")
 
-	pterm.Info.Print(config)
+	res := re.FindAllStringSubmatch(config, -1)
+
+	ports := "SSH Tunnel Available:\n"
+
+	for _, v := range res {
+		ports += fmt.Sprintf("%s:%s => localhost:%s\n", v[2], v[3], v[1])
+	}
+
+	pterm.Info.Print(ports)
 
 	return nil
 }
