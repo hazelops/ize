@@ -18,13 +18,13 @@ type cmder interface {
 	getCommand() *cobra.Command
 }
 
-func CheckCommand(command string, subcommand []string) error {
-	err := exec.Command(command, subcommand...).Run()
+func CheckCommand(command string, subcommand []string) (string, error) {
+	out, err := exec.Command(command, subcommand...).Output()
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return string(out), nil
 }
 
 const (
@@ -32,7 +32,7 @@ const (
 	ssmMacOsUrl = "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/sessionmanager-bundle.zip"
 )
 
-func DownloadSSMAgent() error {
+func DownloadSSMAgentPlugin() error {
 	switch goos := runtime.GOOS; goos {
 	case "darwin":
 		client := http.Client{
@@ -124,7 +124,7 @@ func DownloadSSMAgent() error {
 			}
 		}
 	default:
-		return fmt.Errorf("unable to install SSM agent automatically.\nPlease install SSM Agent manually and try again")
+		return fmt.Errorf("unable to install automatically")
 	}
 
 	return nil
@@ -134,9 +134,9 @@ func CleanupSSMAgent() error {
 	command := []string{}
 
 	if runtime.GOOS == "darwin" {
-		command = []string{"rm", "-rf", "sessionmanager-bundle sessionmanager-bundle.zip"}
+		command = []string{"rm", "-f", "sessionmanager-bundle sessionmanager-bundle.zip"}
 	} else if runtime.GOOS == "linux" {
-		command = []string{"rm", "-rf", "session-manager-plugin.rpm"}
+		command = []string{"rm", "-f", "session-manager-plugin.rpm"}
 
 		distrName, err := getLinuxDistoName()
 		if err != nil {

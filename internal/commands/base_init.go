@@ -14,7 +14,7 @@ func (c *izeBuilderCommon) initConfig(filename string) (*config.Config, error) {
 	}
 
 	if path == "" {
-		return nil, errors.New("a Ize configuration file (ize.hcl) is required but wasn't found")
+		return nil, errors.New("an Ize configuration file (ize.hcl) is required but wasn't found")
 	}
 
 	return c.initConfigLoad(path)
