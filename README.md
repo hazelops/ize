@@ -42,7 +42,7 @@ ize deploy infra
 ize destroy infra
 ```
 
-## Ize installation via homebrew(MacOS only):
+## Ize installation via homebrew (MacOS only):
 
 ##### 1. Install [Homebrew](https://brew.sh/)
 
