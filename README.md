@@ -41,3 +41,15 @@ ize secret get
 ize deploy infra
 ize destroy infra
 ```
+
+## Ize installation via homebrew(MacOS only):
+
+##### 1. Install [Homebrew](https://brew.sh/)
+
+##### 2. Run the following commands:
+  
+  2.1 `brew tap hazelops/ize`
+   
+  2.2 `brew install ize`
+
+#### 3. Now you can run `ize` from command shell by typing `ize` in console.
