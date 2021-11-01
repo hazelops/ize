@@ -14,7 +14,7 @@ func (c *izeBuilderCommon) initConfig(filename string) (*config.Config, error) {
 	}
 
 	if path == "" {
-		return nil, errors.New("A Waypoint configuration file (waypoint.hcl) is required but wasn't found.")
+		return nil, errors.New("an Ize configuration file (ize.hcl) is required but wasn't found")
 	}
 
 	return c.initConfigLoad(path)
@@ -23,7 +23,7 @@ func (c *izeBuilderCommon) initConfig(filename string) (*config.Config, error) {
 func (c *izeBuilderCommon) initConfigPath(filename string) (string, error) {
 	path, err := config.FindPath(filename)
 	if err != nil {
-		return "", fmt.Errorf("Error looking for a Ize configuration: %s", err)
+		return "", fmt.Errorf("error looking for a Ize configuration: %s", err)
 	}
 
 	return path, nil

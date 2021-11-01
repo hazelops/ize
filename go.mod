@@ -3,6 +3,7 @@ module github.com/hazelops/ize
 go 1.16
 
 require (
+	github.com/Masterminds/semver v1.5.0
 	github.com/aws/aws-sdk-go v1.40.56
 	github.com/containerd/containerd v1.5.4 // indirect
 	github.com/docker/docker v20.10.7+incompatible

@@ -1,11 +1,15 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/Masterminds/semver"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/logger"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap/zapcore"
@@ -128,7 +132,6 @@ type izeBuilderCommon struct {
 }
 
 func (cc *izeBuilderCommon) Init() error {
-
 	config, err := cc.initConfig(cc.cfgFile)
 	if err != nil {
 		return err
@@ -171,6 +174,84 @@ func (cc *izeBuilderCommon) Init() error {
 	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
 	viper.SetDefault("TF_LOG", fmt.Sprintf(""))
 	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
+
+	//Check Docker and SSM Agent
+	_, err = CheckCommand("docker", []string{"info"})
+	if err != nil {
+		return errors.New("docker is not running or is not installed (visit https://www.docker.com/get-started)")
+	}
+
+	_, err = CheckCommand("session-manager-plugin", []string{})
+	if err != nil {
+		pterm.Warning.Println("SSM Agent plugin is not installed. Trying to install SSM Agent plugin")
+
+		var pyVersion string
+
+		pyVersion, err = CheckCommand("python3", []string{"--version"})
+		if err != nil {
+			pyVersion, err = CheckCommand("python", []string{"--version"})
+			if err != nil {
+				return errors.New("python is not installed")
+			}
+
+			c, err := semver.NewConstraint("<= 2.6.5")
+			if err != nil {
+				return err
+			}
+
+			v, err := semver.NewVersion(strings.TrimSpace(strings.Split(pyVersion, " ")[1]))
+			if err != nil {
+				return err
+			}
+
+			if c.Check(v) {
+				return fmt.Errorf("python version %s below required %s", v.String(), "2.6.5")
+			}
+			return errors.New("python is not installed")
+		}
+
+		c, err := semver.NewConstraint("<= 3.3.0")
+		if err != nil {
+			return err
+		}
+
+		v, err := semver.NewVersion(strings.TrimSpace(strings.Split(pyVersion, " ")[1]))
+		if err != nil {
+			return err
+		}
+
+		if c.Check(v) {
+			return fmt.Errorf("python version %s below required %s", v.String(), "3.3.0")
+		}
+
+		pterm.DefaultSection.Println("Installing SSM Agent plugin")
+
+		err = DownloadSSMAgentPlugin()
+		if err != nil {
+			return fmt.Errorf("download SSM Agent plugin error: %v (visit https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)", err)
+		}
+
+		pterm.Success.Println("Downloading SSM Agent plugin")
+
+		err = InstallSSMAgent()
+		if err != nil {
+			return fmt.Errorf("install SSM Agent plugin error: %v (visit https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)", err)
+		}
+
+		pterm.Success.Println("Installing SSM Agent plugin")
+
+		err = CleanupSSMAgent()
+		if err != nil {
+			return fmt.Errorf("cleanup SSM Agent plugin error: %v (visit https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)", err)
+		}
+
+		pterm.Success.Println("Cleanup Session Manager plugin installation package")
+
+		_, err = CheckCommand("session-manager-plugin", []string{})
+		if err != nil {
+			return fmt.Errorf("check SSM Agent plugin error: %v (visit https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)", err)
+		}
+	}
 
 	return nil
 }

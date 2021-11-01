@@ -42,8 +42,6 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 				return err
 			}
 
-			pterm.DefaultSection.Println("Generating terraform files")
-
 			opts := TerraformRunOption{
 				ContainerName: "terraform-init",
 				Cmd:           []string{"init", "-input=true"},
@@ -70,7 +68,6 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 		command executes the actions proposed in a Terraform plan`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := cc.Init()
-
 			if err != nil {
 				return err
 			}
@@ -102,7 +99,6 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 		The terraform plan command creates an execution plan.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := cc.Init()
-
 			if err != nil {
 				return err
 			}
@@ -133,7 +129,6 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 		Long:  `This command run terraform destroy command.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := cc.Init()
-
 			if err != nil {
 				return err
 			}
@@ -246,7 +241,7 @@ func runTerraform(cc *terraformCmd, opts TerraformRunOption) error {
 	pterm.Success.Printfln("Creating terraform container from image %v:%v", imageName, imageTag)
 
 	if err := cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{}); err != nil {
-		pterm.Error.Printfln("Terraform container started:", cont.ID)
+		pterm.Error.Println("Terraform container started:", cont.ID)
 		return err
 	}
 
