@@ -2,7 +2,6 @@ name: "Build IZE on release"
 on:
   release:
     types: [created]
-  workflow_dispatch:
 jobs:
   Build:
     runs-on: ubuntu-latest
