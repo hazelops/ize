@@ -71,8 +71,9 @@ func (b *commandsBuilder) newIzeCmd() *izeCmd {
 	cc := &izeCmd{}
 
 	cc.baseBuilderCmd = b.newBuilderCmd(&cobra.Command{
-		Use:   "ize",
-		Short: "A brief description of your application",
+		Use:     "ize",
+		Version: GetVersionNumber(),
+		Short:   "A brief description of your application",
 		Long: `A longer description that spans multiple lines and likely contains
 examples and usage of using your application. For example:
 
