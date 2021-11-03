@@ -53,3 +53,9 @@ ize destroy infra
   2.2 `brew install ize`
 
 #### 3. Now you can run `ize` from command shell by typing `ize` in console.
+
+#### 4. To update `ize`:
+  4.1 Uninstall previous version (`brew uninstall ize`)
+  4.2 Update version in brew repo: `brew tap hazelops/ize`
+  4.3 Install `ize`: `brew install ize`
+

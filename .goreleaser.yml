@@ -8,6 +8,35 @@ builds:
     goarch:
       - amd64
       - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
     id: "ize"
     dir: .
     main: ./cmd
+    ldflags:
+      - -s -w -X 'github.com/hazelops/ize/internal/commands.Version={{.Env.RELEASE_VERSION}}'
+
+brews:
+  - name: ize
+    tap:
+      owner: hazelops
+      name: homebrew-ize
+      branch: main
+      # Optionally a token can be provided, if it differs from the token provided to GoReleaser
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    download_strategy: CurlDownloadStrategy
+    commit_author:
+      name: ize
+      email: ize@hazelops.com
+    # The project name and current git tag are used in the format string.
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    homepage: "https://ize.sh/"
+    description: "IZE is an opinionated infrastructure wrapper that allows to use multiple tools in one infra"
+    license: "MIT"
+    skip_upload: auto
+    test: |
+      system "#{bin}/ize"
+    # Custom install script for brew.
+    install: |
+      bin.install "ize"
