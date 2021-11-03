@@ -58,4 +58,5 @@ ize destroy infra
   4.1 Uninstall previous version (`brew uninstall ize`)
   4.2 Update version in brew repo: `brew tap hazelops/ize`
   4.3 Install `ize`: `brew install ize`
+
   
