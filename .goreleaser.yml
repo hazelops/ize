@@ -60,7 +60,7 @@ nfpms:
     homepage: https://ize.sh
     maintainer: Ize development team <ize@hazelops.com>
     description: IZE is an opinionated infrastructure wrapper that allows to use multiple tools in one infra
-    license: MIT
+    license: Apache 2.0
 
 publishers:
   - name: fury.io
