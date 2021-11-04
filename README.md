@@ -59,3 +59,35 @@ ize destroy infra
   4.2 Update version in brew repo: `brew tap hazelops/ize`
   4.3 Install `ize`: `brew install ize`
 
+## Ize installation via public apt repository URL (Ubuntu):
+
+##### 1. To enable, create the following file:
+
+ `/etc/apt/sources.list.d/fury.list` with the following content:
+
+ ```fury.list  
+ deb [trusted=yes] https://apt.fury.io/hazelops/ /
+ ```
+
+##### 2. After this, you should update information. Run:
+```shell
+apt-get update
+```
+
+##### 3. To install the latest version of `ize` app, you should run:
+
+```shell
+apt-get install ize 
+```
+
+##### 4. If you wish to install certain version of the `ize` you should add version like this:
+
+ ```shell
+ apt-get install ize=<version>
+ ```
+
+##### 6. To remove `ize` app - run this command:
+
+```shell
+apt-get purge ize
+```
