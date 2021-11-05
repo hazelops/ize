@@ -61,13 +61,11 @@ ize destroy infra
 
 ## Ize installation via public apt repository URL (Ubuntu):
 
-##### 1. To enable, create the following file:
+##### 1. To add public apt repository run:
 
- `/etc/apt/sources.list.d/fury.list` with the following content:
-
- ```fury.list  
- deb [trusted=yes] https://apt.fury.io/hazelops/ /
- ```
+ ```shell
+sudo echo "deb [trusted=yes] https://apt.fury.io/hazelops/ /" > /etc/apt/sources.list.d/fury.list
+```
 
 ##### 2. After this, you should update information. Run:
 ```shell
