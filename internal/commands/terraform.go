@@ -213,7 +213,7 @@ func runTerraform(cc *terraformCmd, opts TerraformRunOption) error {
 		},
 
 		&container.HostConfig{
-			AutoRemove: false,
+			AutoRemove: true,
 			Mounts: []mount.Mount{
 				{
 					Type:   mount.TypeBind,
