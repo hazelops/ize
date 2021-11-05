@@ -1,11 +1,12 @@
 package commands
 
 import (
+	"bufio"
 	"context"
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -21,6 +22,8 @@ import (
 type terraformCmd struct {
 	*baseBuilderCmd
 }
+
+const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
 
 func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 	cc := &terraformCmd{}
@@ -221,9 +224,9 @@ func runTerraform(cc *terraformCmd, opts TerraformRunOption) error {
 
 	if cc.log.SugaredLogger != nil {
 		termFd, _ := term.GetFdInfo(os.Stderr)
-	err = jsonmessage.DisplayJSONMessagesStream(out, &cc.log, termFd, true, nil)
-	if err != nil {
-		return err
+		err = jsonmessage.DisplayJSONMessagesStream(out, &cc.log, termFd, true, nil)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -279,28 +282,32 @@ func runTerraform(cc *terraformCmd, opts TerraformRunOption) error {
 		return err
 	}
 
-	statusCh, errCh := cli.ContainerWait(context.Background(), cont.ID, container.WaitConditionNextExit)
-	select {
-	case err := <-errCh:
-		if err != nil {
-			return err
-		}
-	case status := <-statusCh:
-		if status.StatusCode != 0 {
-			out, err = cli.ContainerLogs(context.Background(), cont.ID, types.ContainerLogsOptions{
-				ShowStdout: true,
-				ShowStderr: true,
-			})
-			if err != nil {
-				return err
-			}
+	reader, err := cli.ContainerLogs(context.Background(), cont.ID, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+		Timestamps: false,
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer reader.Close()
 
-			defer out.Close()
-			content, _ := ioutil.ReadAll(out)
-			pterm.Error.Printfln("Terraform container started: %s", cont.ID)
-
-			return errors.New(string(content))
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		if strings.Contains(scanner.Text(), "Error: ") {
+			r := regexp.MustCompile(ansi)
+			strErr := r.ReplaceAllString(scanner.Text(), "")
+			strErr = strings.TrimRight(strErr, ".")
+			strErr = strings.TrimPrefix(strErr, "Error: ")
+			strErr = strings.ToLower(string(strErr[0])) + strErr[1:]
+			err = fmt.Errorf(strErr)
 		}
+		fmt.Println(scanner.Text())
+	}
+
+	if err != nil {
+		return err
 	}
 
 	pterm.Success.Printfln("Terraform container started: %s", cont.ID)
