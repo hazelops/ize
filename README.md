@@ -13,16 +13,36 @@ This tool is using configuration file that describes the workflows.
 
 ##### 2. Run the following commands:
 
-2.1 `brew tap hazelops/ize`
+```shell
+brew tap hazelops/ize
+```
 
-2.2 `brew install ize`
+```shell
+brew install ize
+```
 
-#### 3. Now you can run `ize` from command shell by typing `ize` in console.
+Now you can run `ize` from command shell by typing `ize` in console.
+
 
 #### 4. To update `ize`:
-4.1 Uninstall previous version (`brew uninstall ize`)
-4.2 Update version in brew repo: `brew tap hazelops/ize`
-4.3 Install `ize`: `brew install ize`
+
+4.1 Uninstall previous version:
+
+```shell
+brew uninstall ize
+```
+
+4.2 Update version in brew repo: `
+
+```shell
+brew tap hazelops/ize
+```
+
+4.3 Install `ize`: 
+
+```shell
+brew install ize
+```
 
 ### Ize installation via public apt repository URL (Ubuntu):
 
