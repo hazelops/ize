@@ -61,7 +61,8 @@ func (b *commandsBuilder) newEnvCmd() *envCmd {
 			pterm.Success.Println("backend.tf generated")
 
 			sess, err := utils.GetSession(&utils.SessionConfig{
-				Region: cc.config.AwsRegion,
+				Region:  cc.config.AwsRegion,
+				Profile: cc.config.AwsProfile,
 			})
 			if err != nil {
 				pterm.DefaultSection.Println("Generate terrafrom file not completed")
