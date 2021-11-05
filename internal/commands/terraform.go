@@ -29,14 +29,19 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 		Use:   "terraform",
 		Short: "Terraform management.",
 		Long:  `This command contains subcommands for work with terraform.`,
-		RunE:  nil,
 	}
 
-	cmd.AddCommand(&cobra.Command{
+	initCmd := &cobra.Command{
 		Use:   "init",
 		Short: "Download terraform docker image",
 		Long:  `This command download terraform docker image of the specified version.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 0 {
+				if args[0] == "-h" || args[0] == "--help" {
+					return cmd.Help()
+				}
+			}
+
 			err := cc.Init()
 			if err != nil {
 				return err
@@ -44,8 +49,10 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 
 			opts := TerraformRunOption{
 				ContainerName: "terraform-init",
-				Cmd:           []string{"init", "-input=true"},
+				Cmd:           []string{"init"},
 			}
+
+			opts.Cmd = append(opts.Cmd, args...)
 
 			pterm.DefaultSection.Println("Starting Terraform init")
 
@@ -59,14 +66,21 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 
 			return nil
 		},
-	})
+		DisableFlagParsing: true,
+	}
 
-	cmd.AddCommand(&cobra.Command{
+	applyCmd := &cobra.Command{
 		Use:   "apply",
 		Short: "Run terraform apply",
 		Long: `This command run terraform apply command. Terraform apply
 		command executes the actions proposed in a Terraform plan`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 0 {
+				if args[0] == "-h" || args[0] == "--help" {
+					return cmd.Help()
+				}
+			}
+
 			err := cc.Init()
 			if err != nil {
 				return err
@@ -74,8 +88,10 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 
 			opts := TerraformRunOption{
 				ContainerName: "terraform-apply",
-				Cmd:           []string{"apply", "-input=false", fmt.Sprintf("%v/.terraform/tfplan", viper.Get("ENV_DIR"))},
+				Cmd:           []string{"apply"},
 			}
+
+			opts.Cmd = append(opts.Cmd, args...)
 
 			pterm.DefaultSection.Println("Starting Terraform apply")
 
@@ -90,14 +106,21 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 
 			return nil
 		},
-	})
+		DisableFlagParsing: true,
+	}
 
-	cmd.AddCommand(&cobra.Command{
+	planCmd := &cobra.Command{
 		Use:   "plan",
 		Short: "Run terraform plan",
 		Long: `This command run terraform plan command.
 		The terraform plan command creates an execution plan.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 0 {
+				if args[0] == "-h" || args[0] == "--help" {
+					return cmd.Help()
+				}
+			}
+
 			err := cc.Init()
 			if err != nil {
 				return err
@@ -105,8 +128,10 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 
 			opts := TerraformRunOption{
 				ContainerName: "terraform-plan",
-				Cmd:           []string{"plan", fmt.Sprintf("-out=%v/.terraform/tfplan", viper.Get("ENV_DIR")), "-input=false"},
+				Cmd:           []string{"plan"},
 			}
+
+			opts.Cmd = append(opts.Cmd, args...)
 
 			pterm.DefaultSection.Println("Starting Terraform plan")
 
@@ -121,13 +146,20 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 
 			return nil
 		},
-	})
+		DisableFlagParsing: true,
+	}
 
-	cmd.AddCommand(&cobra.Command{
+	destroyCmd := &cobra.Command{
 		Use:   "destroy",
 		Short: "Run terraform destroy",
 		Long:  `This command run terraform destroy command.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 0 {
+				if args[0] == "-h" || args[0] == "--help" {
+					return cmd.Help()
+				}
+			}
+
 			err := cc.Init()
 			if err != nil {
 				return err
@@ -137,6 +169,8 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 				ContainerName: "terraform-destroy",
 				Cmd:           []string{"destroy"},
 			}
+
+			opts.Cmd = append(opts.Cmd, args...)
 
 			pterm.DefaultSection.Println("Starting Terraform destroy")
 
@@ -151,8 +185,10 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 
 			return nil
 		},
-	})
+		DisableFlagParsing: true,
+	}
 
+	cmd.AddCommand(initCmd, applyCmd, destroyCmd, planCmd)
 	cc.baseBuilderCmd = b.newBuilderBasicCdm(cmd)
 
 	return cc
@@ -174,7 +210,6 @@ func runTerraform(cc *terraformCmd, opts TerraformRunOption) error {
 
 	imageName := "hashicorp/terraform"
 	imageTag := cc.config.TerraformVersion
-	termFd, _ := term.GetFdInfo(os.Stderr)
 
 	out, err := cli.ImagePull(context.Background(), fmt.Sprintf("%v:%v", imageName, imageTag), types.ImagePullOptions{})
 	if err != nil {
@@ -184,15 +219,14 @@ func runTerraform(cc *terraformCmd, opts TerraformRunOption) error {
 
 	pterm.Success.Printfln("Pulling terraform image %v:%v/n", imageName, imageTag)
 
+	if cc.log.SugaredLogger != nil {
+		termFd, _ := term.GetFdInfo(os.Stderr)
 	err = jsonmessage.DisplayJSONMessagesStream(out, &cc.log, termFd, true, nil)
-
 	if err != nil {
 		return err
+		}
 	}
 
-	cc.log.Debugf(fmt.Sprintf("%v", viper.Get("ENV_DIR")))
-
-	//TODO: Add Auto Pull Docker image
 	cont, err := cli.ContainerCreate(
 		context.Background(),
 		&container.Config{
