@@ -57,6 +57,7 @@ func (b *commandsBuilder) addAll() *commandsBuilder {
 		b.newConfigCmd(),
 		b.newEnvCmd(),
 		b.newTunnelCmd(),
+		b.newMfaCmd(),
 	)
 
 	return b
@@ -82,21 +83,21 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			cc.cmd.PersistentFlags().StringVarP(&cc.ll, "log-level", "l", "", "enable debug message")
-	cc.cmd.PersistentFlags().StringVarP(&cc.cfgFile, "config-file", "c", "", "set config file name")
+			cc.cmd.PersistentFlags().StringVarP(&cc.cfgFile, "config-file", "c", "", "set config file name")
 			cc.cmd.PersistentFlags().Parse(args)
 
-	var logLevel zapcore.Level
+			var logLevel zapcore.Level
 
-	switch cc.ll {
-	case "info":
-		logLevel = zapcore.InfoLevel
-	case "debug":
-		logLevel = zapcore.DebugLevel
-	default:
-		logLevel = zapcore.WarnLevel
-	}
+			switch cc.ll {
+			case "info":
+				logLevel = zapcore.InfoLevel
+			case "debug":
+				logLevel = zapcore.DebugLevel
+			default:
+				logLevel = zapcore.WarnLevel
+			}
 
-	cc.log = logger.NewSugaredLogger(logLevel)
+			cc.log = logger.NewSugaredLogger(logLevel)
 		},
 	})
 
