@@ -151,7 +151,8 @@ func (b *commandsBuilder) newTunnelCmd() *tunnelCmd {
 
 func (c *tunnelCmd) SSHKeyEnsurePresent() error {
 	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region: c.config.AwsRegion,
+		Region:  c.config.AwsRegion,
+		Profile: c.config.AwsProfile,
 	})
 	if err != nil {
 		pterm.Error.Printfln("Getting AWS session")
@@ -222,7 +223,8 @@ func (c *tunnelCmd) SSHKeyEnsurePresent() error {
 
 func (c *tunnelCmd) SSHTunnelConfigCreate() error {
 	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region: c.config.AwsRegion,
+		Region:  c.config.AwsRegion,
+		Profile: c.config.AwsProfile,
 	})
 	if err != nil {
 		pterm.Error.Printfln("Getting AWS session")
@@ -301,7 +303,8 @@ func (c *tunnelCmd) SSHTunnelConfigCreate() error {
 func (c *tunnelCmd) BastionSHHTunnelUp() error {
 	var err error
 	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region: c.config.AwsRegion,
+		Region:  c.config.AwsRegion,
+		Profile: c.config.AwsProfile,
 	})
 	if err != nil {
 		pterm.Error.Printfln("Getting AWS session")
@@ -357,7 +360,8 @@ func (c *tunnelCmd) BastionSHHTunnelUp() error {
 
 func (c *tunnelCmd) BastionSHHTunnelStatus() error {
 	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region: c.config.AwsRegion,
+		Region:  c.config.AwsRegion,
+		Profile: c.config.AwsProfile,
 	})
 	if err != nil {
 		pterm.Error.Printfln("Getting AWS session")
@@ -416,7 +420,8 @@ func (c *tunnelCmd) BastionSHHTunnelStatus() error {
 
 func (c *tunnelCmd) BastionSHHTunnelDown() error {
 	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region: c.config.AwsRegion,
+		Region:  c.config.AwsRegion,
+		Profile: c.config.AwsProfile,
 	})
 	if err != nil {
 		pterm.Error.Printfln("Getting AWS session")

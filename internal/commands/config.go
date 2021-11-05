@@ -51,7 +51,16 @@ func (b *commandsBuilder) newConfigCmd() *configCmd {
 			svc := strings.TrimSuffix(basename, filepath.Ext(basename))
 
 			if cc.vaultType == "ssm" {
-				err = Set(cc.config.AwsRegion, cc.filePath, fmt.Sprintf("/%s/%s", cc.config.Env, svc), svc)
+
+				err = Set(
+					utils.SessionConfig{
+						Region:  cc.config.AwsRegion,
+						Profile: cc.config.AwsProfile,
+					},
+					cc.filePath,
+					fmt.Sprintf("/%s/%s", cc.config.Env, svc),
+					svc,
+				)
 				if err != nil {
 					pterm.DefaultSection.Println("Config setting not completed")
 					return err
@@ -80,7 +89,13 @@ func (b *commandsBuilder) newConfigCmd() *configCmd {
 			pterm.DefaultSection.Printfln("Starting remove secrets")
 
 			if cc.vaultType == "ssm" {
-				err = Remove(cc.config.AwsRegion, cc.path)
+				err = Remove(
+					utils.SessionConfig{
+						Region:  cc.config.AwsRegion,
+						Profile: cc.config.AwsProfile,
+					},
+					cc.path,
+				)
 				if err != nil {
 					pterm.DefaultSection.Println("Remove secrets not completed")
 					return err
@@ -109,15 +124,13 @@ func (b *commandsBuilder) newConfigCmd() *configCmd {
 	return cc
 }
 
-func Remove(region string, path string) error {
+func Remove(sessCfg utils.SessionConfig, path string) error {
 	if path == "" {
 		pterm.Info.Printfln("Path were not set")
 		return nil
 	}
 
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region: region,
-	})
+	sess, err := utils.GetSession(&sessCfg)
 	if err != nil {
 		return err
 	}
@@ -159,10 +172,8 @@ func Remove(region string, path string) error {
 	return nil
 }
 
-func Set(region string, file string, path string, svc string) error {
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region: region,
-	})
+func Set(sessCfg utils.SessionConfig, file string, path string, svc string) error {
+	sess, err := utils.GetSession(&sessCfg)
 	if err != nil {
 		return err
 	}
