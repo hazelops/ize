@@ -80,16 +80,13 @@ examples and usage of using your application. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	})
-
-	cc.cmd.SilenceErrors = true
-	cc.cmd.SilenceUsage = true
-	cc.cmd.PersistentFlags().StringVarP(&cc.ll, "log-level", "l", "infa", "enable debug message")
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			cc.cmd.PersistentFlags().StringVarP(&cc.ll, "log-level", "l", "", "enable debug message")
 	cc.cmd.PersistentFlags().StringVarP(&cc.cfgFile, "config-file", "c", "", "set config file name")
+			cc.cmd.PersistentFlags().Parse(args)
 
 	var logLevel zapcore.Level
 
-	// TODO: Fix
 	switch cc.ll {
 	case "info":
 		logLevel = zapcore.InfoLevel
@@ -100,6 +97,11 @@ to quickly create a Cobra application.`,
 	}
 
 	cc.log = logger.NewSugaredLogger(logLevel)
+		},
+	})
+
+	cc.baseCmd.cmd.SilenceErrors = true
+	cc.cmd.SilenceUsage = true
 
 	return cc
 }
