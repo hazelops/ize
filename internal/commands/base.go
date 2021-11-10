@@ -58,6 +58,7 @@ func (b *commandsBuilder) addAll() *commandsBuilder {
 		b.newEnvCmd(),
 		b.newTunnelCmd(),
 		b.newMfaCmd(),
+		b.newSSHCmd(),
 	)
 
 	return b
