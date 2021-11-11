@@ -3,6 +3,7 @@ package template
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
@@ -13,6 +14,7 @@ import (
 const (
 	backend = "backend.tf"
 	vars    = "terraform.tfvars"
+	ize     = "ize.hcl"
 )
 
 func GenerateVarsTf(opts VarsOpts, path string) error {
@@ -30,6 +32,43 @@ func GenerateVarsTf(opts VarsOpts, path string) error {
 	rootBody.SetAttributeValue("namespace", cty.StringVal(opts.NAMESPACE))
 
 	file, err := os.Create(fmt.Sprintf("%s/%s", path, vars))
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	_, err = f.WriteTo(file)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GenerateConfigFile(opts ConfigOpts, path string) error {
+	if path == "" {
+		path += ize
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	path = filepath.Join(wd, path)
+
+	f := hclwrite.NewEmptyFile()
+
+	rootBody := f.Body()
+
+	rootBody.SetAttributeValue("env", cty.StringVal(opts.ENV))
+	rootBody.SetAttributeValue("aws_profile", cty.StringVal(opts.AWS_PROFILE))
+	rootBody.SetAttributeValue("aws_region", cty.StringVal(opts.AWS_REGION))
+	rootBody.SetAttributeValue("terraform_version", cty.StringVal(opts.TERRAFORM_VERSION))
+	rootBody.SetAttributeValue("namespace", cty.StringVal(opts.NAMESPACE))
+
+	file, err := os.Create(path)
 	if err != nil {
 		return err
 	}
@@ -151,4 +190,12 @@ type BackendOpts struct {
 	TERRAFORM_STATE_PROFILE        string
 	TERRAFORM_STATE_DYNAMODB_TABLE string
 	TERRAFORM_AWS_PROVIDER_VERSION string
+}
+
+type ConfigOpts struct {
+	ENV               string
+	AWS_PROFILE       string
+	AWS_REGION        string
+	TERRAFORM_VERSION string
+	NAMESPACE         string
 }

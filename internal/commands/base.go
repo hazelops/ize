@@ -59,6 +59,7 @@ func (b *commandsBuilder) addAll() *commandsBuilder {
 		b.newTunnelCmd(),
 		b.newMfaCmd(),
 		b.newSSHCmd(),
+		b.newInitCmd(),
 	)
 
 	return b
