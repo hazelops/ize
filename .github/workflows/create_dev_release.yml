@@ -2,7 +2,7 @@ name: "Create dev release"
 on:
   push:
     branches:
-      - master
+      - main
 jobs:
   create_on_push:
     runs-on: ubuntu-latest
