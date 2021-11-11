@@ -6,8 +6,8 @@ on:
 
 jobs:
   Build:
+    if: startsWith(github.ref, 'refs/tags/0.0.0-dev') != true
     runs-on: ubuntu-latest
-
     steps:
     - name: Install Go
       uses: actions/setup-go@v2

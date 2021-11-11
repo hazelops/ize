@@ -1,27 +1,36 @@
 name: "Build IZE on push"
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  release:
+    types: [created]
+
 jobs:
   Build:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+    if: startsWith(github.ref, 'refs/tags/0.0.0-dev')
+    runs-on: ubuntu-latest
+
     steps:
     - name: Install Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.17.x
+       go-version: 1.17.x
+
     - name: Checkout code
       uses: actions/checkout@v2
-    - name: Build
-      run: go build -o ./ize ./cmd
-    - name: Upload bin to artifacts
-      uses: actions/upload-artifact@v1
       with:
-        name: ${{ runner.os }}
-        path: ize
+        fetch-depth: 0
 
+    - name: Set env
+      run: |
+        echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+    - name: Run GoReleaser
+      uses: goreleaser/goreleaser-action@v2
+      with:
+        # either 'goreleaser' (default) or 'goreleaser-pro'
+        distribution: goreleaser
+        version: latest
+        args: release -f .goreleaser_push.yml --rm-dist
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+        RELEASE_VERSION: ${{ github.sha }}
+        FURY_TOKEN: ${{ secrets.FURY_PUSH_TOKEN }}
