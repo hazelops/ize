@@ -1,0 +1,70 @@
+project_name: ize
+builds:
+  - env: [CGO_ENABLED=0]
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    id: "ize"
+    dir: .
+    main: ./cmd
+    ldflags:
+      - -s -w -X 'github.com/hazelops/ize/internal/commands.Version={{.Env.RELEASE_VERSION}}'
+
+brews:
+  - name: ize-dev
+    tap:
+      owner: hazelops
+      name: homebrew-ize
+      branch: main
+      # Optionally a token can be provided, if it differs from the token provided to GoReleaser
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    download_strategy: CurlDownloadStrategy
+    commit_author:
+      name: ize
+      email: ize@hazelops.com
+    # The project name and current git tag are used in the format string.
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    homepage: "https://ize.sh/"
+    description: "IZE is an opinionated infrastructure wrapper that allows to use multiple tools in one infra"
+    license: "Apache 2.0"
+    skip_upload: false
+    test: |
+      system "#{bin}/ize"
+    # Custom install script for brew.
+    install: |
+      bin.install "ize"
+
+nfpms:
+  # note that this is an array of nfpm configs
+  -
+    # ID of the nfpm config, must be unique.
+    # Defaults to "default".
+    id: ize-dev
+
+    # Name of the package.
+    # Defaults to `ProjectName`.
+#    package_name: foo
+
+    # You can change the file name of the package.
+    # Default: `{{ .PackageName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}`
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - deb
+      - rpm
+    vendor: HazelOps
+    homepage: https://ize.sh
+    maintainer: Ize development team <ize@hazelops.com>
+    description: IZE is an opinionated infrastructure wrapper that allows to use multiple tools in one infra
+    license: Apache 2.0
+
+publishers:
+  - name: fury.io
+    # by specifying `packages` id here goreleaser will only use this publisher
+    # with artifacts identified by this id
+    ids:
+      - ize-dev
+    dir: "{{ dir .ArtifactPath }}"
+    cmd: curl -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/hazelops/
