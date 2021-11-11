@@ -3,6 +3,7 @@ package template
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
@@ -45,8 +46,17 @@ func GenerateVarsTf(opts VarsOpts, path string) error {
 	return nil
 }
 
-func GenerateConfigFile(opts ConfigOpts) error {
-	configPath, _ := os.Getwd()
+func GenerateConfigFile(opts ConfigOpts, path string) error {
+	if path == "" {
+		path += ize
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	path = filepath.Join(wd, path)
 
 	f := hclwrite.NewEmptyFile()
 
@@ -58,7 +68,7 @@ func GenerateConfigFile(opts ConfigOpts) error {
 	rootBody.SetAttributeValue("terraform_version", cty.StringVal(opts.TERRAFORM_VERSION))
 	rootBody.SetAttributeValue("namespace", cty.StringVal(opts.NAMESPACE))
 
-	file, err := os.Create(fmt.Sprintf("%s/%s", configPath, ize))
+	file, err := os.Create(path)
 	if err != nil {
 		return err
 	}

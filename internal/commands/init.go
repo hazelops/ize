@@ -10,17 +10,19 @@ import (
 
 type initCmd struct {
 	*baseBuilderCmd
+
+	filePath string
 }
 
-func (b *commandsBuilder) newInitCmd() *mfaCmd {
-	cc := &mfaCmd{}
+func (b *commandsBuilder) newInitCmd() *initCmd {
+	cc := &initCmd{}
 
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "",
 		Long:  "",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := InitConfigFile()
+			err := InitConfigFile(cc.filePath)
 			if err != nil {
 				return err
 			}
@@ -29,12 +31,14 @@ func (b *commandsBuilder) newInitCmd() *mfaCmd {
 		},
 	}
 
+	cmd.Flags().StringVar(&cc.filePath, "path", os.Getenv("IZE_FILE"), "config file path")
+
 	cc.baseBuilderCmd = b.newBuilderBasicCdm(cmd)
 
 	return cc
 }
 
-func InitConfigFile() error {
+func InitConfigFile(path string) error {
 	var qs = []*survey.Question{
 		{
 			Prompt: &survey.Input{
@@ -87,7 +91,7 @@ func InitConfigFile() error {
 		return err
 	}
 
-	err = template.GenerateConfigFile(opts)
+	err = template.GenerateConfigFile(opts, path)
 	if err != nil {
 		return err
 	}
