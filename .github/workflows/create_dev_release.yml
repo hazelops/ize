@@ -25,13 +25,13 @@ jobs:
         sudo apt-get -y install ruby
         sudo gem install gemfury
 
-    - name: list of packages
-      run: |
-        fury versions ize  --api-token=${{ secrets.FURY_ACCESS_TOKEN }}
+    - name: list dev packages
+      run: fury versions ize --api-token=${{ secrets.FURY_ACCESS_TOKEN }}
       continue-on-error: true
-      
-    - name: remove old version of dev package
+
+    - name: yank old versions of dev
       run: |
+        fury yank ize --version=0.0.0~dev --api-token=${{ secrets.FURY_ACCESS_TOKEN }}
         fury yank ize --version=0.0.0~dev --api-token=${{ secrets.FURY_ACCESS_TOKEN }}
       continue-on-error: true
 
