@@ -20,6 +20,20 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: install gemfury
+      run: |
+        sudo apt-get -y install ruby
+        sudo gem install gemfury
+
+    - name: list of packages
+      run: |
+        fury versions ize  --api-token=${{ secrets.FURY_ACCESS_TOKEN }}
+
+    - name: remove old version of dev package
+      run: |
+        fury yank ize --version=0.0.0~dev --api-token=${{ secrets.FURY_ACCESS_TOKEN }}
+      continue-on-error: true
+
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
