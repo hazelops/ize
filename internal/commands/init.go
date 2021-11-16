@@ -14,8 +14,8 @@ type initCmd struct {
 	filePath string
 }
 
-func (b *commandsBuilder) newInitCmd() *initCmd {
-	cc := &initCmd{}
+func (b *commandsBuilder) newInitCmd() *infraCmd {
+	cc := &infraCmd{}
 
 	cmd := &cobra.Command{
 		Use:   "init",

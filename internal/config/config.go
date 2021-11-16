@@ -16,29 +16,12 @@ type Config struct {
 }
 
 type hclConfig struct {
-	AwsConfig        string `hcl:"aws_config,optional"`
-	TerraformVersion string `hcl:"terraform_version"`
-	Env              string `hcl:"env"`
-	AwsRegion        string `hcl:"aws_region"`
-	AwsProfile       string `hcl:"aws_profile"`
-	Namespace        string `hcl:"namespace"`
-
-	Service []*struct {
-		Type string   `hcl:"type,label"`
-		Name string   `hcl:"name,label"`
-		Body hcl.Body `hcl:",remain"`
-	} `hcl:"service,block"`
-}
-
-type Service struct {
-	Use    *Use     `hcl:"use,block"`
-	Body   hcl.Body `hcl:",body"`
-	Remain hcl.Body `hcl:",remain"`
-}
-
-type Use struct {
-	Type string   `hcl:",label"`
-	Body hcl.Body `hcl:",remain"`
+	TerraformVersion string      `hcl:"terraform_version"`
+	Env              string      `hcl:"env"`
+	AwsRegion        string      `hcl:"aws_region"`
+	AwsProfile       string      `hcl:"aws_profile"`
+	Namespace        string      `hcl:"namespace"`
+	Infra            []*hclInfra `hcl:"infra,block"`
 }
 
 func FindPath(filename string) (string, error) {
@@ -81,8 +64,4 @@ func Load(path string) (*Config, error) {
 	return &Config{
 		hclConfig: cfg,
 	}, nil
-}
-
-type Ecs struct {
-	TerraformStateBucketName string `hcl:"terraform_state_bucket_name"`
 }
