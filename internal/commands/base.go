@@ -60,6 +60,7 @@ func (b *commandsBuilder) addAll() *commandsBuilder {
 		b.newMfaCmd(),
 		b.newSSHCmd(),
 		b.newInitCmd(),
+		b.newDeployCmd(),
 	)
 
 	return b
@@ -181,8 +182,16 @@ func (cc *izeBuilderCommon) Init() error {
 	viper.SetDefault("TF_LOG", fmt.Sprintf(""))
 	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
 
+	if err = CheckRequiments(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func CheckRequiments() error {
 	//Check Docker and SSM Agent
-	_, err = CheckCommand("docker", []string{"info"})
+	_, err := CheckCommand("docker", []string{"info"})
 	if err != nil {
 		return errors.New("docker is not running or is not installed (visit https://www.docker.com/get-started)")
 	}
@@ -260,8 +269,4 @@ func (cc *izeBuilderCommon) Init() error {
 	}
 
 	return nil
-}
-
-type Ecs struct {
-	TerraformStateBucketName string `hcl:"terraform_state_bucket_name"`
 }
