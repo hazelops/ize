@@ -8,23 +8,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type infraCmd struct {
+type deployCmd struct {
 	*baseBuilderCmd
 
 	filePath string
 }
 
-func (b *commandsBuilder) newInfraCmd() *infraCmd {
-	cc := &infraCmd{}
+func (b *commandsBuilder) newDeployCmd() *deployCmd {
+	cc := &deployCmd{}
 
 	cmd := &cobra.Command{
-		Use:   "infra",
+		Use:   "deploy",
 		Short: "",
 		Long:  "",
 	}
 
 	cmd.AddCommand(&cobra.Command{
-		Use: "deploy",
+		Use: "infra",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := cc.Init()
 			if err != nil {

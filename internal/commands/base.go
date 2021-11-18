@@ -60,7 +60,7 @@ func (b *commandsBuilder) addAll() *commandsBuilder {
 		b.newMfaCmd(),
 		b.newSSHCmd(),
 		b.newInitCmd(),
-		b.newInfraCmd(),
+		b.newDeployCmd(),
 	)
 
 	return b
