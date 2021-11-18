@@ -25,14 +25,18 @@ jobs:
         sudo apt-get -y install ruby
         sudo gem install gemfury
 
-    - name: list dev packages
-      run: fury versions ize --api-token=${{ secrets.FURY_ACCESS_TOKEN }}
+    - name: list dev packages # Show list of linux packages in Gemfury
+      run: |
+        fury versions deb:ize  --api-token=${{ secrets.FURY_ACCESS_TOKEN }}
+        fury versions rpm:ize  --api-token=${{ secrets.FURY_ACCESS_TOKEN }}
       continue-on-error: true
 
-    - name: yank old versions of dev
+    - name: yank old versions of dev # Since we have AMD64 and ARM64 versions of ize - we need to run every remove twice
       run: |
-        fury yank ize --version=0.0.0~dev --api-token=${{ secrets.FURY_ACCESS_TOKEN }}
-        fury yank ize --version=0.0.0~dev --api-token=${{ secrets.FURY_ACCESS_TOKEN }}
+        fury yank deb:ize --version=0.0.0~dev --api-token=${{ secrets.FURY_ACCESS_TOKEN }}
+        fury yank deb:ize --version=0.0.0~dev --api-token=${{ secrets.FURY_ACCESS_TOKEN }}
+        fury yank rpm:ize --version=0.0.0~dev-1 --api-token=${{ secrets.FURY_ACCESS_TOKEN }}
+        fury yank rpm:ize --version=0.0.0~dev-1 --api-token=${{ secrets.FURY_ACCESS_TOKEN }}
       continue-on-error: true
 
     - name: Create Release
