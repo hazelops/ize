@@ -29,7 +29,7 @@ jobs:
       run: |
         fury versions deb:ize  --api-token=${{ secrets.FURY_ACCESS_TOKEN }}
         fury versions rpm:ize  --api-token=${{ secrets.FURY_ACCESS_TOKEN }}
-#      continue-on-error: true
+      continue-on-error: true
 
     - name: yank old versions of dev # Since we have AMD64 and ARM64 versions of ize - we need to run every remove action twice
       run: |
