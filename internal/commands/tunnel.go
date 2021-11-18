@@ -30,14 +30,14 @@ func (b *commandsBuilder) newTunnelCmd() *tunnelCmd {
 
 	cmd := &cobra.Command{
 		Use:   "tunnel",
-		Short: "",
+		Short: "Tunnel management.",
 		Long:  "",
 		RunE:  nil,
 	}
 
 	cmd.AddCommand(&cobra.Command{
 		Use:   "up",
-		Short: "",
+		Short: "Open tunnel.",
 		Long:  "",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := cc.Init()
@@ -57,7 +57,7 @@ func (b *commandsBuilder) newTunnelCmd() *tunnelCmd {
 	},
 		&cobra.Command{
 			Use:   "down",
-			Short: "",
+			Short: "Close tunnel.",
 			Long:  "",
 			RunE: func(cmd *cobra.Command, args []string) error {
 				err := cc.Init()
@@ -77,7 +77,7 @@ func (b *commandsBuilder) newTunnelCmd() *tunnelCmd {
 		},
 		&cobra.Command{
 			Use:   "status",
-			Short: "",
+			Short: "Show status tunnel.",
 			Long:  "",
 			RunE: func(cmd *cobra.Command, args []string) error {
 				err := cc.Init()
@@ -97,7 +97,7 @@ func (b *commandsBuilder) newTunnelCmd() *tunnelCmd {
 		},
 		&cobra.Command{
 			Use:   "ssh-key",
-			Short: "",
+			Short: "Send ssh key to remote server.",
 			Long:  "",
 			RunE: func(cmd *cobra.Command, args []string) error {
 				err := cc.Init()
@@ -117,7 +117,7 @@ func (b *commandsBuilder) newTunnelCmd() *tunnelCmd {
 		},
 		&cobra.Command{
 			Use:   "config",
-			Short: "",
+			Short: "Create ssh config.",
 			Long:  "",
 			RunE: func(cmd *cobra.Command, args []string) error {
 				err := cc.Init()

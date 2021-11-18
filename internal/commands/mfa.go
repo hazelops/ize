@@ -16,16 +16,14 @@ func (b *commandsBuilder) newMfaCmd() *mfaCmd {
 
 	cmd := &cobra.Command{
 		Use:              "mfa",
-		Short:            "",
-		Long:             "",
+		Short:            "MFA management.",
 		RunE:             nil,
 		TraverseChildren: true,
 	}
 
 	mfaCmd := &cobra.Command{
 		Use:   "export",
-		Short: "Generate terraform files",
-		Long:  "This command generate terraform files",
+		Short: "Print mfa credentials.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := cc.Init()
 			if err != nil {

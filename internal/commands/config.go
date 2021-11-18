@@ -29,8 +29,7 @@ func (b *commandsBuilder) newConfigCmd() *configCmd {
 
 	cmd := &cobra.Command{
 		Use:              "config",
-		Short:            "",
-		Long:             "",
+		Short:            "Manage configuration.",
 		RunE:             nil,
 		TraverseChildren: true,
 	}

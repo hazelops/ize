@@ -21,7 +21,7 @@ func (b *commandsBuilder) newSSHCmd() *sshCmd {
 
 	cmd := &cobra.Command{
 		Use:   "ssh",
-		Short: "",
+		Short: "SSH connection to ECS container of the app.",
 		Long:  "",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
