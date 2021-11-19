@@ -3,7 +3,7 @@ module github.com/hazelops/ize
 go 1.16
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.2 // indirect
+	github.com/AlecAivazis/survey/v2 v2.3.2
 	github.com/Masterminds/semver v1.5.0
 	github.com/aws/aws-sdk-go v1.40.56
 	github.com/containerd/containerd v1.5.4 // indirect
@@ -21,3 +21,5 @@ require (
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	gopkg.in/ini.v1 v1.62.0
 )
+
+replace github.com/spf13/pflag => github.com/cornfeedhobo/pflag v1.1.0
