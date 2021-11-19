@@ -36,8 +36,8 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 
 	initCmd := &cobra.Command{
 		Use:   "init",
-		Short: "Download terraform docker image",
-		Long:  `This command download terraform docker image of the specified version.`,
+		Short: "Run terraform init.",
+		Long:  `This command run terraform init command.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 0 {
 				if args[0] == "-h" || args[0] == "--help" {
@@ -74,9 +74,9 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 
 	applyCmd := &cobra.Command{
 		Use:   "apply",
-		Short: "Run terraform apply",
+		Short: "Run terraform apply.",
 		Long: `This command run terraform apply command. Terraform apply
-		command executes the actions proposed in a Terraform plan`,
+		command executes the actions proposed in a Terraform plan.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 0 {
 				if args[0] == "-h" || args[0] == "--help" {
@@ -114,7 +114,7 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 
 	planCmd := &cobra.Command{
 		Use:   "plan",
-		Short: "Run terraform plan",
+		Short: "Run terraform plan.",
 		Long: `This command run terraform plan command.
 		The terraform plan command creates an execution plan.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -154,7 +154,7 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 
 	destroyCmd := &cobra.Command{
 		Use:   "destroy",
-		Short: "Run terraform destroy",
+		Short: "Run terraform destroy.",
 		Long:  `This command run terraform destroy command.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 0 {

@@ -19,12 +19,12 @@ func (b *commandsBuilder) newDeployCmd() *deployCmd {
 
 	cmd := &cobra.Command{
 		Use:   "deploy",
-		Short: "",
-		Long:  "",
+		Short: "Manage deployments.",
 	}
 
 	cmd.AddCommand(&cobra.Command{
-		Use: "infra",
+		Use:   "infra",
+		Short: "Deploy infrastructures.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := cc.Init()
 			if err != nil {

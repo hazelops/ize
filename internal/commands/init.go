@@ -19,8 +19,7 @@ func (b *commandsBuilder) newInitCmd() *initCmd {
 
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "",
-		Long:  "",
+		Short: "Сreates an IZE configuration file.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := InitConfigFile(cc.filePath)
 			if err != nil {

@@ -12,7 +12,6 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"go.uber.org/zap/zapcore"
 )
 
 type baseCmd struct {
@@ -71,38 +70,31 @@ func (b *commandsBuilder) newBuilderBasicCdm(cmd *cobra.Command) *baseBuilderCmd
 	return bcmd
 }
 
+var (
+	// Used for flags.
+	ll      string
+	cfgFile string
+
+	rootCmd = &cobra.Command{
+		Use: "ize",
+		Long: fmt.Sprintf("%s\n%s\n%s",
+			pterm.White(pterm.Bold.Sprint("Welcome to IZE")),
+			pterm.Sprintf("%s %s", pterm.Blue("Docs:"), "ize.sh"),
+			pterm.Sprintf("%s %s", pterm.Green("Version:"), Version),
+		),
+		TraverseChildren: true,
+	}
+)
+
+func init() {
+	rootCmd.PersistentFlags().StringVarP(&ll, "log-level", "l", "", "enable debug message")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config-file", "c", "", "set config file name")
+}
+
 func (b *commandsBuilder) newIzeCmd() *izeCmd {
 	cc := &izeCmd{}
 
-	cc.baseBuilderCmd = b.newBuilderCmd(&cobra.Command{
-		Use:     "ize",
-		Version: GetVersionNumber(),
-		Short:   "A brief description of your application",
-		Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			cc.cmd.PersistentFlags().StringVarP(&cc.ll, "log-level", "l", "", "enable debug message")
-			cc.cmd.PersistentFlags().StringVarP(&cc.cfgFile, "config-file", "c", "", "set config file name")
-			cc.cmd.PersistentFlags().Parse(args)
-
-			var logLevel zapcore.Level
-
-			switch cc.ll {
-			case "info":
-				logLevel = zapcore.InfoLevel
-			case "debug":
-				logLevel = zapcore.DebugLevel
-			default:
-				logLevel = zapcore.WarnLevel
-			}
-
-			cc.log = logger.NewSugaredLogger(logLevel)
-		},
-	})
+	cc.baseBuilderCmd = b.newBuilderCmd(rootCmd)
 
 	cc.baseCmd.cmd.SilenceErrors = true
 	cc.cmd.SilenceUsage = true
@@ -131,15 +123,12 @@ func (b *commandsBuilder) build() *izeCmd {
 }
 
 type izeBuilderCommon struct {
-	cfgFile string
-	ll      string
-
 	config *config.Config
 	log    logger.StandartLogger
 }
 
 func (cc *izeBuilderCommon) Init() error {
-	config, err := cc.initConfig(cc.cfgFile)
+	config, err := cc.initConfig(cfgFile)
 	if err != nil {
 		return err
 	}
@@ -150,20 +139,6 @@ func (cc *izeBuilderCommon) Init() error {
 	if err != nil {
 		fmt.Println("Error getting current directory")
 	}
-
-	// for _, s := range config.Service {
-	// 	switch serviceType := s.Type; serviceType {
-	// 	case "ecs":
-	// 		ecsCfg := Ecs{}
-	// 		if s.Body != nil {
-	// 			if diag := gohcl.DecodeBody(s.Body, &hcl.EvalContext{}, &ecsCfg); diag.HasErrors() {
-	// 				return fmt.Errorf("error: %w", diag)
-	// 			}
-	// 		}
-	// 		app = ecsCfg
-	// 	}
-
-	// }
 
 	// Find home directory.
 	home, err := os.UserHomeDir()
