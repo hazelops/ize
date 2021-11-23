@@ -4,21 +4,23 @@ import (
 	"bufio"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
+	"os/signal"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/elliotchance/sshtunnel"
 	"github.com/hazelops/ize/internal/aws/utils"
+	"github.com/hazelops/ize/pkg/ssmsession.go"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type tunnelCmd struct {
@@ -47,7 +49,7 @@ func (b *commandsBuilder) newTunnelCmd() *tunnelCmd {
 
 			pterm.DefaultSection.Printfln("Running SSH Tunnel Up")
 
-			err = cc.BastionSHHTunnelUp()
+			err = cc.BastionSSHTunnelUp()
 			if err != nil {
 				return err
 			}
@@ -55,46 +57,6 @@ func (b *commandsBuilder) newTunnelCmd() *tunnelCmd {
 			return nil
 		},
 	},
-		&cobra.Command{
-			Use:   "down",
-			Short: "Close tunnel.",
-			Long:  "",
-			RunE: func(cmd *cobra.Command, args []string) error {
-				err := cc.Init()
-				if err != nil {
-					return err
-				}
-
-				pterm.DefaultSection.Printfln("Running SSH Tunnel Down")
-
-				err = cc.BastionSHHTunnelDown()
-				if err != nil {
-					return err
-				}
-
-				return nil
-			},
-		},
-		&cobra.Command{
-			Use:   "status",
-			Short: "Show status tunnel.",
-			Long:  "",
-			RunE: func(cmd *cobra.Command, args []string) error {
-				err := cc.Init()
-				if err != nil {
-					return err
-				}
-
-				pterm.DefaultSection.Printfln("Running SSH Tunnel Status")
-
-				err = cc.BastionSHHTunnelStatus()
-				if err != nil {
-					return err
-				}
-
-				return nil
-			},
-		},
 		&cobra.Command{
 			Use:   "ssh-key",
 			Short: "Send ssh key to remote server.",
@@ -108,33 +70,6 @@ func (b *commandsBuilder) newTunnelCmd() *tunnelCmd {
 				pterm.DefaultSection.Printfln("Passing SSH Key")
 
 				err = cc.SSHKeyEnsurePresent()
-				if err != nil {
-					return err
-				}
-
-				return nil
-			},
-		},
-		&cobra.Command{
-			Use:   "config",
-			Short: "Create ssh config.",
-			Long:  "",
-			RunE: func(cmd *cobra.Command, args []string) error {
-				err := cc.Init()
-				if err != nil {
-					return err
-				}
-
-				pterm.DefaultSection.Printfln("Passing SSH Key")
-
-				err = cc.SSHKeyEnsurePresent()
-				if err != nil {
-					return err
-				}
-
-				pterm.DefaultSection.Printfln("Getting SSH Tunnel config")
-
-				err = cc.SSHTunnelConfigCreate()
 				if err != nil {
 					return err
 				}
@@ -211,6 +146,7 @@ func (c *tunnelCmd) SSHKeyEnsurePresent() error {
 			"commands": {&command},
 		},
 	})
+
 	if err != nil {
 		pterm.Error.Printfln("Sending user SSH public Key")
 		return err
@@ -221,277 +157,145 @@ func (c *tunnelCmd) SSHKeyEnsurePresent() error {
 	return nil
 }
 
-func (c *tunnelCmd) SSHTunnelConfigCreate() error {
+func privateKeyPath() string {
+	return os.Getenv("HOME") + "/.ssh/id_rsa"
+}
+
+func (c *tunnelCmd) BastionSSHTunnelUp() error {
+	err := c.Init()
+	if err != nil {
+		return err
+	}
+
 	sess, err := utils.GetSession(&utils.SessionConfig{
 		Region:  c.config.AwsRegion,
 		Profile: c.config.AwsProfile,
 	})
 	if err != nil {
 		pterm.Error.Printfln("Getting AWS session")
-		return err
+		fmt.Println(err)
 	}
 
 	pterm.Success.Printfln("Getting AWS session")
 
-	ssmSvc := ssm.New(sess)
+	svc := ssm.New(sess)
 
-	out, err := ssmSvc.GetParameter(&ssm.GetParameterInput{
+	resp, err := svc.GetParameter(&ssm.GetParameterInput{
 		Name:           aws.String(fmt.Sprintf("/%s/terraform-output", "dev")),
 		WithDecryption: aws.Bool(true),
 	})
 	if err != nil {
-		pterm.Error.Printfln("Getting SSH Tunnel config")
+		pterm.Error.Printfln("Getting SSH forward config")
 		return err
 	}
 
 	var value []byte
 
-	value, err = base64.StdEncoding.DecodeString(*out.Parameter.Value)
+	value, err = base64.StdEncoding.DecodeString(*resp.Parameter.Value)
 	if err != nil {
-		pterm.Error.Printfln("Getting SSH Tunnel config")
+		pterm.Error.Printfln("Getting SSH forward config")
 		return err
 	}
 
-	var tOut terraformOutput
+	var config terraformOutput
 
-	err = json.Unmarshal(value, &tOut)
+	err = json.Unmarshal(value, &config)
 	if err != nil {
-		pterm.Error.Printfln("Getting SSH Tunnel config")
-		return err
-	}
-
-	pterm.Success.Printfln("Getting SSH Tunnel config")
-
-	f, err := os.Create(fmt.Sprintf("%s/%s", viper.GetString("ENV_DIR"), "ssh.config"))
-	if err != nil {
-		pterm.Error.Printfln("Writing SSH Tunnel config to file")
+		pterm.Error.Printfln("Getting SSH forward config")
 		return err
 	}
 
 	re, err := regexp.Compile(`LocalForward\s(?P<localPort>\d+)\s(?P<remoteHost>.+):(?P<remotePort>\d+)`)
 	if err != nil {
+		pterm.Error.Printfln("Getting SSH forward config")
 		return err
 	}
 
-	var config string
+	hosts := re.FindAllStringSubmatch(
+		strings.Join(config.SSHForwardConfig.Value, "\n"),
+		-1,
+	)
 
-	defer f.Close()
-	for _, v := range tOut.SSHForwardConfig.Value {
-		config += v + "\n"
-		_, err = fmt.Fprintln(f, v)
-		if err != nil {
-			pterm.Error.Printfln("Writing SSH Tunnel config to file")
-			return err
-		}
-	}
-
-	pterm.Success.Printfln("Writing SSH Tunnel config to file")
-
-	res := re.FindAllStringSubmatch(config, -1)
-
-	ports := "SSH Tunnel Available:\n"
-
-	for _, v := range res {
-		ports += fmt.Sprintf("%s:%s => localhost:%s\n", v[2], v[3], v[1])
-	}
-
-	pterm.Info.Print(ports)
-
-	return nil
-}
-
-func (c *tunnelCmd) BastionSHHTunnelUp() error {
-	var err error
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  c.config.AwsRegion,
-		Profile: c.config.AwsProfile,
-	})
-	if err != nil {
-		pterm.Error.Printfln("Getting AWS session")
+	if len(hosts) == 0 {
+		pterm.Error.Printfln("Getting SSH forward config")
 		return err
 	}
 
-	pterm.Success.Printfln("Getting AWS session")
+	pterm.Success.Printfln("Getting SSH forward config")
 
-	ssmSvc := ssm.New(sess)
+	input := &ssm.StartSessionInput{
+		DocumentName: aws.String("AWS-StartPortForwardingSession"),
+		Parameters: map[string][]*string{
+			"portNumber":      {aws.String(strconv.Itoa(22))},
+			"localPortNumber": {aws.String("30022")},
+		},
+		Target: aws.String("i-03a1e68e16db39dea"),
+	}
 
-	out, err := ssmSvc.GetParameter(&ssm.GetParameterInput{
-		Name:           aws.String(fmt.Sprintf("/%s/terraform-output", "dev")),
-		WithDecryption: aws.Bool(true),
-	})
+	out, err := svc.StartSession(input)
 	if err != nil {
-		pterm.Error.Printfln("Getting tunnel up command")
+		pterm.Error.Printfln("Start session")
 		return err
 	}
 
-	var value []byte
+	pterm.Success.Printfln("Start session")
 
-	value, err = base64.StdEncoding.DecodeString(*out.Parameter.Value)
+	err = ssmsession.NewSSMPluginCommand(c.config.AwsRegion).Forward(out, input)
 	if err != nil {
-		pterm.Error.Printfln("Getting tunnel up command")
-		return err
-	}
-
-	var tOut terraformOutput
-
-	err = json.Unmarshal(value, &tOut)
-	if err != nil {
-		pterm.Error.Printfln("Getting tunnel up command")
-		return err
-	}
-
-	command := strings.Split(tOut.Cmd.Value.Tunnel.Up, " ")
-	command = command[:len(command)-1]
-	command = append(command, "-F")
-	command = append(command, fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR")))
-
-	pterm.Success.Printfln("Getting tunnel up command")
-
-	err = CallProcess(command[0], command[1:])
-	if err != nil {
-		pterm.Error.Printfln("Running tunnel up command")
 		fmt.Println(err)
+		pterm.Error.Printfln("Forward server to localhost")
 	}
 
-	pterm.Success.Printfln("Running tunnel up command")
+	pterm.Success.Printfln("Forward server to localhost")
 
-	return nil
-}
+	for _, h := range hosts {
+		destinationHost := h[2] + ":" + h[3]
 
-func (c *tunnelCmd) BastionSHHTunnelStatus() error {
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  c.config.AwsRegion,
-		Profile: c.config.AwsProfile,
-	})
-	if err != nil {
-		pterm.Error.Printfln("Getting AWS session")
-		return err
+		localPort := h[1]
+
+		tunnel := sshtunnel.NewSSHTunnel(
+			"ubuntu@localhost",
+			sshtunnel.PrivateKeyFile(privateKeyPath()),
+			destinationHost,
+			localPort,
+		)
+
+		tunnel.Server.Port = 30022
+
+		go func() {
+			if err := tunnel.Start(); err != nil {
+				pterm.Error.Printfln("Forward destination hosts to localhost")
+				os.Exit(1)
+			}
+		}()
+		pterm.Info.Printfln("%s:%s => localhost:%s", h[2], h[3], h[1])
+		time.Sleep(100 * time.Millisecond)
 	}
 
-	pterm.Success.Printfln("Getting AWS session")
+	pterm.Success.Printfln("Forward destination hosts to localhost")
 
-	ssmSvc := ssm.New(sess)
+	sigs := make(chan os.Signal, 1)
+	done := make(chan bool, 1)
 
-	out, err := ssmSvc.GetParameter(&ssm.GetParameterInput{
-		Name:           aws.String(fmt.Sprintf("/%s/terraform-output", "dev")),
-		WithDecryption: aws.Bool(true),
-	})
-	if err != nil {
-		pterm.Error.Printfln("Getting tunnel status command")
-		return err
-	}
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	var value []byte
+	go func() {
+		<-sigs
+		fmt.Println()
+		done <- true
+	}()
 
-	value, err = base64.StdEncoding.DecodeString(*out.Parameter.Value)
-	if err != nil {
-		pterm.Error.Printfln("Getting tunnel status command")
-		return err
-	}
+	pterm.Info.Println("Press Ctrl-C to close the connections.")
+	<-done
+	pterm.Success.Println("Сlosing connections")
 
-	var tOut terraformOutput
-
-	err = json.Unmarshal(value, &tOut)
-	if err != nil {
-		pterm.Error.Printfln("Getting tunnel status command")
-		return err
-	}
-
-	command := strings.Split(tOut.Cmd.Value.Tunnel.Status, " ")
-	command = append(command, "-F")
-	command = append(command, fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR")))
-
-	pterm.Success.Printfln("Getting tunnel status command")
-
-	err = CallProcess(command[0], command[1:])
-	if err != nil {
-		exiterr := err.(*exec.ExitError)
-		status := exiterr.Sys().(syscall.WaitStatus)
-		if status.ExitStatus() != 255 {
-			pterm.Error.Printfln("Running tunnel down command")
-			return err
-		}
-	}
-
-	pterm.Success.Printfln("Running tunnel status command")
-
-	return nil
-}
-
-func (c *tunnelCmd) BastionSHHTunnelDown() error {
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  c.config.AwsRegion,
-		Profile: c.config.AwsProfile,
-	})
-	if err != nil {
-		pterm.Error.Printfln("Getting AWS session")
-		return err
-	}
-
-	pterm.Success.Printfln("Getting AWS session")
-
-	ssmSvc := ssm.New(sess)
-
-	out, err := ssmSvc.GetParameter(&ssm.GetParameterInput{
-		Name:           aws.String(fmt.Sprintf("/%s/terraform-output", "dev")),
-		WithDecryption: aws.Bool(true),
-	})
-	if err != nil {
-		pterm.Error.Printfln("Getting tunnel down command")
-		return err
-	}
-
-	var value []byte
-
-	value, err = base64.StdEncoding.DecodeString(*out.Parameter.Value)
-	if err != nil {
-		pterm.Error.Printfln("Getting tunnel down command")
-		return err
-	}
-
-	var tOut terraformOutput
-
-	err = json.Unmarshal(value, &tOut)
-	if err != nil {
-		pterm.Error.Printfln("Getting tunnel down command")
-		return err
-	}
-
-	command := strings.Split(tOut.Cmd.Value.Tunnel.Down, " ")
-	command = command[:len(command)-1]
-	command = append(command, "-F")
-	command = append(command, fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR")))
-
-	pterm.Success.Printfln("Getting tunnel down command")
-
-	err = CallProcess(command[0], command[1:])
-	if err != nil {
-		exiterr := err.(*exec.ExitError)
-		status := exiterr.Sys().(syscall.WaitStatus)
-		if status.ExitStatus() != 255 {
-			pterm.Error.Printfln("Running tunnel down command")
-			return err
-		}
-	}
-
-	pterm.Success.Printfln("Running tunnel down command")
-
-	return nil
+	return err
 }
 
 type terraformOutput struct {
 	BastionInstanceID struct {
 		Value string `json:"value,omitempty"`
 	} `json:"bastion_instance_id,omitempty"`
-	Cmd struct {
-		Value struct {
-			Tunnel struct {
-				Down   string `json:"down,omitempty"`
-				Status string `json:"status,omitempty"`
-				Up     string `json:"up,omitempty"`
-			} `json:"tunnel,omitempty"`
-		} `json:"value,omitempty"`
-	} `json:"cmd,omitempty"`
 	SSHForwardConfig struct {
 		Value []string `json:"value,omitempty"`
 	} `json:"ssh_forward_config,omitempty"`
@@ -516,44 +320,4 @@ func getPublicKey() (string, error) {
 	}
 
 	return key, nil
-}
-
-func CallProcess(app string, flags []string) error {
-	if app == "" {
-		return errors.New("application is not specified")
-	}
-
-	errc := make(chan error, 1)
-
-	cmd := exec.Command(app, flags...)
-
-	stderrPipe, err := cmd.StderrPipe()
-	if err != nil {
-		return err
-	}
-
-	if err = cmd.Start(); err != nil {
-		return err
-	}
-
-	go func() {
-		defer close(errc)
-		buf := bufio.NewReader(stderrPipe)
-		for {
-			line, err := buf.ReadString('\n')
-			if len(line) > 0 {
-				pterm.Info.Printfln(strings.TrimSuffix(line, "\n"))
-			}
-			if err != nil {
-				return
-			}
-		}
-	}()
-
-	err = cmd.Wait()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
