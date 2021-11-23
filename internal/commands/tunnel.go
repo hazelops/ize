@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"regexp"
@@ -223,13 +224,19 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 
 	pterm.Success.Printfln("Getting SSH forward config")
 
+	localport, err := getFreePort()
+	if err != nil {
+		pterm.Error.Printfln("Start session")
+		return err
+	}
+
 	input := &ssm.StartSessionInput{
 		DocumentName: aws.String("AWS-StartPortForwardingSession"),
 		Parameters: map[string][]*string{
 			"portNumber":      {aws.String(strconv.Itoa(22))},
-			"localPortNumber": {aws.String("30022")},
+			"localPortNumber": {aws.String(strconv.Itoa(localport))},
 		},
-		Target: aws.String("i-03a1e68e16db39dea"),
+		Target: &config.BastionInstanceID.Value,
 	}
 
 	out, err := svc.StartSession(input)
@@ -260,11 +267,11 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 			localPort,
 		)
 
-		tunnel.Server.Port = 30022
+		tunnel.Server.Port = localport
 
 		go func() {
 			if err := tunnel.Start(); err != nil {
-				pterm.Error.Printfln("Forward destination hosts to localhost")
+				pterm.Error.Printfln("Forward destination host to localhost")
 				os.Exit(1)
 			}
 		}()
@@ -285,7 +292,7 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 		done <- true
 	}()
 
-	pterm.Info.Println("Press Ctrl-C to close the connections.")
+	pterm.Info.Println("Press Ctrl-C to to stop the tunnel.")
 	<-done
 	pterm.Success.Println("Сlosing connections")
 
@@ -320,4 +327,18 @@ func getPublicKey() (string, error) {
 	}
 
 	return key, nil
+}
+
+func getFreePort() (int, error) {
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		return 0, err
+	}
+
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return 0, err
+	}
+	defer l.Close()
+	return l.Addr().(*net.TCPAddr).Port, nil
 }
