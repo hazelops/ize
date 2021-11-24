@@ -3,8 +3,7 @@ package commands
 import (
 	"fmt"
 
-	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/gohcl"
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 )
 
@@ -31,31 +30,32 @@ func (b *commandsBuilder) newDeployCmd() *deployCmd {
 				return err
 			}
 
-			for _, i := range cc.config.Infra {
-				switch i.Provider {
+			for pName, pBlock := range cc.config.Infra {
+
+				switch pName {
 				case "terraform":
-					var terrafromConfig hclTerraform
-					diag := gohcl.DecodeBody(i.Body, &hcl.EvalContext{}, &terrafromConfig)
-					if diag.HasErrors() {
-						return diag
-					}
+					for _, block := range pBlock {
 
-					if terrafromConfig.Profile == "" {
-						terrafromConfig.Profile = cc.config.AwsProfile
-					}
-					if terrafromConfig.Region == "" {
-						terrafromConfig.Region = cc.config.AwsRegion
-					}
-					if terrafromConfig.Version == "" {
-						terrafromConfig.Version = cc.config.TerraformVersion
-					}
+						var terrafromConfig hclTerraform
+						mapstructure.Decode(block, &terrafromConfig)
 
-					fmt.Println(terrafromConfig)
+						if terrafromConfig.Profile == "" {
+							terrafromConfig.Profile = cc.config.AwsProfile
+						}
+						if terrafromConfig.Region == "" {
+							terrafromConfig.Region = cc.config.AwsRegion
+						}
+						if terrafromConfig.Version == "" {
+							terrafromConfig.Version = cc.config.TerraformVersion
+						}
+
+						fmt.Println(terrafromConfig)
+
+					}
 				default:
-					return fmt.Errorf("provider %s is not supported", i.Provider)
+					return fmt.Errorf("provider %s is not supported", pName)
 				}
 			}
-
 			return nil
 		},
 	})
@@ -66,8 +66,8 @@ func (b *commandsBuilder) newDeployCmd() *deployCmd {
 }
 
 type hclTerraform struct {
-	RootDir string `hcl:"root_dir,optional"`
-	Version string `hcl:"terraform_version,optional"`
-	Region  string `hcl:"aws_region,optional"`
-	Profile string `hcl:"aws_profile,optional"`
+	RootDir string `mapstructure:"root_dir,optional"`
+	Version string `mapstructure:"terraform_version,optional"`
+	Region  string `mapstructure:"aws_region,optional"`
+	Profile string `mapstructure:"aws_profile,optional"`
 }

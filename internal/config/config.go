@@ -4,24 +4,22 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/hclsimple"
+	"github.com/spf13/viper"
 )
 
 const Filename = "ize.hcl"
 
 type Config struct {
 	hclConfig
-	pathData map[string]string
 }
 
 type hclConfig struct {
-	TerraformVersion string      `hcl:"terraform_version"`
-	Env              string      `hcl:"env"`
-	AwsRegion        string      `hcl:"aws_region"`
-	AwsProfile       string      `hcl:"aws_profile"`
-	Namespace        string      `hcl:"namespace"`
-	Infra            []*hclInfra `hcl:"infra,block"`
+	TerraformVersion string                                  `mapstructure:"terraform_version"`
+	Env              string                                  `mapstructure:"env"`
+	AwsRegion        string                                  `mapstructure:"aws_region"`
+	AwsProfile       string                                  `mapstructure:"aws_profile"`
+	Namespace        string                                  `mapstructure:"namespace"`
+	Infra            map[string]map[string]map[string]string `mapstructure:"infra,block"`
 }
 
 func FindPath(filename string) (string, error) {
@@ -44,7 +42,6 @@ func FindPath(filename string) (string, error) {
 }
 
 func Load(path string) (*Config, error) {
-	var ctx *hcl.EvalContext
 
 	// We require an absolute path for the path so we can set the path vars
 	if !filepath.IsAbs(path) {
@@ -55,9 +52,17 @@ func Load(path string) (*Config, error) {
 		}
 	}
 
-	// Decode
+	viper.SetConfigFile(path)
+	if err := viper.ReadInConfig(); err != nil {
+		return nil, err
+	}
+
+	viper.SetEnvPrefix("ize")
+	viper.AutomaticEnv()
+
+	//Decode
 	var cfg hclConfig
-	if err := hclsimple.DecodeFile(path, ctx, &cfg); err != nil {
+	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, err
 	}
 

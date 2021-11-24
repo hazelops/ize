@@ -89,6 +89,13 @@ var (
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&ll, "log-level", "l", "", "enable debug message")
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config-file", "c", "", "set config file name")
+
+	rootCmd.Flags().StringP("env", "e", "", "set enviroment name")
+	rootCmd.Flags().StringP("aws_profile", "p", "", "set AWS profile")
+	rootCmd.Flags().StringP("aws_region", "r", "", "set AWS region")
+	rootCmd.Flags().StringP("namespace", "n", "", "set namespace")
+
+	viper.BindPFlags(rootCmd.Flags())
 }
 
 func (b *commandsBuilder) newIzeCmd() *izeCmd {
