@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/spf13/viper"
@@ -23,19 +24,21 @@ type hclConfig struct {
 }
 
 func FindPath(filename string) (string, error) {
-	var err error
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", err
+	if !path.IsAbs(filename) {
+		wd, err := os.Getwd()
+		if err != nil {
+			return "", err
+		}
+
+		if filename == "" {
+			filename = Filename
+		}
+
+		filename = filepath.Join(wd, filename)
 	}
 
-	if filename == "" {
-		filename = Filename
-	}
-
-	path := filepath.Join(wd, filename)
-	if _, err := os.Stat(path); err == nil {
-		return path, nil
+	if _, err := os.Stat(filename); err == nil {
+		return filename, nil
 	} else {
 		return "", err
 	}
@@ -56,9 +59,6 @@ func Load(path string) (*Config, error) {
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
 	}
-
-	viper.SetEnvPrefix("ize")
-	viper.AutomaticEnv()
 
 	//Decode
 	var cfg hclConfig
