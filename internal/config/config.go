@@ -46,7 +46,6 @@ func FindPath(filename string) (string, error) {
 
 func Load(path string) (*Config, error) {
 
-	// We require an absolute path for the path so we can set the path vars
 	if !filepath.IsAbs(path) {
 		var err error
 		path, err = filepath.Abs(path)

@@ -42,7 +42,7 @@ func InitConfigFile(path string) error {
 		{
 			Prompt: &survey.Input{
 				Message: " Env:",
-				Default: os.Getenv("ENV"),
+				Default: os.Getenv("IZE_ENV"),
 			},
 			Validate: survey.Required,
 			Name:     "env",
@@ -50,7 +50,7 @@ func InitConfigFile(path string) error {
 		{
 			Prompt: &survey.Input{
 				Message: " aws region:",
-				Default: os.Getenv("AWS_REGION"),
+				Default: os.Getenv("IZE_AWS_REGION"),
 			},
 			Validate: survey.Required,
 			Name:     "aws_region",
@@ -58,7 +58,7 @@ func InitConfigFile(path string) error {
 		{
 			Prompt: &survey.Input{
 				Message: " aws profile:",
-				Default: os.Getenv("AWS_PROFILE"),
+				Default: os.Getenv("IZE_AWS_PROFILE"),
 			},
 			Validate: survey.Required,
 			Name:     "aws_profile",
@@ -66,6 +66,7 @@ func InitConfigFile(path string) error {
 		{
 			Prompt: &survey.Input{
 				Message: " namespace:",
+				Default: os.Getenv("IZE_NAMESPACE"),
 			},
 			Validate: survey.Required,
 			Name:     "namespace",
