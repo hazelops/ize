@@ -71,10 +71,6 @@ func (b *commandsBuilder) newBuilderBasicCdm(cmd *cobra.Command) *baseBuilderCmd
 }
 
 var (
-	// Used for flags.
-	ll      string
-	cfgFile string
-
 	rootCmd = &cobra.Command{
 		Use: "ize",
 		Long: fmt.Sprintf("%s\n%s\n%s",
@@ -87,8 +83,16 @@ var (
 )
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&ll, "log-level", "l", "", "enable debug message")
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config-file", "c", "", "set config file name")
+	rootCmd.PersistentFlags().StringP("log_level", "l", "", "enable debug message")
+	rootCmd.PersistentFlags().StringP("config_file", "c", "", "set config file name")
+
+	rootCmd.Flags().StringP("env", "e", "", "set enviroment name")
+	rootCmd.Flags().StringP("aws_profile", "p", "", "set AWS profile")
+	rootCmd.Flags().StringP("aws_region", "r", "", "set AWS region")
+	rootCmd.Flags().StringP("namespace", "n", "", "set namespace")
+
+	viper.BindPFlags(rootCmd.Flags())
+	viper.BindPFlags(rootCmd.PersistentFlags())
 }
 
 func (b *commandsBuilder) newIzeCmd() *izeCmd {
@@ -128,7 +132,10 @@ type izeBuilderCommon struct {
 }
 
 func (cc *izeBuilderCommon) Init() error {
-	config, err := cc.initConfig(cfgFile)
+	viper.SetEnvPrefix("IZE")
+	viper.AutomaticEnv()
+
+	config, err := cc.initConfig(viper.GetString("config_file"))
 	if err != nil {
 		return err
 	}
