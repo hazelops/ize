@@ -38,11 +38,31 @@ func (b *commandsBuilder) newInitCmd() *initCmd {
 }
 
 func InitConfigFile(path string) error {
+	env, exist := os.LookupEnv("IZE_ENV")
+	if !exist {
+		env = os.Getenv("ENV")
+	}
+
+	region, exist := os.LookupEnv("IZE_AWS_REGION")
+	if !exist {
+		region = os.Getenv("AWS_REGION")
+	}
+
+	profile, exist := os.LookupEnv("IZE_AWS_PROFILE")
+	if !exist {
+		profile = os.Getenv("AWS_PROFILE")
+	}
+
+	namespace, exist := os.LookupEnv("IZE_NAMESPACE")
+	if !exist {
+		namespace = os.Getenv("NAMESPACE")
+	}
+
 	var qs = []*survey.Question{
 		{
 			Prompt: &survey.Input{
-				Message: " Env:",
-				Default: os.Getenv("IZE_ENV"),
+				Message: " env:",
+				Default: env,
 			},
 			Validate: survey.Required,
 			Name:     "env",
@@ -50,7 +70,7 @@ func InitConfigFile(path string) error {
 		{
 			Prompt: &survey.Input{
 				Message: " aws region:",
-				Default: os.Getenv("IZE_AWS_REGION"),
+				Default: region,
 			},
 			Validate: survey.Required,
 			Name:     "aws_region",
@@ -58,7 +78,7 @@ func InitConfigFile(path string) error {
 		{
 			Prompt: &survey.Input{
 				Message: " aws profile:",
-				Default: os.Getenv("IZE_AWS_PROFILE"),
+				Default: profile,
 			},
 			Validate: survey.Required,
 			Name:     "aws_profile",
@@ -66,7 +86,7 @@ func InitConfigFile(path string) error {
 		{
 			Prompt: &survey.Input{
 				Message: " namespace:",
-				Default: os.Getenv("IZE_NAMESPACE"),
+				Default: namespace,
 			},
 			Validate: survey.Required,
 			Name:     "namespace",
