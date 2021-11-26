@@ -4,7 +4,8 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"os"
+	"io"
+	"io/ioutil"
 	"regexp"
 	"strings"
 
@@ -12,8 +13,6 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/moby/term"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -222,13 +221,7 @@ func runTerraform(cc *terraformCmd, opts TerraformRunOption) error {
 
 	pterm.Success.Printfln("Pulling terraform image %v:%v/n", imageName, imageTag)
 
-	if cc.log.SugaredLogger != nil {
-		termFd, _ := term.GetFdInfo(os.Stderr)
-		err = jsonmessage.DisplayJSONMessagesStream(out, &cc.log, termFd, true, nil)
-		if err != nil {
-			return err
-		}
-	}
+	io.Copy(ioutil.Discard, out)
 
 	cont, err := cli.ContainerCreate(
 		context.Background(),
