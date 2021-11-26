@@ -75,7 +75,7 @@ var (
 		Use: "ize",
 		Long: fmt.Sprintf("%s\n%s\n%s",
 			pterm.White(pterm.Bold.Sprint("Welcome to IZE")),
-			pterm.Sprintf("%s %s", pterm.Blue("Docs:"), "ize.sh"),
+			pterm.Sprintf("%s %s", pterm.Blue("Docs:"), "https://ize.sh"),
 			pterm.Sprintf("%s %s", pterm.Green("Version:"), Version),
 		),
 		TraverseChildren: true,
@@ -83,13 +83,20 @@ var (
 )
 
 func init() {
-	rootCmd.PersistentFlags().StringP("log_level", "l", "", "enable debug message")
-	rootCmd.PersistentFlags().StringP("config_file", "c", "", "set config file name")
+	rootCmd.PersistentFlags().StringP("log-level", "l", "", "enable debug messages")
+	rootCmd.PersistentFlags().StringP("config-file", "c", "", "set config file name")
 
-	rootCmd.Flags().StringP("env", "e", "", "set enviroment name")
-	rootCmd.Flags().StringP("aws_profile", "p", "", "set AWS profile")
-	rootCmd.Flags().StringP("aws_region", "r", "", "set AWS region")
+	rootCmd.Flags().StringP("env", "e", "", "set environment name")
+	rootCmd.Flags().StringP("aws-profile", "p", "", "set AWS profile")
+	rootCmd.Flags().StringP("aws-region", "r", "", "set AWS region")
+
 	rootCmd.Flags().StringP("namespace", "n", "", "set namespace")
+
+	//Bind viper key to a flag (required for flags/parameters that are more than 1 word)
+	viper.BindPFlag("log_level", rootCmd.PersistentFlags().Lookup("log-level"))
+	viper.BindPFlag("config_file", rootCmd.PersistentFlags().Lookup("config-file"))
+	viper.BindPFlag("aws_profile", rootCmd.Flags().Lookup("aws-profile"))
+	viper.BindPFlag("aws_region", rootCmd.Flags().Lookup("aws-region"))
 
 	viper.BindPFlags(rootCmd.Flags())
 	viper.BindPFlags(rootCmd.PersistentFlags())
@@ -164,14 +171,14 @@ func (cc *izeBuilderCommon) Init() error {
 	viper.SetDefault("TF_LOG", fmt.Sprintf(""))
 	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
 
-	if err = CheckRequiments(); err != nil {
+	if err = CheckRequirements(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func CheckRequiments() error {
+func CheckRequirements() error {
 	//Check Docker and SSM Agent
 	_, err := CheckCommand("docker", []string{"info"})
 	if err != nil {
