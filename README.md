@@ -117,7 +117,7 @@ You will need to start a new shell for this setup to take effect.
 
 ##### 2. BASH:
 
-Autocompletion script depends on the ‘bash-completion’ package.
+Autocompletion script depends on the `bash-completion` package.
 
 If it is not installed already, you can install it via your OS’s package manager.
 
