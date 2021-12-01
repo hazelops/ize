@@ -75,6 +75,22 @@ sudo apt-get install ize=<version>
 sudo apt-get purge ize
 ```
 
+
+### Ize installation from source:
+
+#### Prerequisites:
+
+- GO version should be 1.16+
+- `GOPATH` environment variable is set to `~/go`
+
+To install Ize from source download code or clone it from this repo. After this you should run:
+
+```shell
+go mod download
+make install
+```
+
+
 ### Ize autocompletion scripts:
 
 You could use integrated option to add autocompletion to Ize commands (bash, fish, zsh, powershell). In this manual we will describe it only for zsh and bash.
@@ -144,19 +160,6 @@ ize completion bash > /etc/bash_completion.d/ize
 
 You will need to start a new shell for this setup to take effect.
 
-### Ize installation from source:
-
-#### Prerequisites:
-
-- GO version should be 1.16+
-- `GOPATH` environment variable is set to `~/go`
-
-To install Ize from source download code or clone it from this repo. After this you should run:
-
-```shell
-go mod download
-make install
-```
 
 ### To use Ize, you should create configuration file like this (ize.hcl):
 
