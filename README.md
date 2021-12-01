@@ -1,6 +1,6 @@
 # Ize Tool (WIP)
 
-This tool is designed to be an opinionated infrastructure wrapper that allows to use multiple tools in one infra: terraform, serverless, waypoint. 
+This tool is designed to be an opinionated infrastructure wrapper that allows to use multiple tools in one infra: terraform, serverless, waypoint.
 It combines build and deploy workflows in one.
 
 This tool is using configuration file that describes the workflows.
@@ -38,7 +38,7 @@ brew uninstall ize
 brew tap hazelops/ize
 ```
 
-4.3 Install `ize`: 
+4.3 Install `ize`:
 
 ```shell
 brew install ize
@@ -75,6 +75,7 @@ sudo apt-get install ize=<version>
 sudo apt-get purge ize
 ```
 
+
 ### Ize installation from source:
 
 #### Prerequisites:
@@ -89,6 +90,77 @@ go mod download
 make install
 ```
 
+
+### Ize autocompletion scripts:
+
+You could use integrated option to add autocompletion to Ize commands (bash, fish, zsh, powershell). In this manual we will describe it only for zsh and bash.
+
+To add autocompletion script, use the following manual:
+
+#### On MacOS systems:
+
+##### 1. ZSH:
+
+If shell completion is not already enabled in your environment you will need to enable it. You should execute the following once:
+
+```shell
+echo "autoload -U compinit; compinit" >>  ~/.zshrc
+```
+
+To load completions for every new session, execute once:
+
+###### 1.1 macOS:
+
+```shell
+ize completion zsh > /usr/local/share/zsh/site-functions/_ize
+```
+
+###### 1.2 Linux:
+
+You will need root privileges.
+
+```shell
+sudo zsh
+```
+Input your root password and run:
+
+```shell
+ize completion zsh > "${fpath[1]}/_ize"
+```
+
+You will need to start a new shell for this setup to take effect.
+
+
+##### 2. BASH:
+
+Autocompletion script depends on the `bash-completion` package.
+
+If it is not installed already, you can install it via your OS’s package manager.
+
+To load completions for every new session, you should execute once:
+
+###### 2.1 MacOS:
+
+```shell
+ize completion bash > /usr/local/etc/bash_completion.d/ize
+```
+
+###### 2.2 Linux:
+
+You will need root privileges.
+
+```shell
+sudo bash
+```
+Input your root password and run:
+
+```shell
+ize completion bash > /etc/bash_completion.d/ize
+```
+
+You will need to start a new shell for this setup to take effect.
+
+
 ### To use Ize, you should create configuration file like this (ize.hcl):
 
 ```hcl
@@ -99,11 +171,6 @@ aws_profile       = "company-dev"
 aws_region        = "us-east-1"
 namespace         = "company"
 ```
-
-
-
-
-
 
 ### Application Lifecycle
 (acts as an ideation doc, stuff is not working)
