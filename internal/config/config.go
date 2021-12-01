@@ -15,12 +15,12 @@ type Config struct {
 }
 
 type hclConfig struct {
-	TerraformVersion string                                  `mapstructure:"terraform_version"`
-	Env              string                                  `mapstructure:"env"`
-	AwsRegion        string                                  `mapstructure:"aws_region"`
-	AwsProfile       string                                  `mapstructure:"aws_profile"`
-	Namespace        string                                  `mapstructure:"namespace"`
-	Infra            map[string]map[string]map[string]string `mapstructure:"infra,block"`
+	TerraformVersion string                            `mapstructure:"terraform_version"`
+	Env              string                            `mapstructure:"env"`
+	AwsRegion        string                            `mapstructure:"aws_region"`
+	AwsProfile       string                            `mapstructure:"aws_profile"`
+	Namespace        string                            `mapstructure:"namespace"`
+	Infra            map[string]map[string]interface{} `mapstructure:"infra"`
 }
 
 func FindPath(filename string) (string, error) {
