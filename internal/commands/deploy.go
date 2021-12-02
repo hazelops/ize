@@ -30,32 +30,31 @@ func (b *commandsBuilder) newDeployCmd() *deployCmd {
 				return err
 			}
 
-			for pName, pBlock := range cc.config.Infra {
+			fmt.Println("Config:", *cc.config)
 
-				switch pName {
+			for pname, provider := range cc.config.Infra {
+				switch pname {
 				case "terraform":
-					for _, block := range pBlock {
+					var terraform map[string]hclTerraform = make(map[string]hclTerraform)
+					var t hclTerraform
+					mapstructure.Decode(provider, &t)
+					terraform["main"] = t
 
-						var terrafromConfig hclTerraform
-						mapstructure.Decode(block, &terrafromConfig)
+					for sname, subitem := range provider {
 
-						if terrafromConfig.Profile == "" {
-							terrafromConfig.Profile = cc.config.AwsProfile
+						i, ok := subitem.(map[string]interface{})
+						if ok {
+							mapstructure.Decode(i, &t)
+							terraform[sname] = t
 						}
-						if terrafromConfig.Region == "" {
-							terrafromConfig.Region = cc.config.AwsRegion
-						}
-						if terrafromConfig.Version == "" {
-							terrafromConfig.Version = cc.config.TerraformVersion
-						}
-
-						fmt.Println(terrafromConfig)
-
 					}
+					fmt.Println()
+					fmt.Println("Terraform block:", terraform)
 				default:
-					return fmt.Errorf("provider %s is not supported", pName)
+					return fmt.Errorf("provider %s is not supported", pname)
 				}
 			}
+
 			return nil
 		},
 	})
