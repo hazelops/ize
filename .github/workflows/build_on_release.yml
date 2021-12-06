@@ -35,3 +35,20 @@ jobs:
         HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
         RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
         FURY_TOKEN: ${{ secrets.FURY_PUSH_TOKEN }}
+
+    - name: create docs
+      run: |
+        mkdir -p commands
+        go run ./cmd gendoc
+
+    - name: Pushes ize commands to ize.sh
+      uses: dmnemec/copy_file_to_another_repo_action@main
+      env:
+        API_TOKEN_GITHUB: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+      with:
+        source_file: 'commands'
+        destination_repo: 'hazelops/ize.sh'
+        destination_folder: 'content'
+        user_email: 'ize@hazelops.com'
+        user_name: 'ize'
+        commit_message: 'Add commands from Ize'
