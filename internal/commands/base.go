@@ -3,13 +3,14 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"os"
+	"path"
+	"runtime"
 	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/pkg/logger"
 	"github.com/pterm/pterm"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -128,45 +129,51 @@ func (b *commandsBuilder) build() *izeCmd {
 
 type izeBuilderCommon struct {
 	config *config.Config
-	log    logger.StandartLogger
+	log    logrus.Logger
 }
 
 func (cc *izeBuilderCommon) Init() error {
 	viper.SetEnvPrefix("IZE")
 	viper.AutomaticEnv()
 
-	config, err := cc.initConfig(viper.GetString("config_file"))
+	cc.log = *logrus.New()
+	cc.log.SetReportCaller(true)
+	cc.log.Formatter = &logrus.TextFormatter{
+		PadLevelText:     true,
+		DisableTimestamp: true,
+		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+			filename := path.Base(f.File)
+			return "", fmt.Sprintf("%s:%d", filename, f.Line)
+		},
+	}
+
+	switch viper.GetString("log-level") {
+	case "info":
+		cc.log.SetLevel(logrus.InfoLevel)
+	case "debug":
+		cc.log.SetLevel(logrus.DebugLevel)
+	case "trace":
+		cc.log.SetLevel(logrus.TraceLevel)
+	case "panic":
+		cc.log.SetLevel(logrus.PanicLevel)
+	case "warn":
+		cc.log.SetLevel(logrus.WarnLevel)
+	case "error":
+		cc.log.SetLevel(logrus.ErrorLevel)
+	default:
+		cc.log.SetLevel(0)
+	}
+
+	if err := CheckRequiments(); err != nil {
+		return err
+	}
+
+	config, err := cc.initConfig(viper.GetString("config-file"))
 	if err != nil {
 		return err
 	}
 
 	cc.config = config
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		fmt.Println("Error getting current directory")
-	}
-
-	// Find home directory.
-	home, err := os.UserHomeDir()
-	cobra.CheckErr(err)
-
-	viper.AutomaticEnv() // read in environment variables that match
-
-	//TODO ensure values of the variables are checked for nil before passing down to docker.
-
-	// Global
-
-	viper.SetDefault("ROOT_DIR", cwd)
-	viper.SetDefault("INFRA_DIR", fmt.Sprintf("%v/.infra", cwd))
-	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, cc.config.Env))
-	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
-	viper.SetDefault("TF_LOG", fmt.Sprintf(""))
-	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
-
-	if err = CheckRequiments(); err != nil {
-		return err
-	}
 
 	return nil
 }
