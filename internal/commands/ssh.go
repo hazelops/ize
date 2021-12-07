@@ -33,6 +33,8 @@ func (b *commandsBuilder) newSSHCmd() *sshCmd {
 			serviceName := fmt.Sprintf("%s-%s", cc.config.Env, os.Args[2])
 			clusterName := fmt.Sprintf("%s-%s", cc.config.Env, cc.config.Namespace)
 
+			cc.log.Infof("service name: %s, cluster name: %s", serviceName, clusterName)
+
 			sess, err := utils.GetSession(&utils.SessionConfig{
 				Region:  cc.config.AwsRegion,
 				Profile: cc.config.AwsProfile,
@@ -55,6 +57,8 @@ func (b *commandsBuilder) newSSHCmd() *sshCmd {
 				pterm.Error.Printfln("Getting running task")
 				return err
 			}
+
+			cc.log.Debugf("list task output: %s", lto)
 
 			if len(lto.TaskArns) == 0 {
 				return fmt.Errorf("running task not found")

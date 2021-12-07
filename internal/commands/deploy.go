@@ -30,7 +30,7 @@ func (b *commandsBuilder) newDeployCmd() *deployCmd {
 				return err
 			}
 
-			fmt.Println("Config:", *cc.config)
+			cc.log.Infof("infra: %s", cc.config.Infra)
 
 			for pname, provider := range cc.config.Infra {
 				switch pname {
@@ -41,15 +41,14 @@ func (b *commandsBuilder) newDeployCmd() *deployCmd {
 					terraform["main"] = t
 
 					for sname, subitem := range provider {
-
 						i, ok := subitem.(map[string]interface{})
 						if ok {
 							mapstructure.Decode(i, &t)
 							terraform[sname] = t
 						}
 					}
-					fmt.Println()
-					fmt.Println("Terraform block:", terraform)
+
+					cc.log.Debugf("%s block: %s", pname, terraform)
 				default:
 					return fmt.Errorf("provider %s is not supported", pname)
 				}
