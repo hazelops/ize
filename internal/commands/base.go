@@ -61,6 +61,7 @@ func (b *commandsBuilder) addAll() *commandsBuilder {
 		b.newSSHCmd(),
 		b.newInitCmd(),
 		b.newDeployCmd(),
+		b.newGendocCmd(),
 	)
 
 	return b
