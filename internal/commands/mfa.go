@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/spf13/cobra"
 )
@@ -38,12 +39,22 @@ func (b *commandsBuilder) newMfaCmd() *mfaCmd {
 				return err
 			}
 
+			devices, err := iam.New(sess).ListMFADevices(&iam.ListMFADevicesInput{})
+			if err != nil {
+				return err
+			}
+
+			if len(devices.MFADevices) == 0 {
+				cc.log.Error("MFA hasn't configured")
+				return fmt.Errorf("MFA hasn't configured")
+			}
+
 			v, err := sess.Config.Credentials.Get()
 			if err != nil {
 				return err
 			}
 
-			fmt.Printf("export AWS_SECRET_ACCESS_KEY=%s && \nexport AWS_SESSION_TOKEN=%s && \nexport AWS_ACCESS_KEY_ID=%s",
+			fmt.Printf("export AWS_SECRET_ACCESS_KEY=%s && \\ \nexport AWS_SESSION_TOKEN=%s && \\ \nexport AWS_ACCESS_KEY_ID=%s",
 				v.SecretAccessKey, v.SessionToken, v.AccessKeyID,
 			)
 
