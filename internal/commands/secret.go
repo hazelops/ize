@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
@@ -112,9 +113,13 @@ func (b *commandsBuilder) newSecretCmd() *secretCmd {
 
 	removeCmd.Flags().StringVar(&cc.vaultType, "type", "", "vault type")
 	removeCmd.Flags().StringVar(&cc.path, "path", "", "path to secrets")
+	removeCmd.MarkFlagRequired("type")
+	removeCmd.MarkFlagRequired("path")
 
 	setCmd.Flags().StringVar(&cc.vaultType, "type", "", "vault type")
 	setCmd.Flags().StringVar(&cc.filePath, "file", "", "file with sercrets")
+	setCmd.MarkFlagRequired("type")
+	setCmd.MarkFlagRequired("file")
 
 	cmd.AddCommand(setCmd, removeCmd)
 
@@ -207,8 +212,13 @@ func Set(sessCfg utils.SessionConfig, file string, path string, svc string) erro
 			},
 		})
 
-		if err != nil {
-			return err
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case "ParameterAlreadyExists":
+				return fmt.Errorf("secret already exists, you can use --force to overwrite it")
+			default:
+				return err
+			}
 		}
 	}
 
