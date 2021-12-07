@@ -1,6 +1,8 @@
 package commands
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/spf13/cobra"
+)
 
 type Response struct {
 	Err error

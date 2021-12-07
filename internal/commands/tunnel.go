@@ -206,6 +206,8 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 		return err
 	}
 
+	c.log.Debugf("output: %s", config)
+
 	re, err := regexp.Compile(`LocalForward\s(?P<localPort>\d+)\s(?P<remoteHost>.+):(?P<remotePort>\d+)`)
 	if err != nil {
 		pterm.Error.Printfln("Getting SSH forward config")
@@ -216,6 +218,8 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 		strings.Join(config.SSHForwardConfig.Value, "\n"),
 		-1,
 	)
+
+	c.log.Debugf("hosts: %s", hosts)
 
 	if len(hosts) == 0 {
 		pterm.Error.Printfln("Getting SSH forward config")
@@ -229,6 +233,8 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 		pterm.Error.Printfln("Start session")
 		return err
 	}
+
+	c.log.Debugf("localport: %d", localport)
 
 	input := &ssm.StartSessionInput{
 		DocumentName: aws.String("AWS-StartPortForwardingSession"),
@@ -306,6 +312,10 @@ type terraformOutput struct {
 	SSHForwardConfig struct {
 		Value []string `json:"value,omitempty"`
 	} `json:"ssh_forward_config,omitempty"`
+}
+
+func (t terraformOutput) String() string {
+	return fmt.Sprintf("Bastion instance ID: %s,\nSSH forward config: %s", t.BastionInstanceID.Value, t.SSHForwardConfig.Value)
 }
 
 func getPublicKey() (string, error) {

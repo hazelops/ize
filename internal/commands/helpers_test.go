@@ -10,27 +10,32 @@ func TestCheckCommand(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
+		want    string
 		wantErr bool
 	}{
 		{
 			name: "Error case",
 			args: args{
-				command: "error_case",
+				command:    "error_case",
+				subcommand: []string{},
 			},
 			wantErr: true,
 		},
 		{
 			name: "Success case",
 			args: args{
-				command: "ls",
+				command:    "ls",
+				subcommand: []string{},
 			},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := CheckCommand(tt.args.command, tt.args.subcommand); (err != nil) != tt.wantErr {
+			_, err := CheckCommand(tt.args.command, tt.args.subcommand)
+			if (err != nil) != tt.wantErr {
 				t.Errorf("CheckCommand() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
 		})
 	}

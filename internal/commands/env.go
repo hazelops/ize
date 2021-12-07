@@ -40,17 +40,24 @@ func (b *commandsBuilder) newEnvCmd() *envCmd {
 
 			pterm.DefaultSection.Printfln("Starting generate terrafrom files")
 
-			err = template.GenerateBackendTf(template.BackendOpts{
+			backendOpts := template.BackendOpts{
 				ENV:                            cc.config.Env,
 				LOCALSTACK_ENDPOINT:            "",
 				TERRAFORM_STATE_BUCKET_NAME:    fmt.Sprintf("%s-tf-state", cc.config.Namespace),
 				TERRAFORM_STATE_KEY:            fmt.Sprintf("%v/terraform.tfstate", cc.config.Env),
 				TERRAFORM_STATE_REGION:         cc.config.AwsRegion,
 				TERRAFORM_STATE_PROFILE:        cc.config.AwsProfile,
-				TERRAFORM_STATE_DYNAMODB_TABLE: "tf-state-lock", // So? // TODO: cc.config.TERRAFORM_STATE_DYNAMODB_TABLE
+				TERRAFORM_STATE_DYNAMODB_TABLE: "tf-state-lock",
 				TERRAFORM_AWS_PROVIDER_VERSION: "",
-			},
-				viper.GetString("ENV_DIR"),
+			}
+			envDir := viper.GetString("ENV_DIR")
+
+			cc.log.Debugf("backend opts: %s", backendOpts)
+			cc.log.Debugf("ENV dir path: %s", envDir)
+
+			err = template.GenerateBackendTf(
+				backendOpts,
+				envDir,
 			)
 
 			if err != nil {
@@ -70,7 +77,6 @@ func (b *commandsBuilder) newEnvCmd() *envCmd {
 			}
 
 			pterm.Success.Printfln("Read SSH public key")
-			cc.log.Debug("Read SSH public key")
 
 			home, _ := os.UserHomeDir()
 			key, err := ioutil.ReadFile(fmt.Sprintf("%s/.ssh/id_rsa.pub", home))
@@ -90,7 +96,7 @@ func (b *commandsBuilder) newEnvCmd() *envCmd {
 				return err
 			}
 
-			err = template.GenerateVarsTf(template.VarsOpts{
+			varsOpts := template.VarsOpts{
 				ENV:               cc.config.Env,
 				AWS_PROFILE:       cc.config.AwsProfile,
 				AWS_REGION:        cc.config.AwsRegion,
@@ -99,8 +105,14 @@ func (b *commandsBuilder) newEnvCmd() *envCmd {
 				SSH_PUBLIC_KEY:    string(key)[:len(string(key))-1],
 				DOCKER_REGISTRY:   fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, cc.config.AwsRegion),
 				NAMESPACE:         cc.config.Namespace,
-			},
-				viper.GetString("ENV_DIR"),
+			}
+
+			cc.log.Debugf("backend opts: %s", varsOpts)
+			cc.log.Debugf("ENV dir path: %s", envDir)
+
+			err = template.GenerateVarsTf(
+				varsOpts,
+				envDir,
 			)
 
 			if err != nil {

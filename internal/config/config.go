@@ -1,10 +1,12 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
@@ -21,6 +23,8 @@ type hclConfig struct {
 	AwsProfile       string                            `mapstructure:"aws_profile"`
 	Namespace        string                            `mapstructure:"namespace"`
 	Infra            map[string]map[string]interface{} `mapstructure:"infra"`
+	InfraDir         string                            `mapstructure:"infra_dir"`
+	RootDir          string                            `mapstructure:"root_dir"`
 }
 
 func FindPath(filename string) (string, error) {
@@ -58,6 +62,26 @@ func Load(path string) (*Config, error) {
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
 	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error getting current directory")
+	}
+
+	// Find home directory.
+	home, err := os.UserHomeDir()
+	cobra.CheckErr(err)
+
+	viper.AutomaticEnv()
+
+	//TODO ensure values of the variables are checked for nil before passing down to docker.
+
+	viper.SetDefault("ROOT_DIR", cwd)
+	viper.SetDefault("INFRA_DIR", fmt.Sprintf("%v/.infra", cwd))
+	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, viper.GetString("ENV")))
+	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
+	viper.SetDefault("TF_LOG", fmt.Sprintf(""))
+	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
 
 	//Decode
 	var cfg hclConfig

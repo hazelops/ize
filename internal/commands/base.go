@@ -3,13 +3,14 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"os"
+	"path"
+	"runtime"
 	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/pkg/logger"
 	"github.com/pterm/pterm"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -52,8 +53,8 @@ func (b *commandsBuilder) addCommands(commands ...cmder) *commandsBuilder {
 
 func (b *commandsBuilder) addAll() *commandsBuilder {
 	b.addCommands(
-		b.newTerraformCmd(),
 		b.newConfigCmd(),
+		b.newTerraformCmd(),
 		b.newEnvCmd(),
 		b.newTunnelCmd(),
 		b.newMfaCmd(),
@@ -71,7 +72,7 @@ func (b *commandsBuilder) newBuilderBasicCdm(cmd *cobra.Command) *baseBuilderCmd
 }
 
 var (
-	rootCmd = &cobra.Command{
+	RootCmd = &cobra.Command{
 		Use: "ize",
 		Long: fmt.Sprintf("%s\n%s\n%s",
 			pterm.White(pterm.Bold.Sprint("Welcome to IZE")),
@@ -83,29 +84,23 @@ var (
 )
 
 func init() {
-	rootCmd.PersistentFlags().StringP("log-level", "l", "", "enable debug messages")
-	rootCmd.PersistentFlags().StringP("config-file", "c", "", "set config file name")
+	RootCmd.PersistentFlags().StringP("log-level", "l", "", "enable debug messages")
+	RootCmd.PersistentFlags().StringP("config-file", "c", "", "set config file name")
 
-	rootCmd.Flags().StringP("env", "e", "", "set environment name")
-	rootCmd.Flags().StringP("aws-profile", "p", "", "set AWS profile")
-	rootCmd.Flags().StringP("aws-region", "r", "", "set AWS region")
+	RootCmd.Flags().StringP("env", "e", "", "set enviroment name")
+	RootCmd.Flags().StringP("aws-profile", "p", "", "set AWS profile")
+	RootCmd.Flags().StringP("aws-region", "r", "", "set AWS region")
+	RootCmd.Flags().StringP("namespace", "n", "", "set namespace")
+	viper.BindPFlag("aws_region", RootCmd.Flags().Lookup("aws-region"))
 
-	rootCmd.Flags().StringP("namespace", "n", "", "set namespace")
-
-	//Bind viper key to a flag (required for flags/parameters that are more than 1 word)
-	viper.BindPFlag("log_level", rootCmd.PersistentFlags().Lookup("log-level"))
-	viper.BindPFlag("config_file", rootCmd.PersistentFlags().Lookup("config-file"))
-	viper.BindPFlag("aws_profile", rootCmd.Flags().Lookup("aws-profile"))
-	viper.BindPFlag("aws_region", rootCmd.Flags().Lookup("aws-region"))
-
-	viper.BindPFlags(rootCmd.Flags())
-	viper.BindPFlags(rootCmd.PersistentFlags())
+	viper.BindPFlags(RootCmd.Flags())
+	viper.BindPFlags(RootCmd.PersistentFlags())
 }
 
 func (b *commandsBuilder) newIzeCmd() *izeCmd {
 	cc := &izeCmd{}
 
-	cc.baseBuilderCmd = b.newBuilderCmd(rootCmd)
+	cc.baseBuilderCmd = b.newBuilderCmd(RootCmd)
 
 	cc.baseCmd.cmd.SilenceErrors = true
 	cc.cmd.SilenceUsage = true
@@ -135,45 +130,51 @@ func (b *commandsBuilder) build() *izeCmd {
 
 type izeBuilderCommon struct {
 	config *config.Config
-	log    logger.StandartLogger
+	log    logrus.Logger
 }
 
 func (cc *izeBuilderCommon) Init() error {
 	viper.SetEnvPrefix("IZE")
 	viper.AutomaticEnv()
 
-	config, err := cc.initConfig(viper.GetString("config_file"))
+	cc.log = *logrus.New()
+	cc.log.SetReportCaller(true)
+	cc.log.Formatter = &logrus.TextFormatter{
+		PadLevelText:     true,
+		DisableTimestamp: true,
+		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+			filename := path.Base(f.File)
+			return "", fmt.Sprintf("%s:%d", filename, f.Line)
+		},
+	}
+
+	switch viper.GetString("log-level") {
+	case "info":
+		cc.log.SetLevel(logrus.InfoLevel)
+	case "debug":
+		cc.log.SetLevel(logrus.DebugLevel)
+	case "trace":
+		cc.log.SetLevel(logrus.TraceLevel)
+	case "panic":
+		cc.log.SetLevel(logrus.PanicLevel)
+	case "warn":
+		cc.log.SetLevel(logrus.WarnLevel)
+	case "error":
+		cc.log.SetLevel(logrus.ErrorLevel)
+	default:
+		cc.log.SetLevel(0)
+	}
+
+	if err := CheckRequirements(); err != nil {
+		return err
+	}
+
+	config, err := cc.initConfig(viper.GetString("config-file"))
 	if err != nil {
 		return err
 	}
 
 	cc.config = config
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		fmt.Println("Error getting current directory")
-	}
-
-	// Find home directory.
-	home, err := os.UserHomeDir()
-	cobra.CheckErr(err)
-
-	viper.AutomaticEnv() // read in environment variables that match
-
-	//TODO ensure values of the variables are checked for nil before passing down to docker.
-
-	// Global
-
-	viper.SetDefault("ROOT_DIR", cwd)
-	viper.SetDefault("INFRA_DIR", fmt.Sprintf("%v/.infra", cwd))
-	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, cc.config.Env))
-	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
-	viper.SetDefault("TF_LOG", fmt.Sprintf(""))
-	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
-
-	if err = CheckRequirements(); err != nil {
-		return err
-	}
 
 	return nil
 }
