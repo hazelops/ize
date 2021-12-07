@@ -73,7 +73,7 @@ func (b *commandsBuilder) newBuilderBasicCdm(cmd *cobra.Command) *baseBuilderCmd
 }
 
 var (
-	RootCmd = &cobra.Command{
+	rootCmd = &cobra.Command{
 		Use: "ize",
 		Long: fmt.Sprintf("%s\n%s\n%s",
 			pterm.White(pterm.Bold.Sprint("Welcome to IZE")),
@@ -85,23 +85,23 @@ var (
 )
 
 func init() {
-	RootCmd.PersistentFlags().StringP("log-level", "l", "", "enable debug messages")
-	RootCmd.PersistentFlags().StringP("config-file", "c", "", "set config file name")
+	rootCmd.PersistentFlags().StringP("log-level", "l", "", "enable debug messages")
+	rootCmd.PersistentFlags().StringP("config-file", "c", "", "set config file name")
 
-	RootCmd.Flags().StringP("env", "e", "", "set enviroment name")
-	RootCmd.Flags().StringP("aws-profile", "p", "", "set AWS profile")
-	RootCmd.Flags().StringP("aws-region", "r", "", "set AWS region")
-	RootCmd.Flags().StringP("namespace", "n", "", "set namespace")
-	viper.BindPFlag("aws_region", RootCmd.Flags().Lookup("aws-region"))
+	rootCmd.Flags().StringP("env", "e", "", "set enviroment name")
+	rootCmd.Flags().StringP("aws-profile", "p", "", "set AWS profile")
+	rootCmd.Flags().StringP("aws-region", "r", "", "set AWS region")
+	rootCmd.Flags().StringP("namespace", "n", "", "set namespace")
+	viper.BindPFlag("aws_region", rootCmd.Flags().Lookup("aws-region"))
 
-	viper.BindPFlags(RootCmd.Flags())
-	viper.BindPFlags(RootCmd.PersistentFlags())
+	viper.BindPFlags(rootCmd.Flags())
+	viper.BindPFlags(rootCmd.PersistentFlags())
 }
 
 func (b *commandsBuilder) newIzeCmd() *izeCmd {
 	cc := &izeCmd{}
 
-	cc.baseBuilderCmd = b.newBuilderCmd(RootCmd)
+	cc.baseBuilderCmd = b.newBuilderCmd(rootCmd)
 
 	cc.baseCmd.cmd.SilenceErrors = true
 	cc.cmd.SilenceUsage = true
