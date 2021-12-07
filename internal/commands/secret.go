@@ -16,7 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
-type configCmd struct {
+type secretCmd struct {
 	*baseBuilderCmd
 
 	vaultType string
@@ -24,12 +24,12 @@ type configCmd struct {
 	path      string
 }
 
-func (b *commandsBuilder) newConfigCmd() *configCmd {
-	cc := &configCmd{}
+func (b *commandsBuilder) newSecretCmd() *secretCmd {
+	cc := &secretCmd{}
 
 	cmd := &cobra.Command{
-		Use:              "config",
-		Short:            "Manage configuration.",
+		Use:              "secret",
+		Short:            "manage secret",
 		RunE:             nil,
 		TraverseChildren: true,
 	}
