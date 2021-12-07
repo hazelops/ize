@@ -201,14 +201,40 @@ type TerraformRunOption struct {
 	Cmd           []string
 }
 
-func runTerraform(cc *terraformCmd, opts TerraformRunOption) error {
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+func cleanupOldContainers(cli *client.Client, opts TerraformRunOption) error {
+	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{
+		All: true,
+	})
 	if err != nil {
-		pterm.Error.Println("Docker Clinet initialization")
 		return err
 	}
 
-	pterm.Success.Println("Docker Clinet initialization")
+	for _, container := range containers {
+		if strings.Contains(container.Names[0], opts.ContainerName) {
+			err = cli.ContainerRemove(context.Background(), container.ID, types.ContainerRemoveOptions{})
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func runTerraform(cc *terraformCmd, opts TerraformRunOption) error {
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		pterm.Error.Println("Docker сlient initialization")
+		return err
+	}
+
+	pterm.Success.Println("Docker сlient initialization")
+
+	err = cleanupOldContainers(cli, opts)
+	if err != nil {
+		return err
+	}
+
 
 	imageName := "hashicorp/terraform"
 	imageTag := cc.config.TerraformVersion
