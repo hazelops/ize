@@ -53,7 +53,7 @@ func (b *commandsBuilder) addCommands(commands ...cmder) *commandsBuilder {
 
 func (b *commandsBuilder) addAll() *commandsBuilder {
 	b.addCommands(
-		b.newConfigCmd(),
+		b.newSecretCmd(),
 		b.newTerraformCmd(),
 		b.newEnvCmd(),
 		b.newTunnelCmd(),
