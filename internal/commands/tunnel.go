@@ -19,7 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/elliotchance/sshtunnel"
 	"github.com/hazelops/ize/internal/aws/utils"
-	"github.com/hazelops/ize/pkg/ssmsession.go"
+	"github.com/hazelops/ize/pkg/ssmsession"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
@@ -68,12 +68,12 @@ func (b *commandsBuilder) newTunnelCmd() *tunnelCmd {
 					return err
 				}
 
-				pterm.DefaultSection.Printfln("Passing SSH Key")
-
 				err = cc.SSHKeyEnsurePresent()
 				if err != nil {
 					return err
 				}
+
+				pterm.Success.Println("Passing SSH Key")
 
 				return nil
 			},
@@ -92,10 +92,11 @@ func (c *tunnelCmd) SSHKeyEnsurePresent() error {
 	})
 	if err != nil {
 		pterm.Error.Printfln("Getting AWS session")
+		c.log.Error("getting AWS session")
 		return err
 	}
 
-	pterm.Success.Printfln("Getting AWS session")
+	c.log.Debug("getting AWS session")
 
 	ssmSvc := ssm.New(sess)
 
@@ -104,7 +105,7 @@ func (c *tunnelCmd) SSHKeyEnsurePresent() error {
 		WithDecryption: aws.Bool(true),
 	})
 	if err != nil {
-		pterm.Error.Printfln("Getting Bastion Instance ID")
+		c.log.Error("getting bastion instance ID")
 		return err
 	}
 
@@ -112,7 +113,7 @@ func (c *tunnelCmd) SSHKeyEnsurePresent() error {
 
 	value, err = base64.StdEncoding.DecodeString(*out.Parameter.Value)
 	if err != nil {
-		pterm.Error.Printfln("Getting Bastion Instance ID")
+		c.log.Error("getting bastion instance ID")
 		return err
 	}
 
@@ -120,19 +121,24 @@ func (c *tunnelCmd) SSHKeyEnsurePresent() error {
 
 	err = json.Unmarshal(value, &tOut)
 	if err != nil {
-		pterm.Error.Printfln("Getting Bastion Instance ID")
+		c.log.Error("getting bastion instance ID")
 		return err
 	}
 
-	pterm.Success.Printfln("Getting Bastion Instance ID")
+	c.log.Debug("getting bastion instance ID")
 
-	key, err := getPublicKey()
+	home, _ := os.UserHomeDir()
+	publicKeyPath := fmt.Sprintf("%s/.ssh/id_rsa.pub", home)
+
+	c.log.Debugf("public key path: %s", publicKeyPath)
+
+	key, err := getPublicKey(publicKeyPath)
 	if err != nil {
-		pterm.Error.Printfln("Reading user SSH public key")
+		c.log.Error("reading user SSH public key")
 		return err
 	}
 
-	pterm.Success.Printfln("Reading user SSH public key")
+	c.log.Debug("reading user SSH public key")
 
 	command := fmt.Sprintf(
 		`grep -qR "%s" /home/ubuntu/.ssh/authorized_keys || echo "%s" >> /home/ubuntu/.ssh/authorized_keys`,
@@ -149,11 +155,11 @@ func (c *tunnelCmd) SSHKeyEnsurePresent() error {
 	})
 
 	if err != nil {
-		pterm.Error.Printfln("Sending user SSH public Key")
+		c.log.Error("sending user SSH public key")
 		return err
 	}
 
-	pterm.Success.Printfln("Sending user SSH public Key")
+	c.log.Debug("sending user SSH public key")
 
 	return nil
 }
@@ -173,11 +179,11 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 		Profile: c.config.AwsProfile,
 	})
 	if err != nil {
-		pterm.Error.Printfln("Getting AWS session")
+		c.log.Error("getting AWS session")
 		fmt.Println(err)
 	}
 
-	pterm.Success.Printfln("Getting AWS session")
+	c.log.Debug("getting AWS session")
 
 	svc := ssm.New(sess)
 
@@ -186,7 +192,7 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 		WithDecryption: aws.Bool(true),
 	})
 	if err != nil {
-		pterm.Error.Printfln("Getting SSH forward config")
+		c.log.Error("getting SSH forward config")
 		return err
 	}
 
@@ -194,7 +200,7 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 
 	value, err = base64.StdEncoding.DecodeString(*resp.Parameter.Value)
 	if err != nil {
-		pterm.Error.Printfln("Getting SSH forward config")
+		c.log.Error("getting SSH forward config")
 		return err
 	}
 
@@ -202,7 +208,7 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 
 	err = json.Unmarshal(value, &config)
 	if err != nil {
-		pterm.Error.Printfln("Getting SSH forward config")
+		c.log.Error("getting SSH forward config")
 		return err
 	}
 
@@ -210,7 +216,7 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 
 	re, err := regexp.Compile(`LocalForward\s(?P<localPort>\d+)\s(?P<remoteHost>.+):(?P<remotePort>\d+)`)
 	if err != nil {
-		pterm.Error.Printfln("Getting SSH forward config")
+		c.log.Error("getting SSH forward config")
 		return err
 	}
 
@@ -219,18 +225,20 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 		-1,
 	)
 
+	c.log.Debug("getting SSH forward config")
+
 	c.log.Debugf("hosts: %s", hosts)
 
 	if len(hosts) == 0 {
-		pterm.Error.Printfln("Getting SSH forward config")
+		c.log.Error("getting SSH forward config")
 		return err
 	}
 
-	pterm.Success.Printfln("Getting SSH forward config")
+	c.log.Debug("port forwarding config is valid")
 
 	localport, err := getFreePort()
 	if err != nil {
-		pterm.Error.Printfln("Start session")
+		c.log.Error("start session")
 		return err
 	}
 
@@ -247,7 +255,7 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 
 	out, err := svc.StartSession(input)
 	if err != nil {
-		pterm.Error.Printfln("Start session")
+		c.log.Error("start session")
 		return err
 	}
 
@@ -256,10 +264,12 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 	err = ssmsession.NewSSMPluginCommand(c.config.AwsRegion).Forward(out, input)
 	if err != nil {
 		fmt.Println(err)
-		pterm.Error.Printfln("Forward server to localhost")
+		c.log.Error("forward server to localhost")
 	}
 
 	pterm.Success.Printfln("Forward server to localhost")
+
+	c.log.Debugf("private key path: %s", privateKeyPath())
 
 	for _, h := range hosts {
 		destinationHost := h[2] + ":" + h[3]
@@ -318,10 +328,9 @@ func (t terraformOutput) String() string {
 	return fmt.Sprintf("Bastion instance ID: %s,\nSSH forward config: %s", t.BastionInstanceID.Value, t.SSHForwardConfig.Value)
 }
 
-func getPublicKey() (string, error) {
+func getPublicKey(path string) (string, error) {
 	var key string
-	home, _ := os.UserHomeDir()
-	file, err := os.Open(fmt.Sprintf("%s/.ssh/id_rsa.pub", home))
+	file, err := os.Open(path)
 	if err != nil {
 		return key, nil
 	}
