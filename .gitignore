@@ -3,3 +3,4 @@ ize
 
 .infra
 *.hcl
+.vscode/launch.json
