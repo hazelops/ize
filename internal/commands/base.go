@@ -58,7 +58,7 @@ func (b *commandsBuilder) addAll() *commandsBuilder {
 		b.newEnvCmd(),
 		b.newTunnelCmd(),
 		b.newMfaCmd(),
-		b.newSSHCmd(),
+		b.newConsoleCmd(),
 		b.newInitCmd(),
 		b.newDeployCmd(),
 		b.newGendocCmd(),
@@ -81,6 +81,7 @@ var (
 			pterm.Sprintf("%s %s", pterm.Blue("Docs:"), "https://ize.sh"),
 			pterm.Sprintf("%s %s", pterm.Green("Version:"), Version),
 		),
+		Version:          Version,
 		TraverseChildren: true,
 	}
 )
@@ -97,6 +98,8 @@ func init() {
 
 	viper.BindPFlags(rootCmd.Flags())
 	viper.BindPFlags(rootCmd.PersistentFlags())
+
+	rootCmd.SetVersionTemplate("IZE v{{.Version}}\n")
 }
 
 func (b *commandsBuilder) newIzeCmd() *izeCmd {
@@ -105,7 +108,6 @@ func (b *commandsBuilder) newIzeCmd() *izeCmd {
 	cc.baseBuilderCmd = b.newBuilderCmd(rootCmd)
 
 	cc.baseCmd.cmd.SilenceErrors = true
-	cc.cmd.SilenceUsage = true
 
 	return cc
 }

@@ -12,15 +12,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type sshCmd struct {
+type consoleCmd struct {
 	*baseBuilderCmd
 }
 
-func (b *commandsBuilder) newSSHCmd() *sshCmd {
-	cc := &sshCmd{}
+func (b *commandsBuilder) newConsoleCmd() *consoleCmd {
+	cc := &consoleCmd{}
 
 	cmd := &cobra.Command{
-		Use:   "ssh [service-name]",
+		Use:   "console [service-name]",
 		Short: "connect to a container in the ECS",
 		Long:  "Connect to a container in the ECS service via AWS SSM.\nTakes ECS service name as an argument.",
 		Args:  cobra.MinimumNArgs(1),
