@@ -7,22 +7,22 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/hazelops/ize/internal/aws/utils"
-	"github.com/hazelops/ize/pkg/ssmsession.go"
+	"github.com/hazelops/ize/pkg/ssmsession"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
 
-type sshCmd struct {
+type consoleCmd struct {
 	*baseBuilderCmd
 }
 
-func (b *commandsBuilder) newSSHCmd() *sshCmd {
-	cc := &sshCmd{}
+func (b *commandsBuilder) newConsoleCmd() *consoleCmd {
+	cc := &consoleCmd{}
 
 	cmd := &cobra.Command{
-		Use:   "ssh",
-		Short: "SSH connection to ECS container of the app.",
-		Long:  "",
+		Use:   "console [service-name]",
+		Short: "connect to a container in the ECS",
+		Long:  "Connect to a container in the ECS service via AWS SSM.\nTakes ECS service name as an argument.",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := cc.Init()
