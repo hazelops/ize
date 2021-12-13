@@ -23,6 +23,7 @@ type secretCmd struct {
 	vaultType string
 	filePath  string
 	path      string
+	force     bool
 }
 
 func (b *commandsBuilder) newSecretCmd() *secretCmd {
@@ -47,20 +48,9 @@ func (b *commandsBuilder) newSecretCmd() *secretCmd {
 
 			pterm.DefaultSection.Printfln("Starting config setting")
 
-			basename := filepath.Base(cc.filePath)
-			svc := strings.TrimSuffix(basename, filepath.Ext(basename))
-
 			if cc.vaultType == "ssm" {
 
-				err = Set(
-					utils.SessionConfig{
-						Region:  cc.config.AwsRegion,
-						Profile: cc.config.AwsProfile,
-					},
-					cc.filePath,
-					fmt.Sprintf("/%s/%s", cc.config.Env, svc),
-					svc,
-				)
+				err = cc.Set()
 				if err != nil {
 					pterm.DefaultSection.Println("Config setting not completed")
 					return err
@@ -118,6 +108,7 @@ func (b *commandsBuilder) newSecretCmd() *secretCmd {
 
 	setCmd.Flags().StringVar(&cc.vaultType, "type", "", "vault type")
 	setCmd.Flags().StringVar(&cc.filePath, "file", "", "file with sercrets")
+	setCmd.Flags().BoolVar(&cc.force, "force", false, "allow overwrite of parameters")
 	setCmd.MarkFlagRequired("type")
 	setCmd.MarkFlagRequired("file")
 
@@ -152,7 +143,7 @@ func Remove(sessCfg utils.SessionConfig, path string) error {
 	pterm.Success.Printfln("Getting secrets from path")
 
 	if len(out.Parameters) == 0 {
-		pterm.Info.Printfln("No values ​​found along the path")
+		pterm.Info.Printfln("No values found along the path")
 		pterm.Success.Printfln("Deleting secrets from path")
 		return nil
 	}
@@ -167,6 +158,8 @@ func Remove(sessCfg utils.SessionConfig, path string) error {
 		Names: names,
 	})
 
+	ssmSvc.RemoveTagsFromResource(&ssm.RemoveTagsFromResourceInput{})
+
 	if err != nil {
 		return err
 	}
@@ -176,15 +169,24 @@ func Remove(sessCfg utils.SessionConfig, path string) error {
 	return nil
 }
 
-func Set(sessCfg utils.SessionConfig, file string, path string, svc string) error {
-	sess, err := utils.GetSession(&sessCfg)
+func (c *secretCmd) Set() error {
+	basename := filepath.Base(c.filePath)
+	svc := strings.TrimSuffix(basename, filepath.Ext(basename))
+	path := fmt.Sprintf("/%s/%s", c.config.Env, svc)
+
+	sess, err := utils.GetSession(
+		&utils.SessionConfig{
+			Region:  c.config.AwsRegion,
+			Profile: c.config.AwsProfile,
+		},
+	)
 	if err != nil {
 		return err
 	}
 
 	pterm.Success.Printfln("Geting AWS session")
 
-	values, err := getKeyValuePairs(file)
+	values, err := getKeyValuePairs(c.filePath)
 	if err != nil {
 		return err
 	}
@@ -197,9 +199,24 @@ func Set(sessCfg utils.SessionConfig, file string, path string, svc string) erro
 		name := fmt.Sprintf("%s/%s", path, key)
 
 		_, err := ssmSvc.PutParameter(&ssm.PutParameterInput{
-			Name:  &name,
-			Value: aws.String(value),
-			Type:  aws.String(ssm.ParameterTypeSecureString),
+			Name:      &name,
+			Value:     aws.String(value),
+			Type:      aws.String(ssm.ParameterTypeSecureString),
+			Overwrite: &c.force,
+		})
+
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case "ParameterAlreadyExists":
+				return fmt.Errorf("secret already exists, you can use --force to overwrite it")
+			default:
+				return err
+			}
+		}
+
+		_, err = ssmSvc.AddTagsToResource(&ssm.AddTagsToResourceInput{
+			ResourceId:   &name,
+			ResourceType: aws.String("Parameter"),
 			Tags: []*ssm.Tag{
 				{
 					Key:   aws.String("Application"),
@@ -212,13 +229,8 @@ func Set(sessCfg utils.SessionConfig, file string, path string, svc string) erro
 			},
 		})
 
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case "ParameterAlreadyExists":
-				return fmt.Errorf("secret already exists, you can use --force to overwrite it")
-			default:
-				return err
-			}
+		if err != nil {
+			return err
 		}
 	}
 

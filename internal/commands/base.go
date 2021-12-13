@@ -108,6 +108,7 @@ func (b *commandsBuilder) newIzeCmd() *izeCmd {
 	cc.baseBuilderCmd = b.newBuilderCmd(rootCmd)
 
 	cc.baseCmd.cmd.SilenceErrors = true
+	cc.cmd.SilenceUsage = true
 
 	return cc
 }
