@@ -29,16 +29,15 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 	cc := &terraformCmd{}
 
 	cmd := &cobra.Command{
-		Use:   "terraform",
-		Short: "Terraform management.",
-		Long:  "This command contains subcommands for work with terraform.",
-	}
-
-	initCmd := &cobra.Command{
-		Use:   "init",
-		Short: "Run terraform init.",
-		Long:  `This command run terraform init command.`,
+		Use:                "terraform <terraform command> [terraform flags]",
+		Short:              "terraform management",
+		Long:               "This command contains subcommands for work with terraform.",
+		DisableFlagParsing: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return cmd.Help()
+			}
+
 			if len(args) != 0 {
 				if args[0] == "-h" || args[0] == "--help" {
 					return cmd.Help()
@@ -51,147 +50,24 @@ func (b *commandsBuilder) newTerraformCmd() *terraformCmd {
 			}
 
 			opts := TerraformRunOption{
-				ContainerName: "terraform-init",
-				Cmd:           []string{"init"},
+				ContainerName: "terraform",
+				Cmd:           args,
 			}
 
-			opts.Cmd = append(opts.Cmd, args...)
-
-			cc.log.Debug("starting terraform init")
+			cc.log.Debug("starting terraform")
 
 			err = runTerraform(cc, opts)
 			if err != nil {
-				cc.log.Error("terraform init not completed")
+				cc.log.Errorf("terraform %s not completed", args[0])
 				return err
 			}
 
-			pterm.DefaultSection.Println("Terraform init completed")
+			pterm.DefaultSection.Printfln("Terraform %s completed", args[0])
 
 			return nil
 		},
-		DisableFlagParsing: true,
 	}
 
-	applyCmd := &cobra.Command{
-		Use:   "apply",
-		Short: "Run terraform apply.",
-		Long: `This command run terraform apply command. Terraform apply
-		command executes the actions proposed in a Terraform plan.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 0 {
-				if args[0] == "-h" || args[0] == "--help" {
-					return cmd.Help()
-				}
-			}
-
-			err := cc.Init()
-			if err != nil {
-				return err
-			}
-
-			opts := TerraformRunOption{
-				ContainerName: "terraform-apply",
-				Cmd:           []string{"apply"},
-			}
-
-			opts.Cmd = append(opts.Cmd, args...)
-
-			cc.log.Debug("starting terraform apply")
-
-			err = runTerraform(cc, opts)
-
-			if err != nil {
-				cc.log.Error("terraform apply not completed")
-				return err
-			}
-
-			pterm.DefaultSection.Println("Terraform apply completed")
-
-			return nil
-		},
-		DisableFlagParsing: true,
-	}
-
-	planCmd := &cobra.Command{
-		Use:   "plan",
-		Short: "Run terraform plan.",
-		Long: `This command run terraform plan command.
-		The terraform plan command creates an execution plan.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 0 {
-				if args[0] == "-h" || args[0] == "--help" {
-					return cmd.Help()
-				}
-			}
-
-			err := cc.Init()
-			if err != nil {
-				return err
-			}
-
-			opts := TerraformRunOption{
-				ContainerName: "terraform-plan",
-				Cmd:           []string{"plan"},
-			}
-
-			opts.Cmd = append(opts.Cmd, args...)
-
-			cc.log.Debug("starting terraform plan")
-
-			err = runTerraform(cc, opts)
-
-			if err != nil {
-				cc.log.Error("terraform plan not completed")
-				return err
-			}
-
-			pterm.DefaultSection.Println("Terraform plan completed")
-
-			return nil
-		},
-		DisableFlagParsing: true,
-	}
-
-	destroyCmd := &cobra.Command{
-		Use:   "destroy",
-		Short: "Run terraform destroy.",
-		Long:  `This command run terraform destroy command.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 0 {
-				if args[0] == "-h" || args[0] == "--help" {
-					return cmd.Help()
-				}
-			}
-
-			err := cc.Init()
-			if err != nil {
-				return err
-			}
-
-			opts := TerraformRunOption{
-				ContainerName: "terraform-destroy",
-				Cmd:           []string{"destroy"},
-			}
-
-			opts.Cmd = append(opts.Cmd, args...)
-
-			cc.log.Debug("starting terraform destroy")
-
-			err = runTerraform(cc, opts)
-
-			if err != nil {
-				cc.log.Error("terraform destroy not completed")
-				return err
-			}
-
-			pterm.DefaultSection.Println("Terraform destroy completed")
-
-			return nil
-		},
-		DisableFlagParsing: true,
-	}
-
-	cmd.AddCommand(initCmd, applyCmd, destroyCmd, planCmd)
 	cc.baseBuilderCmd = b.newBuilderBasicCdm(cmd)
 
 	return cc
@@ -310,9 +186,6 @@ func runTerraform(cc *terraformCmd, opts TerraformRunOption) error {
 		},
 	}
 
-	cc.log.Debugf("container config: %s", contConfig)
-	cc.log.Debugf("container host config: %s", contHostConfig)
-
 	cont, err := cli.ContainerCreate(
 		context.Background(),
 		contConfig,
@@ -330,7 +203,7 @@ func runTerraform(cc *terraformCmd, opts TerraformRunOption) error {
 	cc.log.Debugf("creating terraform container from image %v:%v", imageName, imageTag)
 
 	if err := cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{}); err != nil {
-		cc.log.Errorf("terraform container started:", cont.ID)
+		cc.log.Errorf("terraform container started: %s", cont.ID)
 		return err
 	}
 
@@ -345,17 +218,17 @@ func runTerraform(cc *terraformCmd, opts TerraformRunOption) error {
 	}
 	defer reader.Close()
 
-	if cc.log.GetLevel() >= 4 {
-		scanner := bufio.NewScanner(reader)
-		for scanner.Scan() {
-			if strings.Contains(scanner.Text(), "Error: ") {
-				r := regexp.MustCompile(ansi)
-				strErr := r.ReplaceAllString(scanner.Text(), "")
-				strErr = strErr[strings.LastIndex(strErr, "Error: "):]
-				strErr = strings.TrimPrefix(strErr, "Error: ")
-				strErr = strings.ToLower(string(strErr[0])) + strErr[1:]
-				err = fmt.Errorf(strErr)
-			}
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		if strings.Contains(scanner.Text(), "Error: ") {
+			r := regexp.MustCompile(ansi)
+			strErr := r.ReplaceAllString(scanner.Text(), "")
+			strErr = strErr[strings.LastIndex(strErr, "Error: "):]
+			strErr = strings.TrimPrefix(strErr, "Error: ")
+			strErr = strings.ToLower(string(strErr[0])) + strErr[1:]
+			err = fmt.Errorf(strErr)
+		}
+		if cc.log.GetLevel() >= 4 {
 			fmt.Println(scanner.Text())
 		}
 	}
@@ -364,7 +237,7 @@ func runTerraform(cc *terraformCmd, opts TerraformRunOption) error {
 		return err
 	}
 
-	cc.log.Debugf("terraform container started:", cont.ID)
+	cc.log.Debugf("terraform container started: %s", cont.ID)
 
 	return nil
 }
