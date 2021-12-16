@@ -160,6 +160,9 @@ func Run(log *logrus.Logger, opts Options) error {
 	if err != nil {
 		panic(err)
 	}
+
+	log.Debugf("terraform container started: %s", cont.ID)
+
 	defer reader.Close()
 
 	scanner := bufio.NewScanner(reader)
@@ -181,7 +184,13 @@ func Run(log *logrus.Logger, opts Options) error {
 		return err
 	}
 
-	log.Debugf("terraform container started: %s", cont.ID)
+	wait, errC := cli.ContainerWait(context.Background(), cont.ID, container.WaitConditionRemoved)
 
-	return nil
+	select {
+	case status := <-wait:
+		log.Debugf("container exit status code %d", status.StatusCode)
+		return nil
+	case err := <-errC:
+		return err
+	}
 }
