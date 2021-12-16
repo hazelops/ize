@@ -5,6 +5,7 @@ import (
 
 	"github.com/hazelops/ize/internal/docker/terraform"
 	"github.com/mitchellh/mapstructure"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -52,10 +53,22 @@ func (b *commandsBuilder) newDeployCmd() *deployCmd {
 						TerraformVersion: tic.Version,
 					}
 
+					spinner := &pterm.SpinnerPrinter{}
+
+					if cc.log.Level < 4 {
+						spinner, _ = pterm.DefaultSpinner.Start("execution terraform init")
+					}
+
 					err = terraform.Run(&cc.log, opts)
 					if err != nil {
 						cc.log.Errorf("terraform %s not completed", "init")
 						return err
+					}
+
+					if cc.log.Level < 4 {
+						spinner.Success("terrafrom init completed")
+					} else {
+						pterm.Success.Println("terrafrom init completed")
 					}
 
 					opts = terraform.Options{
@@ -70,12 +83,20 @@ func (b *commandsBuilder) newDeployCmd() *deployCmd {
 						TerraformVersion: tic.Version,
 					}
 
-					cc.log.Debugf("terraform run opts: %s", opts)
+					if cc.log.Level < 4 {
+						spinner, _ = pterm.DefaultSpinner.Start("execution terraform init")
+					}
 
 					err = terraform.Run(&cc.log, opts)
 					if err != nil {
 						cc.log.Errorf("terraform %s not completed", "plan")
 						return err
+					}
+
+					if cc.log.Level < 4 {
+						spinner.Success("terrafrom plan completed")
+					} else {
+						pterm.Success.Println("terrafrom plan completed")
 					}
 
 				default:
