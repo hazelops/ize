@@ -188,7 +188,7 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 	svc := ssm.New(sess)
 
 	resp, err := svc.GetParameter(&ssm.GetParameterInput{
-		Name:           aws.String(fmt.Sprintf("/%s/terraform-output", "dev")),
+		Name:           aws.String(fmt.Sprintf("/%s/terraform-output", c.config.Env)),
 		WithDecryption: aws.Bool(true),
 	})
 	if err != nil {
