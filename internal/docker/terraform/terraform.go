@@ -25,6 +25,7 @@ type Options struct {
 	TerraformVersion string
 	ContainerName    string
 	Cmd              []string
+	OutputPath       string
 }
 
 func cleanupOldContainers(cli *client.Client, opts Options) error {
@@ -98,6 +99,7 @@ func Run(log *logrus.Logger, opts Options) error {
 	log.Debugf("pulling terraform image %v:%v", imageName, imageTag)
 
 	contConfig := &container.Config{
+		User:         fmt.Sprintf("%v:%v", os.Getuid(), os.Getgid()),
 		Image:        fmt.Sprintf("%v:%v", imageName, imageTag),
 		Tty:          true,
 		Cmd:          opts.Cmd,
@@ -125,7 +127,7 @@ func Run(log *logrus.Logger, opts Options) error {
 			{
 				Type:   mount.TypeBind,
 				Source: fmt.Sprintf("%v/.aws", viper.Get("HOME")),
-				Target: "/root/.aws",
+				Target: "/.aws",
 			},
 		},
 	}
@@ -166,6 +168,18 @@ func Run(log *logrus.Logger, opts Options) error {
 	defer reader.Close()
 
 	scanner := bufio.NewScanner(reader)
+
+	var f *os.File
+
+	if opts.OutputPath != "" {
+		f, err = os.Create(opts.OutputPath)
+		if err != nil {
+			return err
+		}
+
+		defer f.Close()
+	}
+
 	for scanner.Scan() {
 		if strings.Contains(scanner.Text(), "Error: ") {
 			r := regexp.MustCompile(ansi)
@@ -177,6 +191,9 @@ func Run(log *logrus.Logger, opts Options) error {
 		}
 		if log.GetLevel() >= 4 {
 			fmt.Println(scanner.Text())
+		}
+		if f != nil {
+			f.WriteString(scanner.Text())
 		}
 	}
 
