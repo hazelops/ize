@@ -9,9 +9,9 @@ aws_profile = "default"
 aws_region = "us-east-1"
 terraform_version = "1.0.10"
 
-[service.squiby]
+[service.goblin]
 type = "ecs"
 env = {env1 = "value1", env2 = "value2"}
-path = "./project/giblin"
+path = "./project/goblin"
 subnets = "infra"
 vpc = "infra"

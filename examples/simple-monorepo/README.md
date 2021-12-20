@@ -1,21 +1,21 @@
 # IZE Simple Example
 
-### Commands for generate terraform files
-
-```shell
-ize -c ./examples/simple-monorepo/.infra/env/testnut/ize.toml env terraform
-```
-
-### Commands for deploy infrastructure
-
-```shell
-ize -c .infra/env/testnut/ize.toml deploy infra
-ize -c .infra/env/testnut/ize.toml destroy infra
-```
-
 ### Set config path via ENV
 ```shell
 export IZE_CONFIG_FILE=<path to your infra folder>/.infra/env/dev/ize.toml 
+```
+
+### Commands for generate terraform files
+
+```shell
+ize env terraform
+```
+
+### Commands to deploy infrastructure
+
+```shell
+ize deploy infra
+ize destroy infra
 ```
 
 ### Establish SSM tunnel
