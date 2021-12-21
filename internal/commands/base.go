@@ -94,7 +94,7 @@ func init() {
 	rootCmd.Flags().StringP("aws-profile", "p", "", "set AWS profile")
 	rootCmd.Flags().StringP("aws-region", "r", "", "set AWS region")
 	rootCmd.Flags().StringP("namespace", "n", "", "set namespace")
-	viper.BindPFlag("aws_region", rootCmd.Flags().Lookup("aws-region"))
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 
 	viper.BindPFlags(rootCmd.Flags())
 	viper.BindPFlags(rootCmd.PersistentFlags())

@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -22,21 +23,29 @@ import (
 	"github.com/hazelops/ize/pkg/ssmsession"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type tunnelCmd struct {
 	*baseBuilderCmd
 }
 
+var cmd = &cobra.Command{
+	Use:              "tunnel",
+	Short:            "tunnel management",
+	Long:             "Tunnel management.",
+	TraverseChildren: true,
+	RunE:             nil,
+}
+
+func init() {
+	cmd.Flags().String("ssh-public-key", "", "set ssh key public path")
+	cmd.Flags().String("ssh-private-key", "", "set ssh key private path")
+	viper.BindPFlags(cmd.Flags())
+}
+
 func (b *commandsBuilder) newTunnelCmd() *tunnelCmd {
 	cc := &tunnelCmd{}
-
-	cmd := &cobra.Command{
-		Use:   "tunnel",
-		Short: "Tunnel management.",
-		Long:  "",
-		RunE:  nil,
-	}
 
 	cmd.AddCommand(&cobra.Command{
 		Use:   "up",
@@ -47,6 +56,8 @@ func (b *commandsBuilder) newTunnelCmd() *tunnelCmd {
 			if err != nil {
 				return err
 			}
+
+			viper.WriteConfigAs("test.toml")
 
 			pterm.DefaultSection.Printfln("Running SSH Tunnel Up")
 
@@ -129,6 +140,10 @@ func (c *tunnelCmd) SSHKeyEnsurePresent() error {
 
 	home, _ := os.UserHomeDir()
 	publicKeyPath := fmt.Sprintf("%s/.ssh/id_rsa.pub", home)
+
+	if viper.GetString("ssh-public-key") != "" {
+		publicKeyPath = viper.GetString("ssh-public-key")
+	}
 
 	c.log.Debugf("public key path: %s", publicKeyPath)
 
@@ -269,7 +284,26 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 
 	pterm.Success.Printfln("Forward server to localhost")
 
-	c.log.Debugf("private key path: %s", privateKeyPath())
+	home, _ := os.UserHomeDir()
+	privateKeyPath := fmt.Sprintf("%s/.ssh/id_rsa", home)
+	if viper.GetString("ssh-private-key") != "" {
+		privateKeyPath = viper.GetString("ssh-private-key")
+
+		if !filepath.IsAbs(privateKeyPath) {
+			var err error
+			privateKeyPath, err = filepath.Abs(privateKeyPath)
+			if err != nil {
+				return err
+			}
+		}
+
+		if _, err := os.Stat(privateKeyPath); err != nil {
+			return fmt.Errorf("%s does not exist", privateKeyPath)
+		}
+
+	}
+
+	c.log.Debugf("private key path: %s", privateKeyPath)
 
 	for _, h := range hosts {
 		destinationHost := h[2] + ":" + h[3]
@@ -278,7 +312,7 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 
 		tunnel := sshtunnel.NewSSHTunnel(
 			"ubuntu@localhost",
-			sshtunnel.PrivateKeyFile(privateKeyPath()),
+			sshtunnel.PrivateKeyFile(privateKeyPath),
 			destinationHost,
 			localPort,
 		)
@@ -310,7 +344,7 @@ func (c *tunnelCmd) BastionSSHTunnelUp() error {
 
 	pterm.Info.Println("Press Ctrl-C to to stop the tunnel.")
 	<-done
-	pterm.Success.Println("Сlosing connections")
+	pterm.Success.Println("Closing connections")
 
 	return err
 }
@@ -329,6 +363,18 @@ func (t terraformOutput) String() string {
 }
 
 func getPublicKey(path string) (string, error) {
+	if !filepath.IsAbs(path) {
+		var err error
+		path, err = filepath.Abs(path)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if _, err := os.Stat(path); err != nil {
+		return "", fmt.Errorf("%s does not exist", path)
+	}
+
 	var key string
 	file, err := os.Open(path)
 	if err != nil {
