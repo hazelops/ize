@@ -95,12 +95,11 @@ func init() {
 	rootCmd.Flags().StringP("aws-profile", "p", "", "set AWS profile")
 	rootCmd.Flags().StringP("aws-region", "r", "", "set AWS region")
 	rootCmd.Flags().StringP("namespace", "n", "", "set namespace")
+	rootCmd.Flags().StringP("tag", "t", "", "set tag")
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 
 	viper.BindPFlags(rootCmd.Flags())
 	viper.BindPFlags(rootCmd.PersistentFlags())
-
-	rootCmd.SetVersionTemplate("IZE v{{.Version}}\n")
 }
 
 func (b *commandsBuilder) newIzeCmd() *izeCmd {
