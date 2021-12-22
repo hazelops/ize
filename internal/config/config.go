@@ -3,9 +3,11 @@ package config
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -25,6 +27,7 @@ type hclConfig struct {
 	Infra            map[string]map[string]interface{} `mapstructure:"infra"`
 	InfraDir         string                            `mapstructure:"infra_dir"`
 	RootDir          string                            `mapstructure:"root_dir"`
+	Tag              string                            `mapstructure:"tag"`
 }
 
 func FindPath(filename string) (string, error) {
@@ -76,12 +79,22 @@ func Load(path string) (*Config, error) {
 
 	//TODO ensure values of the variables are checked for nil before passing down to docker.
 
+	tag := ""
+	out, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output()
+	if err != nil {
+		tag = viper.GetString("ENV")
+		pterm.Warning.Printfln("could not run git rev-parse, the default tag was set: %s", tag)
+	} else {
+		tag = string(out)
+	}
+
 	viper.SetDefault("ROOT_DIR", cwd)
 	viper.SetDefault("INFRA_DIR", fmt.Sprintf("%v/.infra", cwd))
 	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, viper.GetString("ENV")))
 	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
 	viper.SetDefault("TF_LOG", fmt.Sprintf(""))
 	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
+	viper.SetDefault("TAG", string(tag))
 
 	//Decode
 	var cfg hclConfig
