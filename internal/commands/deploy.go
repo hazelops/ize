@@ -5,10 +5,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/aws/aws-sdk-go/service/ecs"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hazelops/ize/internal/aws/utils"
+	"github.com/hazelops/ize/internal/docker/ecsdeploy"
 	"github.com/hazelops/ize/internal/docker/terraform"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pterm/pterm"
@@ -25,7 +31,88 @@ func (b *commandsBuilder) newDeployCmd() *deployCmd {
 
 	cmd := &cobra.Command{
 		Use:   "deploy",
-		Short: "Manage deployments.",
+		Short: "manage deployments",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := cc.Init()
+			if err != nil {
+				return err
+			}
+
+			sess, err := utils.GetSession(&utils.SessionConfig{
+				Region:  cc.config.AwsRegion,
+				Profile: cc.config.AwsProfile,
+			})
+			if err != nil {
+				return err
+			}
+
+			resp, err := sts.New(sess).GetCallerIdentity(
+				&sts.GetCallerIdentityInput{},
+			)
+			if err != nil {
+				return err
+			}
+
+			serviceName := args[0]
+
+			var sConfig ecsServiceConfig
+
+			err = mapstructure.Decode(viper.GetStringMap(fmt.Sprintf("service.%s", serviceName)), &sConfig)
+			if err != nil {
+				return err
+			}
+			cc.log.Infof("%s config: %s", serviceName, sConfig)
+
+			if sConfig.Path == "" {
+				return fmt.Errorf("project path not set")
+			}
+
+			dockerRegistry := fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, cc.config.AwsRegion)
+			dockerImageName := fmt.Sprintf("%s-%s", cc.config.Namespace, serviceName)
+			tag := cc.config.Tag
+			tagLatest := fmt.Sprintf("%s-latest", cc.config.Env)
+
+			contextDir := sConfig.Path
+
+			if !filepath.IsAbs(contextDir) {
+				if contextDir, err = filepath.Abs(contextDir); err != nil {
+					return err
+				}
+			}
+
+			projectPath, err := filepath.Rel(viper.GetString("ROOT_DIR"), contextDir)
+			if err != nil {
+				return err
+			}
+			fmt.Println(viper.GetString("ROOT_DIR"))
+
+			dockerfile := contextDir + "/Dockerfile"
+
+			if _, err := os.Stat(dockerfile); err != nil {
+				return err
+			}
+
+			err = ecsdeploy.Build(cc.log, ecsdeploy.Option{
+				Tags: []string{
+					dockerImageName,
+					fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, strings.Trim(tag, "\n")),
+					fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
+				},
+				Dockerfile: dockerfile,
+				BuildArgs: map[string]*string{
+					"DOCKER_REGISTRY":   &dockerRegistry,
+					"DOCKER_IMAGE_NAME": &dockerImageName,
+					"ENV":               &cc.config.Env,
+					"PROJECT_PATH":      &projectPath,
+				},
+				CacheFrom: []string{
+					fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
+				},
+				ContextDir: viper.GetString("ROOT_DIR"),
+			})
+			if err != nil {
+				return err
+			}
 	}
 
 	cmd.AddCommand(&cobra.Command{
