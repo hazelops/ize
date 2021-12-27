@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hazelops/ize/internal/aws/utils"
@@ -110,6 +111,58 @@ func (b *commandsBuilder) newDeployCmd() *deployCmd {
 				},
 				ContextDir: viper.GetString("ROOT_DIR"),
 			})
+			if err != nil {
+				return err
+			}
+
+			svc := ecr.New(sess)
+
+			repOut, err := svc.DescribeRepositories(&ecr.DescribeRepositoriesInput{
+				RepositoryNames: []*string{aws.String(dockerImageName)},
+			})
+			if err != nil {
+				_, ok := err.(*ecr.RepositoryNotFoundException)
+				if !ok {
+					return err
+				}
+			}
+
+			if repOut == nil || len(repOut.Repositories) == 0 {
+				cc.log.Info("no ECR repository detected, creating", "name", dockerImageName)
+
+				_, err := svc.CreateRepository(&ecr.CreateRepositoryInput{
+					RepositoryName: aws.String(dockerImageName),
+				})
+				if err != nil {
+					return fmt.Errorf("unable to create repository: %w", err)
+				}
+			}
+
+			gat, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{
+				RegistryIds: []*string{
+					resp.Account,
+				},
+			})
+			if err != nil {
+				return err
+			}
+
+			if len(gat.AuthorizationData) == 0 {
+				return fmt.Errorf("not found authorization data")
+			}
+
+			token := *gat.AuthorizationData[0].AuthorizationToken
+
+			fmt.Println(token)
+
+			err = ecsdeploy.Push(
+				cc.log,
+				[]string{
+					fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
+				},
+				token,
+				dockerRegistry,
+			)
 			if err != nil {
 				return err
 			}

@@ -103,3 +103,63 @@ func Build(log logrus.Logger, opts Option) error {
 
 	return nil
 }
+
+func Push(log logrus.Logger, images []string, ecrToken string, registry string) error {
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		log.Error("docker client initialization")
+		return err
+	}
+
+	authBase64, err := getAuthToken(ecrToken, registry)
+	if err != nil {
+		return err
+	}
+
+	for _, i := range images {
+		resp, err := cli.ImagePush(context.Background(), i, types.ImagePushOptions{
+			All:          true,
+			RegistryAuth: authBase64,
+		})
+		if err != nil {
+			return err
+		}
+
+		wr := ioutil.Discard
+		if log.GetLevel() >= 4 {
+			wr = os.Stdout
+		}
+
+		var termFd uintptr
+
+		err = jsonmessage.DisplayJSONMessagesStream(
+			resp,
+			wr,
+			termFd,
+			true,
+			nil,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func getAuthToken(ecrToken, registry string) (string, error) {
+	data, err := base64.StdEncoding.DecodeString(ecrToken)
+	if err != nil {
+		return "", err
+	}
+
+	auth := types.AuthConfig{
+		Username:      "AWS",
+		Password:      string(data[4:]),
+		ServerAddress: registry,
+	}
+
+	authBytes, _ := json.Marshal(auth)
+
+	return base64.URLEncoding.EncodeToString(authBytes), nil
+}
