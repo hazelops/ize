@@ -11,7 +11,4 @@ terraform_version = "1.0.10"
 
 [service.goblin]
 type = "ecs"
-env = {env1 = "value1", env2 = "value2"}
-path = "./project/goblin"
-subnets = "infra"
-vpc = "infra"
+path = "./projects/goblin"
