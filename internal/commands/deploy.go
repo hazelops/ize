@@ -8,10 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/service/ecs"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hazelops/ize/internal/aws/utils"
@@ -27,148 +26,178 @@ type deployCmd struct {
 	*baseBuilderCmd
 }
 
+var deployCommand = &cobra.Command{
+	Use:   "deploy",
+	Short: "manage deployments",
+}
+
+func init() {
+	cmd.Flags().String("ecs-cluster", "", "set ECS cluster name")
+	cmd.Flags().String("image", "", "set image name")
+	cmd.Flags().String("task-definition-arn", "", "set task definition arn")
+	viper.BindPFlags(cmd.Flags())
+}
+
 func (b *commandsBuilder) newDeployCmd() *deployCmd {
 	cc := &deployCmd{}
 
-	cmd := &cobra.Command{
-		Use:   "deploy",
-		Short: "manage deployments",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			err := cc.Init()
-			if err != nil {
+	deployCommand.RunE = func(cmd *cobra.Command, args []string) error {
+		err := cc.Init()
+		if err != nil {
+			return err
+		}
+
+		sess, err := utils.GetSession(&utils.SessionConfig{
+			Region:  cc.config.AwsRegion,
+			Profile: cc.config.AwsProfile,
+		})
+		if err != nil {
+			return err
+		}
+
+		resp, err := sts.New(sess).GetCallerIdentity(
+			&sts.GetCallerIdentityInput{},
+		)
+		if err != nil {
+			return err
+		}
+
+		serviceName := args[0]
+
+		var sConfig ecsServiceConfig
+
+		err = mapstructure.Decode(viper.GetStringMap(fmt.Sprintf("service.%s", serviceName)), &sConfig)
+		if err != nil {
+			return err
+		}
+
+		cc.log.Infof("%s config: %s", serviceName, sConfig)
+
+		if sConfig.Path == "" {
+			return fmt.Errorf("project path not set")
+		}
+
+		dockerRegistry := fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, cc.config.AwsRegion)
+		dockerImageName := fmt.Sprintf("%s-%s", cc.config.Namespace, serviceName)
+		tag := cc.config.Tag
+		tagLatest := fmt.Sprintf("%s-latest", cc.config.Env)
+
+		contextDir := sConfig.Path
+
+		if !filepath.IsAbs(contextDir) {
+			if contextDir, err = filepath.Abs(contextDir); err != nil {
 				return err
 			}
+		}
 
-			sess, err := utils.GetSession(&utils.SessionConfig{
-				Region:  cc.config.AwsRegion,
-				Profile: cc.config.AwsProfile,
+		projectPath, err := filepath.Rel(viper.GetString("ROOT_DIR"), contextDir)
+		if err != nil {
+			return err
+		}
+
+		dockerfile := contextDir + "/Dockerfile"
+
+		if _, err := os.Stat(dockerfile); err != nil {
+			return err
+		}
+
+		err = ecsdeploy.Build(cc.log, ecsdeploy.Option{
+			Tags: []string{
+				dockerImageName,
+				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, strings.Trim(tag, "\n")),
+				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
+			},
+			Dockerfile: dockerfile,
+			BuildArgs: map[string]*string{
+				"DOCKER_REGISTRY":   &dockerRegistry,
+				"DOCKER_IMAGE_NAME": &dockerImageName,
+				"ENV":               &cc.config.Env,
+				"PROJECT_PATH":      &projectPath,
+			},
+			CacheFrom: []string{
+				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
+			},
+			ContextDir: viper.GetString("ROOT_DIR"),
+		})
+		if err != nil {
+			return err
+		}
+
+		svc := ecr.New(sess)
+
+		repOut, err := svc.DescribeRepositories(&ecr.DescribeRepositoriesInput{
+			RepositoryNames: []*string{aws.String(dockerImageName)},
+		})
+		if err != nil {
+			_, ok := err.(*ecr.RepositoryNotFoundException)
+			if !ok {
+				return err
+			}
+		}
+
+		if repOut == nil || len(repOut.Repositories) == 0 {
+			cc.log.Info("no ECR repository detected, creating", "name", dockerImageName)
+
+			_, err := svc.CreateRepository(&ecr.CreateRepositoryInput{
+				RepositoryName: aws.String(dockerImageName),
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("unable to create repository: %w", err)
 			}
+		}
 
-			resp, err := sts.New(sess).GetCallerIdentity(
-				&sts.GetCallerIdentityInput{},
-			)
-			if err != nil {
-				return err
-			}
+		gat, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{
+			RegistryIds: []*string{
+				resp.Account,
+			},
+		})
+		if err != nil {
+			return err
+		}
 
-			serviceName := args[0]
+		if len(gat.AuthorizationData) == 0 {
+			return fmt.Errorf("not found authorization data")
+		}
 
-			var sConfig ecsServiceConfig
+		token := *gat.AuthorizationData[0].AuthorizationToken
 
-			err = mapstructure.Decode(viper.GetStringMap(fmt.Sprintf("service.%s", serviceName)), &sConfig)
-			if err != nil {
-				return err
-			}
-			cc.log.Infof("%s config: %s", serviceName, sConfig)
+		err = ecsdeploy.Push(
+			cc.log,
+			[]string{
+				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
+			},
+			token,
+			dockerRegistry,
+		)
+		if err != nil {
+			return err
+		}
 
-			if sConfig.Path == "" {
-				return fmt.Errorf("project path not set")
-			}
+		stdo, err := ecs.New(sess).DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
+			TaskDefinition: aws.String(fmt.Sprintf("%s-%s", cc.config.Env, serviceName)),
+		})
+		if err != nil {
+			return err
+		}
 
-			dockerRegistry := fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, cc.config.AwsRegion)
-			dockerImageName := fmt.Sprintf("%s-%s", cc.config.Namespace, serviceName)
-			tag := cc.config.Tag
-			tagLatest := fmt.Sprintf("%s-latest", cc.config.Env)
+		err = ecsdeploy.Deploy(cc.log, ecsdeploy.DeployOpts{
+			AwsProfile:        cc.config.AwsProfile,
+			Cluster:           fmt.Sprintf("%s-%s", cc.config.Env, cc.config.Namespace),
+			Service:           serviceName,
+			TaskDefinitionArn: *stdo.TaskDefinition.TaskDefinitionArn,
+			Tag:               tag,
+			Timeout:           "600",
+			Image:             fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, strings.Trim(tag, "\n")),
+			EcsService:        fmt.Sprintf("%s-%s", cc.config.Env, serviceName),
+		})
+		if err != nil {
+			return err
+		}
 
-			contextDir := sConfig.Path
-
-			if !filepath.IsAbs(contextDir) {
-				if contextDir, err = filepath.Abs(contextDir); err != nil {
-					return err
-				}
-			}
-
-			projectPath, err := filepath.Rel(viper.GetString("ROOT_DIR"), contextDir)
-			if err != nil {
-				return err
-			}
-			fmt.Println(viper.GetString("ROOT_DIR"))
-
-			dockerfile := contextDir + "/Dockerfile"
-
-			if _, err := os.Stat(dockerfile); err != nil {
-				return err
-			}
-
-			err = ecsdeploy.Build(cc.log, ecsdeploy.Option{
-				Tags: []string{
-					dockerImageName,
-					fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, strings.Trim(tag, "\n")),
-					fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
-				},
-				Dockerfile: dockerfile,
-				BuildArgs: map[string]*string{
-					"DOCKER_REGISTRY":   &dockerRegistry,
-					"DOCKER_IMAGE_NAME": &dockerImageName,
-					"ENV":               &cc.config.Env,
-					"PROJECT_PATH":      &projectPath,
-				},
-				CacheFrom: []string{
-					fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
-				},
-				ContextDir: viper.GetString("ROOT_DIR"),
-			})
-			if err != nil {
-				return err
-			}
-
-			svc := ecr.New(sess)
-
-			repOut, err := svc.DescribeRepositories(&ecr.DescribeRepositoriesInput{
-				RepositoryNames: []*string{aws.String(dockerImageName)},
-			})
-			if err != nil {
-				_, ok := err.(*ecr.RepositoryNotFoundException)
-				if !ok {
-					return err
-				}
-			}
-
-			if repOut == nil || len(repOut.Repositories) == 0 {
-				cc.log.Info("no ECR repository detected, creating", "name", dockerImageName)
-
-				_, err := svc.CreateRepository(&ecr.CreateRepositoryInput{
-					RepositoryName: aws.String(dockerImageName),
-				})
-				if err != nil {
-					return fmt.Errorf("unable to create repository: %w", err)
-				}
-			}
-
-			gat, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{
-				RegistryIds: []*string{
-					resp.Account,
-				},
-			})
-			if err != nil {
-				return err
-			}
-
-			if len(gat.AuthorizationData) == 0 {
-				return fmt.Errorf("not found authorization data")
-			}
-
-			token := *gat.AuthorizationData[0].AuthorizationToken
-
-			fmt.Println(token)
-
-			err = ecsdeploy.Push(
-				cc.log,
-				[]string{
-					fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
-				},
-				token,
-				dockerRegistry,
-			)
-			if err != nil {
-				return err
-			}
+		return nil
 	}
 
-	cmd.AddCommand(&cobra.Command{
+	deployCommand.AddCommand(&cobra.Command{
 		Use:   "infra",
 		Short: "Deploy infrastructures.",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -277,8 +306,6 @@ func (b *commandsBuilder) newDeployCmd() *deployCmd {
 					// terraform output
 					outputPath := fmt.Sprintf("%s/.terraform/output.json", viper.Get("ENV_DIR"))
 
-					fmt.Println(outputPath)
-
 					opts = terraform.Options{
 						ContainerName: "terraform",
 						Cmd:           []string{"output", "-json"},
@@ -349,7 +376,7 @@ func (b *commandsBuilder) newDeployCmd() *deployCmd {
 		},
 	})
 
-	cc.baseBuilderCmd = b.newBuilderBasicCdm(cmd)
+	cc.baseBuilderCmd = b.newBuilderBasicCdm(deployCommand)
 
 	return cc
 }
@@ -359,4 +386,8 @@ type terraformInfraConfig struct {
 	Version string `mapstructure:"terraform_version,optional"`
 	Region  string `mapstructure:"aws_region,optional"`
 	Profile string `mapstructure:"aws_profile,optional"`
+}
+
+type ecsServiceConfig struct {
+	Path string
 }
