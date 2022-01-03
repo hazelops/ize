@@ -7,13 +7,7 @@ import (
 
 var Version = "development"
 
-type versionCmd struct {
-	*baseBuilderCmd
-}
-
-func (b *commandsBuilder) newVersionCmd() *versionCmd {
-	cc := &versionCmd{}
-
+func NewVersionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
 		Short: "show IZE version",
@@ -22,9 +16,7 @@ func (b *commandsBuilder) newVersionCmd() *versionCmd {
 		},
 	}
 
-	cc.baseBuilderCmd = b.newBuilderBasicCdm(cmd)
-
-	return cc
+	return cmd
 }
 
 func GetVersionNumber() string {
