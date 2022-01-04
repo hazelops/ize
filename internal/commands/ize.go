@@ -7,8 +7,11 @@ import (
 	"github.com/hazelops/ize/internal/commands/console"
 	"github.com/hazelops/ize/internal/commands/deploy"
 	"github.com/hazelops/ize/internal/commands/env"
+	"github.com/hazelops/ize/internal/commands/initialize"
 	"github.com/hazelops/ize/internal/commands/mfa"
+	"github.com/hazelops/ize/internal/commands/secret"
 	"github.com/hazelops/ize/internal/commands/terraform"
+	"github.com/hazelops/ize/internal/commands/tunnel"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -54,10 +57,15 @@ func newApp() (*cobra.Command, error) {
 	}
 
 	rootCmd.AddCommand(
-func Execute(args []string) Response {
-	izeCmd := newCommandBuilder().addAll().build()
-	cmd := izeCmd.getCommand()
-	cmd.SetArgs(args)
+		deploy.NewCmdDeploy(),
+		console.NewCmdConsole(),
+		env.NewCmdEnv(),
+		mfa.NewCmdMfa(),
+		terraform.NewCmdTerraform(),
+		secret.NewCmdSecret(),
+		initialize.NewCmdInit(),
+		tunnel.NewCmdTunnel(),
+		NewGendocCmd(),
 		NewVersionCmd(),
 	)
 
