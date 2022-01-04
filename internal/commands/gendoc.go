@@ -6,16 +6,12 @@ import (
 	"github.com/spf13/cobra/doc"
 )
 
-type gendocCmd struct {
-	*baseBuilderCmd
-}
-
-func (b *commandsBuilder) newGendocCmd() *gendocCmd {
-	cc := &gendocCmd{}
-
+func NewGendocCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "gendoc",
-		Short: "Create Docs",
+		Use:                   "gendoc",
+		Short:                 "create docs",
+		DisableFlagsInUseLine: true,
+		Long:                  "Create docs.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := doc.GenMarkdownTree(rootCmd, "./commands")
 			if err != nil {
@@ -28,7 +24,5 @@ func (b *commandsBuilder) newGendocCmd() *gendocCmd {
 		},
 	}
 
-	cc.baseBuilderCmd = b.newBuilderBasicCdm(cmd)
-
-	return cc
+	return cmd
 }
