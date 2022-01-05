@@ -48,37 +48,37 @@ func cleanupOldContainers(cli *client.Client, opts Options) error {
 	return nil
 }
 
-func Run(log *logrus.Logger, opts Options) error {
-	log.Debugf("terrafrom run options: %s", opts)
+func Run(opts Options) error {
+	logrus.Debugf("terraform run options: %s", opts)
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		log.Error("docker client initialization")
+		logrus.Error("docker client initialization")
 		return err
 	}
 
-	log.Debug("docker client initialization")
+	logrus.Debug("docker client initialization")
 
 	err = cleanupOldContainers(cli, opts)
 	if err != nil {
 		return err
 	}
 
-	log.Debug("cleanup old containers successfully")
+	logrus.Debug("cleanup old containers successfully")
 
 	imageName := "hashicorp/terraform"
 	imageTag := opts.TerraformVersion
 
-	log.Infof("image name: %s, image tag: %s", imageName, imageTag)
+	logrus.Infof("image name: %s, image tag: %s", imageName, imageTag)
 
 	out, err := cli.ImagePull(context.Background(), fmt.Sprintf("%v:%v", imageName, imageTag), types.ImagePullOptions{})
 	if err != nil {
-		log.Errorf("pulling terraform image %v:%v", imageName, imageTag)
+		logrus.Errorf("pulling terraform image %v:%v", imageName, imageTag)
 		return err
 	}
 
 	wr := ioutil.Discard
-	if log.GetLevel() >= 4 {
+	if logrus.GetLevel() >= 4 {
 		wr = os.Stdout
 	}
 
@@ -92,11 +92,11 @@ func Run(log *logrus.Logger, opts Options) error {
 		nil,
 	)
 	if err != nil {
-		log.Errorf("pulling terraform image %v:%v", imageName, imageTag)
+		logrus.Errorf("pulling terraform image %v:%v", imageName, imageTag)
 		return err
 	}
 
-	log.Debugf("pulling terraform image %v:%v", imageName, imageTag)
+	logrus.Debugf("pulling terraform image %v:%v", imageName, imageTag)
 
 	contConfig := &container.Config{
 		User:         fmt.Sprintf("%v:%v", os.Getuid(), os.Getgid()),
@@ -142,14 +142,14 @@ func Run(log *logrus.Logger, opts Options) error {
 	)
 
 	if err != nil {
-		log.Errorf("creating terraform container from image %v:%v", imageName, imageTag)
+		logrus.Errorf("creating terraform container from image %v:%v", imageName, imageTag)
 		return err
 	}
 
-	log.Debugf("creating terraform container from image %v:%v", imageName, imageTag)
+	logrus.Debugf("creating terraform container from image %v:%v", imageName, imageTag)
 
 	if err := cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{}); err != nil {
-		log.Errorf("terraform container started: %s", cont.ID)
+		logrus.Errorf("terraform container started: %s", cont.ID)
 		return err
 	}
 
@@ -163,7 +163,7 @@ func Run(log *logrus.Logger, opts Options) error {
 		panic(err)
 	}
 
-	log.Debugf("terraform container started: %s", cont.ID)
+	logrus.Debugf("terraform container started: %s", cont.ID)
 
 	defer reader.Close()
 
@@ -189,7 +189,7 @@ func Run(log *logrus.Logger, opts Options) error {
 			strErr = strings.ToLower(string(strErr[0])) + strErr[1:]
 			err = fmt.Errorf(strErr)
 		}
-		if log.GetLevel() >= 4 {
+		if logrus.GetLevel() >= 4 {
 			fmt.Println(scanner.Text())
 		}
 		if f != nil {
@@ -205,7 +205,7 @@ func Run(log *logrus.Logger, opts Options) error {
 
 	select {
 	case status := <-wait:
-		log.Debugf("container exit status code %d", status.StatusCode)
+		logrus.Debugf("container exit status code %d", status.StatusCode)
 		return nil
 	case err := <-errC:
 		return err

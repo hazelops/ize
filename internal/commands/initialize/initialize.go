@@ -1,27 +1,41 @@
-package commands
+package initialize
 
 import (
+	"fmt"
 	"os"
+	"reflect"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/hazelops/ize/internal/template"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
-type initCmd struct {
-	*baseBuilderCmd
-
-	filePath string
+type InitOptions struct {
+	Path string
 }
 
-func (b *commandsBuilder) newInitCmd() *initCmd {
-	cc := &initCmd{}
+func NewInitFlags() *InitOptions {
+	return &InitOptions{}
+}
+
+func NewCmdInit() *cobra.Command {
+	o := NewInitFlags()
 
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Сreates an IZE configuration file.",
+		Short: "Creates an IZE configuration file.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := InitConfigFile(cc.filePath)
+			err := o.Complete(cmd, args)
+			if err != nil {
+				return err
+			}
+
+			err = o.Validate()
+			if err != nil {
+				return err
+			}
+
+			err = o.Run()
 			if err != nil {
 				return err
 			}
@@ -30,14 +44,28 @@ func (b *commandsBuilder) newInitCmd() *initCmd {
 		},
 	}
 
-	cmd.Flags().StringVar(&cc.filePath, "path", os.Getenv("IZE_FILE"), "config file path")
+	cmd.Flags().StringVar(&o.Path, "path", os.Getenv("IZE_FILE"), "config file path")
 
-	cc.baseBuilderCmd = b.newBuilderBasicCdm(cmd)
-
-	return cc
+	return cmd
 }
 
-func InitConfigFile(path string) error {
+func (o *InitOptions) Complete(cmd *cobra.Command, args []string) error {
+	if o.Path == "" {
+		o.Path = "./ize.toml"
+	}
+
+	return nil
+}
+
+func (o *InitOptions) Validate() error {
+	if len(o.Path) == 0 {
+		return fmt.Errorf("path must be specified")
+	}
+
+	return nil
+}
+
+func (o *InitOptions) Run() error {
 	env, exist := os.LookupEnv("IZE_ENV")
 	if !exist {
 		env = os.Getenv("ENV")
@@ -100,7 +128,7 @@ func InitConfigFile(path string) error {
 		},
 	}
 
-	opts := template.ConfigOpts{}
+	opts := ConfigOpts{}
 
 	err := survey.Ask(qs, &opts, survey.WithIcons(func(is *survey.IconSet) {
 		is.Question.Text = " ??"
@@ -111,10 +139,25 @@ func InitConfigFile(path string) error {
 		return err
 	}
 
-	err = template.GenerateConfigFile(opts, path)
-	if err != nil {
-		return err
+	v := reflect.ValueOf(opts)
+	typeOfOpts := v.Type()
+
+	viper.Reset()
+	viper.SetConfigType("toml")
+
+	for i := 0; i < v.NumField(); i++ {
+		viper.Set(typeOfOpts.Field(i).Name, v.Field(i).Interface())
 	}
 
+	viper.WriteConfigAs(o.Path)
+
 	return nil
+}
+
+type ConfigOpts struct {
+	Env               string
+	Aws_profile       string
+	Aws_region        string
+	Terraform_version string
+	Namespace         string
 }

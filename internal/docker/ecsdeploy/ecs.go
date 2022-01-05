@@ -36,14 +36,14 @@ type Option struct {
 
 const ansi = `\x1B(?:[@-Z\\-_]|\[[0-?]*[-\]*[@-~])`
 
-func Build(log logrus.Logger, opts Option) error {
+func Build(opts Option) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		log.Error("docker client initialization")
+		logrus.Error("docker client initialization")
 		return err
 	}
 
-	log.Debugf("build options: %s", opts)
+	logrus.Debugf("build options: %s", opts)
 
 	contextDir := opts.ContextDir
 	dockerfile := opts.Dockerfile
@@ -72,6 +72,12 @@ func Build(log logrus.Logger, opts Option) error {
 		return status.Errorf(codes.Internal, "unable to compress context: %s", err)
 	}
 
+	logrus.Debug("CacheFrom:", opts.CacheFrom)
+	logrus.Debug("Tags:", opts.Tags)
+	logrus.Debug("BuildArgs:", opts.BuildArgs)
+	logrus.Debug("Dockerfile:", dockerfile)
+	logrus.Debug("buildCtx:", buildCtx)
+
 	resp, err := cli.ImageBuild(context.Background(), buildCtx, types.ImageBuildOptions{
 		CacheFrom:  opts.CacheFrom,
 		Tags:       opts.Tags,
@@ -79,12 +85,12 @@ func Build(log logrus.Logger, opts Option) error {
 		Dockerfile: dockerfile,
 	})
 	if err != nil {
-		log.Error(err)
+		logrus.Error(err)
 		return err
 	}
 
 	wr := ioutil.Discard
-	if log.GetLevel() >= 4 {
+	if logrus.GetLevel() >= 4 {
 		wr = os.Stdout
 	}
 
@@ -104,10 +110,10 @@ func Build(log logrus.Logger, opts Option) error {
 	return nil
 }
 
-func Push(log logrus.Logger, images []string, ecrToken string, registry string) error {
+func Push(images []string, ecrToken string, registry string) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		log.Error("docker client initialization")
+		logrus.Error("docker client initialization")
 		return err
 	}
 
@@ -126,7 +132,7 @@ func Push(log logrus.Logger, images []string, ecrToken string, registry string) 
 		}
 
 		wr := ioutil.Discard
-		if log.GetLevel() >= 4 {
+		if logrus.GetLevel() >= 4 {
 			wr = os.Stdout
 		}
 
@@ -158,17 +164,17 @@ type DeployOpts struct {
 	EcsService        string
 }
 
-func Deploy(log logrus.Logger, opts DeployOpts) error {
+func Deploy(opts DeployOpts) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		log.Error("docker client initialization")
+		logrus.Error("docker client initialization")
 		return err
 	}
 
 	imageName := "hazelops/ecs-deploy"
 	imageTag := "latest"
 
-	log.Infof("image name: %s, image tag: %s", imageName, imageTag)
+	logrus.Infof("image name: %s, image tag: %s", imageName, imageTag)
 
 	cmd := []string{
 		"ecs",
@@ -188,12 +194,12 @@ func Deploy(log logrus.Logger, opts DeployOpts) error {
 
 	out, err := cli.ImagePull(context.Background(), "hazelops/ecs-deploy", types.ImagePullOptions{})
 	if err != nil {
-		log.Errorf("pulling terraform image %v:%v", imageName, imageTag)
+		logrus.Errorf("pulling terraform image %v:%v", imageName, imageTag)
 		return err
 	}
 
 	wr := ioutil.Discard
-	if log.GetLevel() >= 4 {
+	if logrus.GetLevel() >= 4 {
 		wr = os.Stdout
 	}
 
@@ -207,11 +213,11 @@ func Deploy(log logrus.Logger, opts DeployOpts) error {
 		nil,
 	)
 	if err != nil {
-		log.Errorf("pulling ecs-deploy image %v:%v", imageName, imageTag)
+		logrus.Errorf("pulling ecs-deploy image %v:%v", imageName, imageTag)
 		return err
 	}
 
-	log.Debugf("pulling ecs-deploy image %v:%v", imageName, imageTag)
+	logrus.Debugf("pulling ecs-deploy image %v:%v", imageName, imageTag)
 
 	contConfig := &container.Config{
 		User:         fmt.Sprintf("%v:%v", os.Getuid(), os.Getgid()),
@@ -244,16 +250,15 @@ func Deploy(log logrus.Logger, opts DeployOpts) error {
 		nil,
 		"ecs-deploy",
 	)
-
 	if err != nil {
-		log.Errorf("creating terraform container from image %v:%v", imageName, imageTag)
+		logrus.Errorf("creating terraform container from image %v:%v", imageName, imageTag)
 		return err
 	}
 
-	log.Debugf("creating terraform container from image %v:%v", imageName, imageTag)
+	logrus.Debugf("creating terraform container from image %v:%v", imageName, imageTag)
 
 	if err := cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{}); err != nil {
-		log.Errorf("terraform container started: %s", cont.ID)
+		logrus.Errorf("terraform container started: %s", cont.ID)
 		return err
 	}
 
@@ -267,7 +272,7 @@ func Deploy(log logrus.Logger, opts DeployOpts) error {
 		panic(err)
 	}
 
-	log.Debugf("terraform container started: %s", cont.ID)
+	logrus.Debugf("terraform container started: %s", cont.ID)
 
 	scanner := bufio.NewScanner(reader)
 
@@ -280,7 +285,7 @@ func Deploy(log logrus.Logger, opts DeployOpts) error {
 			strErr = strings.ToLower(string(strErr[0])) + strErr[1:]
 			err = fmt.Errorf(strErr)
 		}
-		if log.GetLevel() >= 4 {
+		if logrus.GetLevel() >= 4 {
 			fmt.Println(scanner.Text())
 		}
 	}
@@ -293,13 +298,11 @@ func Deploy(log logrus.Logger, opts DeployOpts) error {
 
 	select {
 	case status := <-wait:
-		log.Debugf("container exit status code %d", status.StatusCode)
+		logrus.Debugf("container exit status code %d", status.StatusCode)
 		return nil
 	case err := <-errC:
 		return err
 	}
-
-	return nil
 }
 
 func getAuthToken(ecrToken, registry string) (string, error) {
