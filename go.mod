@@ -14,6 +14,7 @@ require (
 	github.com/elliotchance/sshtunnel v1.3.1
 	github.com/gookit/color v1.5.0 // indirect
 	github.com/hashicorp/hcl/v2 v2.11.1
+	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.4.3
@@ -24,6 +25,7 @@ require (
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/opencontainers/runc v1.0.3 // indirect
 	github.com/pterm/pterm v0.12.33
+	github.com/sevlyar/go-daemon v0.1.5
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/afero v1.7.1 // indirect
 	github.com/spf13/cobra v1.3.0
