@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -55,7 +56,7 @@ func NewCmdTunnelUp() *cobra.Command {
 				return err
 			}
 
-			err = o.Run()
+			err = o.Run(cmd)
 			if err != nil {
 				return err
 			}
@@ -110,7 +111,13 @@ func (o *TunnelUpOptions) Validate() error {
 	return nil
 }
 
-func (o *TunnelUpOptions) Run() error {
+func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+
+	ctx, cancel := context.WithCancel(cmd.Context())
+	defer cancel()
+
 	pterm.DefaultSection.Printfln("Running SSH Tunnel Up")
 
 	sess, err := utils.GetSession(&utils.SessionConfig{
@@ -119,7 +126,6 @@ func (o *TunnelUpOptions) Run() error {
 	})
 	if err != nil {
 		logrus.Error("getting AWS session")
-		fmt.Println(err)
 	}
 
 	logrus.Debug("getting AWS session")
@@ -183,6 +189,18 @@ func (o *TunnelUpOptions) Run() error {
 
 	logrus.Debugf("localport: %d", localport)
 
+	_ = tunnelDown(daemonContext(ctx))
+
+	p, err := daemonContext(ctx).Reborn()
+	if err != nil {
+		return fmt.Errorf("restarted tunnel process: %w", err)
+	}
+	if p != nil {
+		pterm.Info.Printf("tunnel is up(pid: %d)\n", p.Pid)
+		return nil
+	}
+	defer daemonContext(ctx).Release()
+
 	input := &ssm.StartSessionInput{
 		DocumentName: aws.String("AWS-StartPortForwardingSession"),
 		Parameters: map[string][]*string{
@@ -202,7 +220,6 @@ func (o *TunnelUpOptions) Run() error {
 
 	err = ssmsession.NewSSMPluginCommand(o.Region).Forward(out, input)
 	if err != nil {
-		fmt.Println(err)
 		logrus.Error("forward server to localhost")
 	}
 
@@ -248,22 +265,19 @@ func (o *TunnelUpOptions) Run() error {
 
 	pterm.Success.Printfln("Forward destination hosts to localhost")
 
-	sigs := make(chan os.Signal, 1)
-	done := make(chan bool, 1)
-
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		<-sigs
-		fmt.Println()
-		done <- true
-	}()
-
-	pterm.Info.Println("Press Ctrl-C to to stop the tunnel.")
-	<-done
-	pterm.Success.Println("Closing connections")
-
-	return err
+	for {
+		select {
+		case sig := <-sigCh:
+			switch sig {
+			case syscall.SIGTERM:
+				svc.TerminateSession(&ssm.TerminateSessionInput{
+					SessionId: out.SessionId,
+				})
+				cancel()
+				return nil
+			}
+		}
+	}
 }
 
 type terraformOutput struct {
