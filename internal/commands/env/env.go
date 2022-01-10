@@ -5,8 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/template"
 	"github.com/pterm/pterm"
@@ -127,15 +125,6 @@ func (o *EnvOptions) Run() error {
 
 	pterm.Success.Println("backend.tf generated")
 
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  o.Region,
-		Profile: o.Profile,
-	})
-	if err != nil {
-		pterm.DefaultSection.Println("Generate terraform file not completed")
-		return err
-	}
-
 	pterm.Success.Printfln("Read SSH public key")
 
 	home, _ := os.UserHomeDir()
@@ -144,10 +133,6 @@ func (o *EnvOptions) Run() error {
 		pterm.DefaultSection.Println("Generate terraform file not completed")
 		return err
 	}
-
-	resp, err := sts.New(sess).GetCallerIdentity(
-		&sts.GetCallerIdentityInput{},
-	)
 
 	if err != nil {
 		pterm.DefaultSection.Println("Generate terraform file not completed")
@@ -161,7 +146,7 @@ func (o *EnvOptions) Run() error {
 		EC2_KEY_PAIR_NAME: fmt.Sprintf("%v-%v", o.Env, o.Namespace),
 		TAG:               o.Env,
 		SSH_PUBLIC_KEY:    string(key)[:len(string(key))-1],
-		DOCKER_REGISTRY:   fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, o.Region),
+		DOCKER_REGISTRY:   viper.GetString("DOCKER_REGISTRY"),
 		NAMESPACE:         o.Namespace,
 	}
 
