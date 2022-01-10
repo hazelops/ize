@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/docker/ecsdeploy"
@@ -165,16 +164,13 @@ func (o *DeployOptions) Run() error {
 		return err
 	}
 
-	resp, err := sts.New(sess).GetCallerIdentity(
-		&sts.GetCallerIdentityInput{},
-	)
 	if err != nil {
 		return err
 	}
 
 	if !o.SkipBuildAndPush {
 		dockerImageName := fmt.Sprintf("%s-%s", o.Namespace, o.ServiceName)
-		dockerRegistry := fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, o.Region)
+		dockerRegistry := viper.GetString("DOCKER_REGISTRY")
 		tag := o.Tag
 		tagLatest := fmt.Sprintf("%s-latest", o.Env)
 		contextDir := o.Path
@@ -243,11 +239,7 @@ func (o *DeployOptions) Run() error {
 			}
 		}
 
-		gat, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{
-			RegistryIds: []*string{
-				resp.Account,
-			},
-		})
+		gat, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
 		if err != nil {
 			return err
 		}

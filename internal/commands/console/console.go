@@ -113,11 +113,6 @@ func (o *ConsoleOptions) Validate() error {
 }
 
 func (o *ConsoleOptions) Run() error {
-	err := config.InitializeConfig()
-	if err != nil {
-		return err
-	}
-
 	serviceName := fmt.Sprintf("%s-%s", o.Env, o.ServiceName)
 	clusterName := fmt.Sprintf("%s-%s", o.Env, o.Namespace)
 

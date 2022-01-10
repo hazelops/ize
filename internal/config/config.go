@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver"
+	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -124,6 +126,35 @@ func InitializeConfig() error {
 		}
 	}
 
+	if len(viper.GetString("aws-profile")) == 0 {
+		viper.Set("aws-profile", viper.GetString("aws_profile"))
+		if len(viper.GetString("aws-profile")) == 0 {
+			return fmt.Errorf("AWS profile must be specified using flags or config file")
+		}
+	}
+
+	if len(viper.GetString("aws-region")) == 0 {
+		viper.Set("aws-region", viper.GetString("aws_region"))
+		if len(viper.GetString("aws-region")) == 0 {
+			return fmt.Errorf("AWS region must be specified using flags or config file")
+		}
+	}
+
+	sess, err := utils.GetSession(&utils.SessionConfig{
+		Region:  viper.GetString("aws-region"),
+		Profile: viper.GetString("aws-profile"),
+	})
+	if err != nil {
+		return err
+	}
+
+	resp, err := sts.New(sess).GetCallerIdentity(
+		&sts.GetCallerIdentityInput{},
+	)
+	if err != nil {
+		return err
+	}
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		fmt.Println("Error getting current directory")
@@ -146,6 +177,7 @@ func InitializeConfig() error {
 		tag = string(out)
 	}
 
+	viper.SetDefault("DOCKER_REGISTRY", fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, viper.GetString("aws-region")))
 	viper.SetDefault("ROOT_DIR", cwd)
 	viper.SetDefault("INFRA_DIR", fmt.Sprintf("%v/.infra", cwd))
 	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, viper.GetString("ENV")))
@@ -153,8 +185,6 @@ func InitializeConfig() error {
 	viper.SetDefault("TF_LOG", fmt.Sprintf(""))
 	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
 	viper.SetDefault("TAG", string(tag))
-
-	// cc.config = config
 
 	return nil
 }
