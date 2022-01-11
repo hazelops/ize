@@ -56,16 +56,6 @@ func NewCmdTerraform() *cobra.Command {
 }
 
 func (o *TerraformOptions) Complete(cmd *cobra.Command, args []string, argsLenAtDash int) error {
-	if len(args) == 0 {
-		return cmd.Help()
-	}
-
-	if len(args) != 0 {
-		if args[0] == "-h" || args[0] == "--help" {
-			return cmd.Help()
-		}
-	}
-
 	err := config.InitializeConfig()
 	if err != nil {
 		return err
@@ -80,7 +70,7 @@ func (o *TerraformOptions) Complete(cmd *cobra.Command, args []string, argsLenAt
 	}
 
 	if o.Version == "" {
-		o.Version = viper.GetString("terrafrom_version")
+		o.Version = viper.GetString("terraform_version")
 	}
 
 	return nil
