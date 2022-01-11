@@ -12,6 +12,7 @@ import (
 	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/docker/ecsdeploy"
+	"github.com/hazelops/ize/pkg/templates"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -32,6 +33,27 @@ type DeployOptions struct {
 	SkipBuildAndPush  bool
 }
 
+var deployLongDesc = templates.LongDesc(`
+	Deploy infraftructure or sevice.
+	For deploy service the service name must be specimfied. 
+	The infrastructure for the service must be prepared in advance.
+`)
+
+var deployExample = templates.Examples(`
+	# Deploy service form image
+	ize deploy --image foo/bar:latest <service name>
+
+	# Deploy service form path
+	ize deploy --path /path/to/service <service name>
+
+	# Deploy service via config file
+	ize --config-file (or -c) /path/to/config deploy <service name>
+
+	# Deploy service via config file installed from env
+	export IZE_CONFIG_FILE=/path/to/config
+	ize deploy <service name>
+`)
+
 func NewDeployFlags() *DeployOptions {
 	return &DeployOptions{}
 }
@@ -40,9 +62,11 @@ func NewCmdDeploy() *cobra.Command {
 	o := NewDeployFlags()
 
 	cmd := &cobra.Command{
-		Use:   "deploy",
-		Short: "manage deployments",
-		Args:  cobra.MinimumNArgs(1),
+		Use:     "deploy [flags] <service name>",
+		Example: deployExample,
+		Short:   "manage deployments",
+		Long:    deployLongDesc,
+		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := o.Complete(cmd, args)
 			if err != nil {
