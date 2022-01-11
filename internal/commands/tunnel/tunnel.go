@@ -2,12 +2,18 @@ package tunnel
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"syscall"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/pterm/pterm"
 	"github.com/sevlyar/go-daemon"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -65,4 +71,44 @@ func daemonRunning(dCtx *daemon.Context) (process *os.Process, running bool, err
 		return p, false, nil
 	}
 	return p, true, nil
+}
+
+func getForwardConfig(sess *session.Session, env string) (terraformOutput, error) {
+	resp, err := ssm.New(sess).GetParameter(&ssm.GetParameterInput{
+		Name:           aws.String(fmt.Sprintf("/%s/terraform-output", env)),
+		WithDecryption: aws.Bool(true),
+	})
+	if err != nil {
+		logrus.Error("getting SSH forward config")
+		return terraformOutput{}, err
+	}
+
+	var value []byte
+
+	value, err = base64.StdEncoding.DecodeString(*resp.Parameter.Value)
+	if err != nil {
+		logrus.Error("getting SSH forward config")
+		return terraformOutput{}, err
+	}
+
+	var config terraformOutput
+
+	err = json.Unmarshal(value, &config)
+	if err != nil {
+		logrus.Error("getting SSH forward config")
+		return terraformOutput{}, err
+	}
+
+	logrus.Debugf("output: %s", config)
+
+	return config, nil
+}
+
+type terraformOutput struct {
+	BastionInstanceID struct {
+		Value string `json:"value,omitempty"`
+	} `json:"bastion_instance_id,omitempty"`
+	SSHForwardConfig struct {
+		Value []string `json:"value,omitempty"`
+	} `json:"ssh_forward_config,omitempty"`
 }
