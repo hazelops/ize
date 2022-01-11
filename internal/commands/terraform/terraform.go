@@ -5,6 +5,7 @@ import (
 
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/docker/terraform"
+	"github.com/hazelops/ize/pkg/templates"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -18,6 +19,22 @@ type TerraformOptions struct {
 	Command []string
 }
 
+var terrafromLongDesc = templates.LongDesc(`
+	Run terraform command via terraform docker container.
+`)
+
+var terraformExample = templates.Examples(`
+	# Run terraform init
+	ize -e dev -p default -r us-east-1 -n hazelops terraform --version 1.0.10 -- init -input=true
+
+	# Run terraform plan via config file
+	ize --config-file (or -c) /path/to/config terraform -- plan -out=$(ENV_DIR)/.terraform/tfplan -input=false
+
+	# Run terraform init via config file installed from env
+	export IZE_CONFIG_FILE=/path/to/config
+	ize terraform -- init -input=true
+`)
+
 func NewTerraformFlags() *TerraformOptions {
 	return &TerraformOptions{}
 }
@@ -26,8 +43,11 @@ func NewCmdTerraform() *cobra.Command {
 	o := NewTerraformFlags()
 
 	cmd := &cobra.Command{
-		Use:   "terraform",
-		Short: "generate terraform files",
+		Use:                   "terraform [flags] -- <terraform command> [terraform flags]",
+		Short:                 "run terraform",
+		Long:                  terrafromLongDesc,
+		Example:               terraformExample,
+		DisableFlagsInUseLine: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			argsLenAtDash := cmd.ArgsLenAtDash()
 

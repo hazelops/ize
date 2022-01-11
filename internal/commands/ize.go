@@ -71,11 +71,11 @@ func newApp() (*cobra.Command, error) {
 
 	rootCmd.PersistentFlags().StringP("log-level", "l", "", "enable debug messages")
 	rootCmd.PersistentFlags().StringP("config-file", "c", "", "set config file name")
+	rootCmd.PersistentFlags().StringP("env", "e", "", "set enviroment name")
+	rootCmd.PersistentFlags().StringP("aws-profile", "p", "", "set AWS profile")
+	rootCmd.PersistentFlags().StringP("aws-region", "r", "", "set AWS region")
+	rootCmd.PersistentFlags().StringP("namespace", "n", "", "set namespace")
 
-	rootCmd.Flags().StringP("env", "e", "", "set enviroment name")
-	rootCmd.Flags().StringP("aws-profile", "p", "", "set AWS profile")
-	rootCmd.Flags().StringP("aws-region", "r", "", "set AWS region")
-	rootCmd.Flags().StringP("namespace", "n", "", "set namespace")
 	rootCmd.Flags().StringP("tag", "t", "", "set tag")
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 
