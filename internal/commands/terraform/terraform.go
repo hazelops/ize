@@ -25,7 +25,7 @@ var terrafromLongDesc = templates.LongDesc(`
 
 var terraformExample = templates.Examples(`
 	# Run terraform init
-	ize -e dev -p default -r us-east-1 -n nutcorp terraform --version 1.0.10 -- init -input=true
+	ize -e dev -p default -r us-east-1 -n hazelops terraform --version 1.0.10 -- init -input=true
 
 	# Run terraform plan via config file
 	ize --config-file (or -c) /path/to/config terraform -- plan -out=$(ENV_DIR)/.terraform/tfplan -input=false
