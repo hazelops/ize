@@ -183,7 +183,12 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 		return fmt.Errorf("restarted tunnel process: %w", err)
 	}
 	if p != nil {
-		pterm.Info.Printf("tunnel is up(pid: %d)\n", p.Pid)
+		logrus.Debugf("tunnel is up(pid: %d)", p.Pid)
+		pterm.Success.Printfln("tunnel is up")
+		pterm.Info.Printfln("forward config:")
+		for _, h := range hosts {
+			pterm.Info.Printfln("%s:%s => localhost:%s", h[2], h[3], h[1])
+		}
 		return nil
 	}
 	defer daemonContext(ctx).Release()
