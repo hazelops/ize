@@ -2,8 +2,6 @@ package tunnel
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -126,38 +124,16 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 	})
 	if err != nil {
 		logrus.Error("getting AWS session")
+		return err
 	}
 
 	logrus.Debug("getting AWS session")
 
-	svc := ssm.New(sess)
-
-	resp, err := svc.GetParameter(&ssm.GetParameterInput{
-		Name:           aws.String(fmt.Sprintf("/%s/terraform-output", o.Env)),
-		WithDecryption: aws.Bool(true),
-	})
+	config, err := getForwardConfig(sess, o.Env)
 	if err != nil {
-		logrus.Error("getting SSH forward config")
+		logrus.Error("get forward config")
 		return err
 	}
-
-	var value []byte
-
-	value, err = base64.StdEncoding.DecodeString(*resp.Parameter.Value)
-	if err != nil {
-		logrus.Error("getting SSH forward config")
-		return err
-	}
-
-	var config terraformOutput
-
-	err = json.Unmarshal(value, &config)
-	if err != nil {
-		logrus.Error("getting SSH forward config")
-		return err
-	}
-
-	logrus.Debugf("output: %s", config)
 
 	re, err := regexp.Compile(`LocalForward\s(?P<localPort>\d+)\s(?P<remoteHost>.+):(?P<remotePort>\d+)`)
 	if err != nil {
@@ -209,6 +185,8 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 		},
 		Target: &config.BastionInstanceID.Value,
 	}
+
+	svc := ssm.New(sess)
 
 	out, err := svc.StartSession(input)
 	if err != nil {
@@ -278,15 +256,6 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 			}
 		}
 	}
-}
-
-type terraformOutput struct {
-	BastionInstanceID struct {
-		Value string `json:"value,omitempty"`
-	} `json:"bastion_instance_id,omitempty"`
-	SSHForwardConfig struct {
-		Value []string `json:"value,omitempty"`
-	} `json:"ssh_forward_config,omitempty"`
 }
 
 func getFreePort() (int, error) {
