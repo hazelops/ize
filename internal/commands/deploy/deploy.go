@@ -88,6 +88,8 @@ func NewCmdDeploy() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.Image, "image", "", "set image name")
+	cmd.Flags().StringVar(&o.EcsCluster, "ecs-cluster", "", "set ECS cluster name")
+	cmd.Flags().StringVar(&o.TaskDefinitionArn, "task-definition-arn", "", "set task definition arn")
 
 	cmd.AddCommand(NewCmdDeployInfra())
 
@@ -100,14 +102,17 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	viper.BindPFlags(cmd.Flags())
 	o.Env = viper.GetString("env")
 	o.Namespace = viper.GetString("namespace")
+	o.TaskDefinitionArn = viper.GetString("task-definition-arn")
+	o.EcsCluster = viper.GetString("ecs-cluster")
+	o.Region = viper.GetString("aws-region")
+	o.Profile = viper.GetString("aws-profile")
+	o.Tag = viper.GetString("tag")
+	o.Tag = viper.GetString("image")
 
 	o.ServiceName = cmd.Flags().Args()[0]
-
-	if o.Env == "" || o.Namespace == "" {
-		return fmt.Errorf("env or namespace is not set")
-	}
 
 	var cfg ecsServiceConfig
 
@@ -121,19 +126,6 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 	if o.EcsCluster == "" {
 		o.EcsCluster = fmt.Sprintf("%s-%s", o.Env, o.Namespace)
 	}
-
-	o.Profile = viper.GetString("aws_profile")
-	o.Region = viper.GetString("aws_region")
-
-	if o.Region == "" {
-		o.Region = viper.GetString("aws-region")
-	}
-
-	if o.Profile == "" {
-		o.Profile = viper.GetString("aws-profile")
-	}
-
-	o.Tag = viper.GetString("tag")
 
 	return nil
 }
@@ -288,18 +280,22 @@ func (o *DeployOptions) Run() error {
 		o.Tag = strings.Split(o.Image, ":")[1]
 	}
 
-	stdo, err := ecs.New(sess).DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
-		TaskDefinition: aws.String(fmt.Sprintf("%s-%s", o.Env, o.ServiceName)),
-	})
-	if err != nil {
-		return err
+	if o.TaskDefinitionArn == "" {
+		stdo, err := ecs.New(sess).DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
+			TaskDefinition: aws.String(fmt.Sprintf("%s-%s", o.Env, o.ServiceName)),
+		})
+		if err != nil {
+			return err
+		}
+
+		o.TaskDefinitionArn = *stdo.TaskDefinition.TaskDefinitionArn
 	}
 
 	err = ecsdeploy.Deploy(ecsdeploy.DeployOpts{
 		AwsProfile:        o.Profile,
-		Cluster:           fmt.Sprintf("%s-%s", o.Env, o.Namespace),
+		Cluster:           o.EcsCluster,
 		Service:           o.ServiceName,
-		TaskDefinitionArn: *stdo.TaskDefinition.TaskDefinitionArn,
+		TaskDefinitionArn: o.TaskDefinitionArn,
 		Tag:               o.Tag,
 		Timeout:           "600",
 		Image:             o.Image,
