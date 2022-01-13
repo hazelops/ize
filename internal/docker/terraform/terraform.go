@@ -79,7 +79,7 @@ func Run(opts Options) error {
 
 	wr := ioutil.Discard
 	if logrus.GetLevel() >= 4 {
-		wr = os.Stdout
+		wr = os.Stderr
 	}
 
 	var termFd uintptr
@@ -189,7 +189,7 @@ func Run(opts Options) error {
 			strErr = strings.ToLower(string(strErr[0])) + strErr[1:]
 			err = fmt.Errorf(strErr)
 		}
-		if logrus.GetLevel() >= 4 {
+		if logrus.GetLevel() >= 4 || strings.Contains(strings.Join(opts.Cmd, ""), "output") {
 			fmt.Println(scanner.Text())
 		}
 		if f != nil {
