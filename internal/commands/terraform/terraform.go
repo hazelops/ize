@@ -6,7 +6,6 @@ import (
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/docker/terraform"
 	"github.com/hazelops/ize/pkg/templates"
-	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -132,7 +131,7 @@ func (o *TerraformOptions) Run(args []string) error {
 		return err
 	}
 
-	pterm.DefaultSection.Printfln("Terraform %s completed", args[0])
+	logrus.Infof("terraform %s completed", args[0])
 
 	return nil
 }
