@@ -3,22 +3,15 @@ package tunnel
 import (
 	"context"
 	"fmt"
-	"net"
 	"os"
 	"os/signal"
-	"path/filepath"
-	"regexp"
-	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/elliotchance/sshtunnel"
 	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/pkg/ssmsession"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -129,43 +122,25 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 
 	logrus.Debug("getting AWS session")
 
-	config, err := getForwardConfig(sess, o.Env)
+	to, err := getTerraformOutput(sess, o.Env)
 	if err != nil {
 		logrus.Error("get forward config")
 		return err
 	}
 
-	re, err := regexp.Compile(`LocalForward\s(?P<localPort>\d+)\s(?P<remoteHost>.+):(?P<remotePort>\d+)`)
-	if err != nil {
-		logrus.Error("getting SSH forward config")
-		return err
-	}
-
-	hosts := re.FindAllStringSubmatch(
-		strings.Join(config.SSHForwardConfig.Value, "\n"),
-		-1,
-	)
+	hosts := getForwardConfig(to)
 
 	logrus.Debug("getting SSH forward config")
 
 	logrus.Debugf("hosts: %s", hosts)
 
 	if len(hosts) == 0 {
-		logrus.Error("getting SSH forward config")
-		return err
+		return fmt.Errorf("can't tunnel up: forward config is not valid")
 	}
 
-	logrus.Debug("port forwarding config is valid")
+	logrus.Debug("forwarding config is valid")
 
-	localport, err := getFreePort()
-	if err != nil {
-		logrus.Error("start session")
-		return err
-	}
-
-	logrus.Debugf("localport: %d", localport)
-
-	_ = tunnelDown(daemonContext(ctx))
+	_ = killDaemon(daemonContext(ctx))
 
 	p, err := daemonContext(ctx).Reborn()
 	if err != nil {
@@ -177,42 +152,9 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 	}
 	defer daemonContext(ctx).Release()
 
-	input := &ssm.StartSessionInput{
-		DocumentName: aws.String("AWS-StartPortForwardingSession"),
-		Parameters: map[string][]*string{
-			"portNumber":      {aws.String(strconv.Itoa(22))},
-			"localPortNumber": {aws.String(strconv.Itoa(localport))},
-		},
-		Target: &config.BastionInstanceID.Value,
-	}
-
-	svc := ssm.New(sess)
-
-	out, err := svc.StartSession(input)
+	localport, sessionID, err := startPortForwardSession(to, o.Region, sess)
 	if err != nil {
-		logrus.Error("start session")
-		return err
-	}
-
-	pterm.Success.Printfln("Start session")
-
-	err = ssmsession.NewSSMPluginCommand(o.Region).Forward(out, input)
-	if err != nil {
-		logrus.Error("forward server to localhost")
-	}
-
-	pterm.Success.Printfln("Forward server to localhost")
-
-	if !filepath.IsAbs(o.PrivateKeyFile) {
-		var err error
-		o.PrivateKeyFile, err = filepath.Abs(o.PrivateKeyFile)
-		if err != nil {
-			return err
-		}
-	}
-
-	if _, err := os.Stat(o.PrivateKeyFile); err != nil {
-		return fmt.Errorf("%s does not exist", o.PrivateKeyFile)
+		return fmt.Errorf("can't tunnel up: %w", err)
 	}
 
 	logrus.Debugf("private key path: %s", o.PrivateKeyFile)
@@ -224,7 +166,7 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 
 		tunnel := sshtunnel.NewSSHTunnel(
 			"ubuntu@localhost",
-			sshtunnel.PrivateKeyFile(o.PrivateKeyFile),
+			sshtunnel.PrivateKeyFile(getPrivateKey(o.PrivateKeyFile)),
 			destinationHost,
 			localPort,
 		)
@@ -237,37 +179,21 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 				os.Exit(1)
 			}
 		}()
-		pterm.Info.Printfln("%s:%s => localhost:%s", h[2], h[3], h[1])
+		pterm.Info.Printfln("%s => localhost:%s", destinationHost, localPort)
 		time.Sleep(100 * time.Millisecond)
 	}
-
-	pterm.Success.Printfln("Forward destination hosts to localhost")
 
 	for {
 		select {
 		case sig := <-sigCh:
 			switch sig {
 			case syscall.SIGTERM:
-				svc.TerminateSession(&ssm.TerminateSessionInput{
-					SessionId: out.SessionId,
+				ssm.New(sess).TerminateSession(&ssm.TerminateSessionInput{
+					SessionId: &sessionID,
 				})
 				cancel()
 				return nil
 			}
 		}
 	}
-}
-
-func getFreePort() (int, error) {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		return 0, err
-	}
-
-	l, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		return 0, err
-	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port, nil
 }

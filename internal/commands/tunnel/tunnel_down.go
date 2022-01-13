@@ -10,7 +10,7 @@ func NewCmdTunnelDown() *cobra.Command {
 		Short: "close tunnel",
 		Long:  "Close tunnel.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return tunnelDown(daemonContext(cmd.Context()))
+			return killDaemon(daemonContext(cmd.Context()))
 		},
 	}
 

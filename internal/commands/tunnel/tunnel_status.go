@@ -101,7 +101,7 @@ func (o *TunnelStatusOptions) Run(cmd *cobra.Command) error {
 		return err
 	}
 
-	config, err := getForwardConfig(sess, o.Env)
+	config, err := getTerraformOutput(sess, o.Env)
 	if err != nil {
 		return err
 	}
