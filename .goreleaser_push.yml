@@ -13,6 +13,9 @@ builds:
     ldflags:
       - -s -w -X 'github.com/hazelops/ize/internal/commands.Version={{.Env.RELEASE_VERSION}}'
 
+release:
+  prerelease: true
+
 brews:
   - name: ize-dev
     tap:
