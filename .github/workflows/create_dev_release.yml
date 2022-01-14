@@ -47,5 +47,6 @@ jobs:
       with:
         tag_name: 0.0.0-dev
         release_name: Dev Release
+        prerelease: true
         body: |
           Most recent dev release
