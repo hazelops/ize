@@ -23,19 +23,19 @@ ize secrets push goblin
 ize secrets rm goblin
 ```
 
-#### Build your `goblin` application
+#### 3. Build your `goblin` application
 _It runs a docker build with all require underneath.
 ```shell
 ize build goblin
 ```
 
-#### Deploy your `goblin` application
+#### 4. Deploy your `goblin` application
 _It runs a simple logic of updating your task definitions to a new version (and rolling back in case ELB/ALB fails). Currently [hazelops/ecs-deploy](https://github.com/hazelops/ecs-deploy) container is used._
 ```shell
 ize deploy goblin
 ```
 
-#### Bring up & Bring SSM tunnel
+#### 5. Bring up & Bring SSM tunnel
 _If you use a bastion host, you can establish a tunnel to access your private resources, like Postgres or Redis. This feature is using Amazon SSM and SSH tunneling underneath. Simple, yet effective._
 ```shell
 ize tunnel up
