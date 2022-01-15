@@ -1,6 +1,6 @@
-# Ize Tool (WIP)
+# ❯ize - Operations Tool for Humans
 
-This tool is designed to be an opinionated infrastructure wrapper that allows to use multiple tools in one infra: terraform, serverless, waypoint.
+This tool is designed to be an opinionated infrastructure wrapper that allows to use multiple tools in one infra: terraform, serverless and others.
 It combines build and deploy workflows in one.
 
 This tool is using configuration file that describes the workflows.
