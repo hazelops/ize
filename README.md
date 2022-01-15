@@ -4,7 +4,7 @@ _Opinionated tool for infrastructure and code._
 
 This tool is designed as a simple wrapper around popular tools, so they can be easily integrated in one infra: terraform, ECS deployment, serverless, and others.
 
-It combines infra, build and deploy workflows in one and is
+It combines infra, build and deploy workflows in one and is too simple to be considered sophisticated. So let's not do it but rather embrace the simplicity and minimalism.
 
 ## Workflow
 Let's imagine we're deploying a terraform-based infra and a Go-based  service named `goblin`.
