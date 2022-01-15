@@ -191,7 +191,6 @@ func InitializeConfig() error {
 	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
 	viper.SetDefault("TAG", string(tag))
 
-
 	return nil
 }
 
