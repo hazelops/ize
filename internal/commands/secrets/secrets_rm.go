@@ -1,4 +1,4 @@
-package secret
+package secrets
 
 import (
 	"fmt"
@@ -11,24 +11,26 @@ import (
 	"github.com/spf13/viper"
 )
 
-type SecretRemoveOptions struct {
+type SecretsRemoveOptions struct {
+	Env string
 	Region  string
 	Profile string
-	Type    string
-	Path    string
+	AppName string
+	Backend        string
+	SecretsPath string
 }
 
-func NewSecretRemoveFlags() *SecretRemoveOptions {
-	return &SecretRemoveOptions{}
+func NewSecretsRemoveFlags() *SecretsRemoveOptions {
+	return &SecretsRemoveOptions{}
 }
 
-func NewCmdSecretRemove() *cobra.Command {
-	o := NewSecretRemoveFlags()
+func NewCmdSecretsRemove() *cobra.Command {
+	o := NewSecretsRemoveFlags()
 
 	cmd := &cobra.Command{
-		Use:              "remove",
+		Use:              "rm",
 		Short:            "remove secrets from storage",
-		Long:             "This command remove sercrets from storage",
+		Long:             "This command removes secrets from storage",
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := o.Complete(cmd, args)
@@ -50,22 +52,22 @@ func NewCmdSecretRemove() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&o.Type, "type", "", "vault type")
-	cmd.Flags().StringVar(&o.Path, "path", "", "path to secrets")
-	cmd.MarkFlagRequired("type")
-	cmd.MarkFlagRequired("path")
+	cmd.Flags().StringVar(&o.Backend, "backend", "ssm", "backend type")
+	cmd.Flags().StringVar(&o.SecretsPath, "path", "", "path to secrets")
 
 	return cmd
 }
 
-func (o *SecretRemoveOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *SecretsRemoveOptions) Complete(cmd *cobra.Command, args []string) error {
 	err := config.InitializeConfig()
 	if err != nil {
 		return err
 	}
 
+	o.Env = viper.GetString("env")
 	o.Profile = viper.GetString("aws-profile")
 	o.Region = viper.GetString("aws-region")
+	o.AppName = cmd.Flags().Args()[0]
 
 	if o.Profile == "" {
 		o.Profile = viper.GetString("aws_profile")
@@ -75,10 +77,14 @@ func (o *SecretRemoveOptions) Complete(cmd *cobra.Command, args []string) error 
 		o.Region = viper.GetString("aws_region")
 	}
 
+	if o.SecretsPath == "" {
+		o.SecretsPath = fmt.Sprintf("/%s/%s", o.Env, o.AppName)
+	}
+
 	return nil
 }
 
-func (o *SecretRemoveOptions) Validate() error {
+func (o *SecretsRemoveOptions) Validate() error {
 	if len(o.Profile) == 0 {
 		return fmt.Errorf("AWS profile must be specified")
 	}
@@ -89,57 +95,61 @@ func (o *SecretRemoveOptions) Validate() error {
 	return nil
 }
 
-func (o *SecretRemoveOptions) Run() error {
-	pterm.DefaultSection.Printfln("Starting remove secrets")
+func (o *SecretsRemoveOptions) Run() error {
+	pterm.DefaultSection.Printfln("Removing Secrets")
 
-	if o.Type == "ssm" {
-		err := remove(
+	if o.Backend == "ssm" {
+		err := rm(
 			utils.SessionConfig{
 				Region:  o.Region,
 				Profile: o.Profile,
 			},
-			o.Path,
+			o,
 		)
 		if err != nil {
-			pterm.DefaultSection.Println("Remove secrets not completed")
+			pterm.DefaultSection.Sprintfln("Secrets have been removed from %s", o.SecretsPath)
 			return err
 		}
 	} else {
-		pterm.DefaultSection.Println("Remove secrets not completed")
-		return fmt.Errorf("vault with type %s not found or not supported", o.Type)
+		pterm.DefaultSection.Println("Secrets removal unsuccessful")
+		return fmt.Errorf("backend %s is not found or not supported", o.Backend)
 	}
 
-	pterm.DefaultSection.Printfln("Remove secrets completed")
+	//pterm.DefaultSection.Printfln("Done: removing secrets")
+
 
 	return nil
 }
 
-func remove(sessCfg utils.SessionConfig, path string) error {
-	if path == "" {
-		pterm.Info.Printfln("Path were not set")
+func rm(sessCfg utils.SessionConfig, o *SecretsRemoveOptions) error {
+	if o.SecretsPath == "" {
+		pterm.Info.Printfln("Path was not set")
 		return nil
 	}
+
+	pterm.Info.Printfln("Removing secrets from %s://%s", o.Backend, o.SecretsPath)
 
 	sess, err := utils.GetSession(&sessCfg)
 	if err != nil {
 		return err
 	}
-	pterm.Success.Printfln("Geting AWS session")
+
+	pterm.Success.Printfln("Establish AWS session")
 
 	ssmSvc := ssm.New(sess)
 
 	out, err := ssmSvc.GetParametersByPath(&ssm.GetParametersByPathInput{
-		Path: &path,
+		Path: &o.SecretsPath,
 	})
 	if err != nil {
 		return err
 	}
 
-	pterm.Success.Printfln("Getting secrets from path")
+	pterm.Success.Printfln("Getting secrets")
 
 	if len(out.Parameters) == 0 {
-		pterm.Info.Printfln("No values found along the path")
-		pterm.Success.Printfln("Deleting secrets from path")
+		pterm.Info.Printfln("No values found")
+		pterm.Success.Printfln("Removing secrets")
 		return nil
 	}
 
@@ -159,7 +169,7 @@ func remove(sessCfg utils.SessionConfig, path string) error {
 		return err
 	}
 
-	pterm.Success.Printfln("Deleting secrets from path")
+	pterm.Success.Printfln("Removed secrets")
 
 	return nil
 }

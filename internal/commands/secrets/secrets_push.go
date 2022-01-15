@@ -1,13 +1,8 @@
-package secret
+package secrets
 
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strings"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -16,29 +11,39 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 )
 
-type SecretSetOptions struct {
-	Env     string
-	Region  string
-	Profile string
-	Type    string
-	Path    string
-	Force   bool
+type SecretsPushOptions struct {
+	Env      string
+	Region   string
+	Profile  string
+	AppName     string
+	Backend     string
+	FilePath    string
+	SecretsPath string
+	Force    bool
+
 }
 
-func NewSecretSetFlags() *SecretSetOptions {
-	return &SecretSetOptions{}
+func NewSecretsSetFlags() *SecretsPushOptions {
+	return &SecretsPushOptions{}
 }
 
-func NewCmdSecretSet() *cobra.Command {
-	o := NewSecretSetFlags()
+func NewCmdSecretsSet() *cobra.Command {
+	o := NewSecretsSetFlags()
 
 	cmd := &cobra.Command{
-		Use:   "set",
-		Short: "set secrets to storage",
-		Long:  "This command set sercrets to storage.",
+		Use:   "push",
+		Short: "push secrets to a key-value storage (like SSM)",
+		Long:  "This command pushes secrets from a local file to a key-value storage (like SSM).",
+		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+
+
+
 			err := o.Complete(cmd, args)
 			if err != nil {
 				return err
@@ -58,16 +63,15 @@ func NewCmdSecretSet() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&o.Type, "type", "", "vault type")
-	cmd.Flags().StringVar(&o.Path, "file", "", "file with sercrets")
-	cmd.Flags().BoolVar(&o.Force, "force", false, "allow overwrite of parameters")
-	cmd.MarkFlagRequired("type")
-	cmd.MarkFlagRequired("file")
+	cmd.Flags().StringVar(&o.Backend, "backend", "ssm", "backend type (default=ssm)")
+	cmd.Flags().StringVar(&o.FilePath, "file","", "file with secrets")
+	cmd.Flags().StringVar(&o.SecretsPath, "path","", "path where to store secrets (/<env>/<app> by default)")
+	cmd.Flags().BoolVar(&o.Force, "force", false, "allow values overwrite")
 
 	return cmd
 }
 
-func (o *SecretSetOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *SecretsPushOptions) Complete(cmd *cobra.Command, args []string) error {
 	err := config.InitializeConfig()
 	if err != nil {
 		return err
@@ -76,6 +80,7 @@ func (o *SecretSetOptions) Complete(cmd *cobra.Command, args []string) error {
 	o.Env = viper.GetString("env")
 	o.Profile = viper.GetString("aws-profile")
 	o.Region = viper.GetString("aws-region")
+	o.AppName = cmd.Flags().Args()[0]
 
 	if o.Profile == "" {
 		o.Profile = viper.GetString("aws_profile")
@@ -85,10 +90,18 @@ func (o *SecretSetOptions) Complete(cmd *cobra.Command, args []string) error {
 		o.Region = viper.GetString("aws_region")
 	}
 
+	if o.FilePath == "" {
+		o.FilePath = fmt.Sprintf("%s/%s/%s.json",viper.GetString("ENV_DIR"), "secrets", o.AppName)
+	}
+
+	if o.SecretsPath == "" {
+		o.SecretsPath = fmt.Sprintf("/%s/%s", o.Env, o.AppName)
+	}
+
 	return nil
 }
 
-func (o *SecretSetOptions) Validate() error {
+func (o *SecretsPushOptions) Validate() error {
 	if len(o.Env) == 0 {
 		return fmt.Errorf("env must be specified")
 	}
@@ -103,30 +116,32 @@ func (o *SecretSetOptions) Validate() error {
 	return nil
 }
 
-func (o *SecretSetOptions) Run() error {
-	pterm.DefaultSection.Printfln("Starting config setting")
+func (o *SecretsPushOptions) Run() error {
+	pterm.DefaultSection.Printfln("Pushing secrets for %s", o.AppName)
 
-	if o.Type == "ssm" {
+	if o.Backend == "ssm" {
 
-		err := set(o)
+		err := push(o)
 		if err != nil {
-			pterm.DefaultSection.Println("Config setting not completed")
+			pterm.Error.Println("Error pushing secrets")
 			return err
 		}
 	} else {
-		pterm.DefaultSection.Println("Config setting not completed")
-		return fmt.Errorf("vault with type %s not found or not supported", o.Type)
+		pterm.Error.Println("Error pushing secrets")
+		return fmt.Errorf("backend with type %s not found or not supported", o.Backend)
 	}
 
-	pterm.DefaultSection.Printfln("Config setting completed")
+	//pterm.Success.Printfln("Pushing Secrets complete")
 
 	return nil
 }
 
-func set(o *SecretSetOptions) error {
-	basename := filepath.Base(o.Path)
-	svc := strings.TrimSuffix(basename, filepath.Ext(basename))
-	path := fmt.Sprintf("/%s/%s", o.Env, svc)
+func push(o *SecretsPushOptions) error {
+	//basename := filepath.Base(o.FilePath)
+
+
+	//svc := strings.TrimSuffix(basename, filepath.Ext(basename))
+	pterm.Info.Printfln("Pushing secrets to %s://%s", o.Backend, o.SecretsPath)
 
 	sess, err := utils.GetSession(
 		&utils.SessionConfig{
@@ -138,9 +153,9 @@ func set(o *SecretSetOptions) error {
 		return err
 	}
 
-	pterm.Success.Printfln("Geting AWS session")
+	pterm.Success.Printfln("Establish AWS session")
 
-	values, err := getKeyValuePairs(o.Path)
+	values, err := getKeyValuePairs(o.FilePath)
 	if err != nil {
 		return err
 	}
@@ -150,7 +165,7 @@ func set(o *SecretSetOptions) error {
 	ssmSvc := ssm.New(sess)
 
 	for key, value := range values {
-		name := fmt.Sprintf("%s/%s", path, key)
+		name := fmt.Sprintf("%s/%s", o.SecretsPath, key)
 
 		_, err := ssmSvc.PutParameter(&ssm.PutParameterInput{
 			Name:      &name,
@@ -174,7 +189,7 @@ func set(o *SecretSetOptions) error {
 			Tags: []*ssm.Tag{
 				{
 					Key:   aws.String("Application"),
-					Value: &svc,
+					Value: &o.AppName,
 				},
 				{
 					Key:   aws.String("EnvVarName"),
@@ -188,18 +203,29 @@ func set(o *SecretSetOptions) error {
 		}
 	}
 
-	pterm.Success.Printfln("Putting secrets in SSM")
+	pterm.Success.Printfln("Push secrets")
 
 	return err
 }
 
-func getKeyValuePairs(file string) (map[string]string, error) {
-	wd, err := os.Getwd()
-	if err != nil {
+func getKeyValuePairs(filePath string) (map[string]string, error) {
+	if !filepath.IsAbs(filePath) {
+		var err error
+		wd, err := os.Getwd()
+		filePath, err = filepath.Abs(wd + "/" + filePath)
+		if err != nil {
+			return nil, err
+		}
+
+
+	}
+
+	if _, err := os.Stat(filePath); err != nil {
+		pterm.Fatal.Sprintfln("%s does not exist", filePath)
 		return nil, err
 	}
 
-	f, err := os.Open(wd + "/" + file)
+	f, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
