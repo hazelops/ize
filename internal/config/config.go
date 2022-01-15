@@ -119,6 +119,11 @@ func InitializeConfig() error {
 		return err
 	}
 
+	viper.SetDefault("ENV", os.Getenv("ENV"))
+	viper.SetDefault("AWS_PROFILE", os.Getenv("AWS_PROFILE"))
+	viper.SetDefault("AWS_REGION", os.Getenv("AWS_REGION"))
+	viper.SetDefault("NAMESPACE", os.Getenv("NAMESPACE"))
+
 	if viper.GetString("config-file") != "" {
 		_, err := initConfig(viper.GetString("config-file"))
 		if err != nil {
@@ -129,7 +134,7 @@ func InitializeConfig() error {
 	if len(viper.GetString("aws-profile")) == 0 {
 		viper.Set("aws-profile", viper.GetString("aws_profile"))
 		if len(viper.GetString("aws-profile")) == 0 {
-			return fmt.Errorf("AWS profile must be specified using flags or config file")
+			return fmt.Errorf("AWS profile must be specified using flags, config file or env var")
 		}
 	}
 
