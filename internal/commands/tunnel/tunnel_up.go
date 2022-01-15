@@ -179,7 +179,7 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 				os.Exit(1)
 			}
 		}()
-		pterm.Info.Printfln("%s => localhost:%s", destinationHost, localPort)
+		pterm.Info.Printfln("%s ➡ localhost:%s", destinationHost, localPort)
 		time.Sleep(100 * time.Millisecond)
 	}
 
