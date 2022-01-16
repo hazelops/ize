@@ -187,7 +187,7 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 		pterm.Success.Printfln("tunnel is up")
 		pterm.Info.Printfln("forward config:")
 		for _, h := range hosts {
-			pterm.Info.Printfln("%s:%s => localhost:%s", h[2], h[3], h[1])
+			pterm.Info.Printfln("%s:%s ➡ localhost:%s", h[2], h[3], h[1])
 		}
 		return nil
 	}
@@ -220,7 +220,7 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 				os.Exit(1)
 			}
 		}()
-		pterm.Info.Printfln("%s => localhost:%s", destinationHost, localPort)
+		pterm.Info.Printfln("%s ➡ localhost:%s", destinationHost, localPort)
 		time.Sleep(100 * time.Millisecond)
 	}
 
