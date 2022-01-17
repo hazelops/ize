@@ -275,15 +275,10 @@ func Deploy(opts DeployOpts) error {
 	logrus.Debugf("terraform container started: %s", cont.ID)
 
 	scanner := bufio.NewScanner(reader)
-
 	for scanner.Scan() {
-		if strings.Contains(scanner.Text(), "Error: ") {
+		if strings.Contains(scanner.Text(), "error") {
 			r := regexp.MustCompile(ansi)
-			strErr := r.ReplaceAllString(scanner.Text(), "")
-			strErr = strErr[strings.LastIndex(strErr, "Error: "):]
-			strErr = strings.TrimPrefix(strErr, "Error: ")
-			strErr = strings.ToLower(string(strErr[0])) + strErr[1:]
-			err = fmt.Errorf(strErr)
+			err = fmt.Errorf(r.ReplaceAllString(scanner.Text(), ""))
 		}
 		if logrus.GetLevel() >= 4 {
 			fmt.Println(scanner.Text())
@@ -299,6 +294,9 @@ func Deploy(opts DeployOpts) error {
 	select {
 	case status := <-wait:
 		logrus.Debugf("container exit status code %d", status.StatusCode)
+		if status.StatusCode == 1 {
+			return err
+		}
 		return nil
 	case err := <-errC:
 		return err
