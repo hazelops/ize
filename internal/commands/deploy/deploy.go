@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/hazelops/ize/internal/aws/utils"
@@ -91,7 +92,10 @@ func NewCmdDeploy() *cobra.Command {
 	cmd.Flags().StringVar(&o.EcsCluster, "ecs-cluster", "", "set ECS cluster name")
 	cmd.Flags().StringVar(&o.TaskDefinitionArn, "task-definition-arn", "", "set task definition arn")
 
-	cmd.AddCommand(NewCmdDeployInfra())
+	cmd.AddCommand(
+		NewCmdDeployAll(),
+		NewCmdDeployInfra(),
+	)
 
 	return cmd
 }
@@ -169,58 +173,52 @@ func (o *DeployOptions) Validate() error {
 	return nil
 }
 
-func (o *DeployOptions) Run() error {
-	logrus.Debugf("profile: %s, region: %s", o.Profile, o.Region)
+func deployService(s Service, profile string, namespace string, env string, tag string, sess *session.Session) error {
+	var err error
 
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  o.Region,
-		Profile: o.Profile,
-	})
-	if err != nil {
-		return err
+	skipBuildAndPush := true
+
+	if len(s.Image) == 0 {
+		skipBuildAndPush = false
 	}
 
-	if err != nil {
-		return err
-	}
-
-	if !o.SkipBuildAndPush {
-		dockerImageName := fmt.Sprintf("%s-%s", o.Namespace, o.ServiceName)
+	if !skipBuildAndPush {
+		dockerImageName := fmt.Sprintf("%s-%s", namespace, s.Name)
 		dockerRegistry := viper.GetString("DOCKER_REGISTRY")
-		tag := o.Tag
-		tagLatest := fmt.Sprintf("%s-latest", o.Env)
-		contextDir := o.Path
+		tag := tag
+		tagLatest := fmt.Sprintf("%s-latest", env)
+		contextDir := s.Path
 
 		if !filepath.IsAbs(contextDir) {
 			if contextDir, err = filepath.Abs(contextDir); err != nil {
-				return err
+				return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
 			}
 		}
 
 		projectPath, err := filepath.Rel(viper.GetString("ROOT_DIR"), contextDir)
 		if err != nil {
-			return err
+			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
 		}
 
 		dockerfile := contextDir + "/Dockerfile"
 
 		if _, err := os.Stat(dockerfile); err != nil {
-			return err
+			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
 		}
 
-		o.Image = fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, strings.Trim(tag, "\n"))
+		s.Image = fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, strings.Trim(tag, "\n"))
 
 		err = ecsdeploy.Build(ecsdeploy.Option{
 			Tags: []string{
 				dockerImageName,
-				o.Image,
+				s.Image,
 				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
 			},
 			Dockerfile: dockerfile,
 			BuildArgs: map[string]*string{
 				"DOCKER_REGISTRY":   &dockerRegistry,
 				"DOCKER_IMAGE_NAME": &dockerImageName,
-				"ENV":               &o.Env,
+				"ENV":               &env,
 				"PROJECT_PATH":      &projectPath,
 			},
 			CacheFrom: []string{
@@ -229,7 +227,7 @@ func (o *DeployOptions) Run() error {
 			ContextDir: viper.GetString("ROOT_DIR"),
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
 		}
 
 		svc := ecr.New(sess)
@@ -240,7 +238,7 @@ func (o *DeployOptions) Run() error {
 		if err != nil {
 			_, ok := err.(*ecr.RepositoryNotFoundException)
 			if !ok {
-				return err
+				return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
 			}
 		}
 
@@ -251,17 +249,17 @@ func (o *DeployOptions) Run() error {
 				RepositoryName: aws.String(dockerImageName),
 			})
 			if err != nil {
-				return fmt.Errorf("unable to create repository: %w", err)
+				return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
 			}
 		}
 
 		gat, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
 		if err != nil {
-			return err
+			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
 		}
 
 		if len(gat.AuthorizationData) == 0 {
-			return fmt.Errorf("not found authorization data")
+			return fmt.Errorf("cat't deploy service %s: not found authorization data", s.Name)
 		}
 
 		token := *gat.AuthorizationData[0].AuthorizationToken
@@ -274,35 +272,61 @@ func (o *DeployOptions) Run() error {
 			dockerRegistry,
 		)
 		if err != nil {
-			return err
+			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
 		}
 	} else {
-		o.Tag = strings.Split(o.Image, ":")[1]
+		tag = strings.Split(s.Image, ":")[1]
 	}
 
-	if o.TaskDefinitionArn == "" {
+	if s.TaskDefinitionArn == "" {
 		stdo, err := ecs.New(sess).DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
-			TaskDefinition: aws.String(fmt.Sprintf("%s-%s", o.Env, o.ServiceName)),
+			TaskDefinition: aws.String(fmt.Sprintf("%s-%s", env, s.Name)),
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
 		}
 
-		o.TaskDefinitionArn = *stdo.TaskDefinition.TaskDefinitionArn
+		s.TaskDefinitionArn = *stdo.TaskDefinition.TaskDefinitionArn
 	}
 
 	err = ecsdeploy.Deploy(ecsdeploy.DeployOpts{
-		AwsProfile:        o.Profile,
-		Cluster:           o.EcsCluster,
-		Service:           o.ServiceName,
-		TaskDefinitionArn: o.TaskDefinitionArn,
-		Tag:               o.Tag,
+		Service:           s.Name,
+		Cluster:           s.EcsCluster,
+		TaskDefinitionArn: s.TaskDefinitionArn,
+		AwsProfile:        profile,
+		Tag:               tag,
 		Timeout:           "600",
-		Image:             o.Image,
-		EcsService:        fmt.Sprintf("%s-%s", o.Env, o.ServiceName),
+		Image:             s.Image,
+		EcsService:        fmt.Sprintf("%s-%s", env, s.Name),
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+	}
+
+	return nil
+}
+
+func (o *DeployOptions) Run() error {
+	logrus.Debugf("profile: %s, region: %s", o.Profile, o.Region)
+
+	sess, err := utils.GetSession(&utils.SessionConfig{
+		Region:  o.Region,
+		Profile: o.Profile,
+	})
+	if err != nil {
+		return fmt.Errorf("can't deploy : %w", err)
+	}
+
+	err = deployService(
+		Service{Name: o.ServiceName, Path: o.Path, Image: o.Image, EcsCluster: o.EcsCluster, TaskDefinitionArn: o.TaskDefinitionArn},
+		o.Profile,
+		o.Namespace,
+		o.Env,
+		o.Tag,
+		sess,
+	)
+	if err != nil {
+		return fmt.Errorf("can't deploy: %w", err)
 	}
 
 	return nil
