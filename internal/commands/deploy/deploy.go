@@ -2,14 +2,7 @@ package deploy
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/docker/ecsdeploy"
@@ -173,139 +166,6 @@ func (o *DeployOptions) Validate() error {
 	return nil
 }
 
-func deployService(s Service, profile string, namespace string, env string, tag string, sess *session.Session) error {
-	var err error
-
-	skipBuildAndPush := true
-
-	if len(s.Image) == 0 {
-		skipBuildAndPush = false
-	}
-
-	if !skipBuildAndPush {
-		dockerImageName := fmt.Sprintf("%s-%s", namespace, s.Name)
-		dockerRegistry := viper.GetString("DOCKER_REGISTRY")
-		tag := tag
-		tagLatest := fmt.Sprintf("%s-latest", env)
-		contextDir := s.Path
-
-		if !filepath.IsAbs(contextDir) {
-			if contextDir, err = filepath.Abs(contextDir); err != nil {
-				return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
-			}
-		}
-
-		projectPath, err := filepath.Rel(viper.GetString("ROOT_DIR"), contextDir)
-		if err != nil {
-			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
-		}
-
-		dockerfile := contextDir + "/Dockerfile"
-
-		if _, err := os.Stat(dockerfile); err != nil {
-			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
-		}
-
-		s.Image = fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, strings.Trim(tag, "\n"))
-
-		err = ecsdeploy.Build(ecsdeploy.Option{
-			Tags: []string{
-				dockerImageName,
-				s.Image,
-				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
-			},
-			Dockerfile: dockerfile,
-			BuildArgs: map[string]*string{
-				"DOCKER_REGISTRY":   &dockerRegistry,
-				"DOCKER_IMAGE_NAME": &dockerImageName,
-				"ENV":               &env,
-				"PROJECT_PATH":      &projectPath,
-			},
-			CacheFrom: []string{
-				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
-			},
-			ContextDir: viper.GetString("ROOT_DIR"),
-		})
-		if err != nil {
-			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
-		}
-
-		svc := ecr.New(sess)
-
-		repOut, err := svc.DescribeRepositories(&ecr.DescribeRepositoriesInput{
-			RepositoryNames: []*string{aws.String(dockerImageName)},
-		})
-		if err != nil {
-			_, ok := err.(*ecr.RepositoryNotFoundException)
-			if !ok {
-				return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
-			}
-		}
-
-		if repOut == nil || len(repOut.Repositories) == 0 {
-			logrus.Info("no ECR repository detected, creating", "name", dockerImageName)
-
-			_, err := svc.CreateRepository(&ecr.CreateRepositoryInput{
-				RepositoryName: aws.String(dockerImageName),
-			})
-			if err != nil {
-				return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
-			}
-		}
-
-		gat, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
-		if err != nil {
-			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
-		}
-
-		if len(gat.AuthorizationData) == 0 {
-			return fmt.Errorf("cat't deploy service %s: not found authorization data", s.Name)
-		}
-
-		token := *gat.AuthorizationData[0].AuthorizationToken
-
-		err = ecsdeploy.Push(
-			[]string{
-				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
-			},
-			token,
-			dockerRegistry,
-		)
-		if err != nil {
-			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
-		}
-	} else {
-		tag = strings.Split(s.Image, ":")[1]
-	}
-
-	if s.TaskDefinitionArn == "" {
-		stdo, err := ecs.New(sess).DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
-			TaskDefinition: aws.String(fmt.Sprintf("%s-%s", env, s.Name)),
-		})
-		if err != nil {
-			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
-		}
-
-		s.TaskDefinitionArn = *stdo.TaskDefinition.TaskDefinitionArn
-	}
-
-	err = ecsdeploy.Deploy(ecsdeploy.DeployOpts{
-		Service:           s.Name,
-		Cluster:           s.EcsCluster,
-		TaskDefinitionArn: s.TaskDefinitionArn,
-		AwsProfile:        profile,
-		Tag:               tag,
-		Timeout:           "600",
-		Image:             s.Image,
-		EcsService:        fmt.Sprintf("%s-%s", env, s.Name),
-	})
-	if err != nil {
-		return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
-	}
-
-	return nil
-}
-
 func (o *DeployOptions) Run() error {
 	logrus.Debugf("profile: %s, region: %s", o.Profile, o.Region)
 
@@ -317,8 +177,8 @@ func (o *DeployOptions) Run() error {
 		return fmt.Errorf("can't deploy : %w", err)
 	}
 
-	err = deployService(
-		Service{Name: o.ServiceName, Path: o.Path, Image: o.Image, EcsCluster: o.EcsCluster, TaskDefinitionArn: o.TaskDefinitionArn},
+	err = ecsdeploy.DeployService(
+		ecsdeploy.Service{Name: o.ServiceName, Path: o.Path, Image: o.Image, EcsCluster: o.EcsCluster, TaskDefinitionArn: o.TaskDefinitionArn},
 		o.Profile,
 		o.Namespace,
 		o.Env,

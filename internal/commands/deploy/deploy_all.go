@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/docker/ecsdeploy"
 	"github.com/hazelops/ize/internal/docker/terraform"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/pterm/pterm"
@@ -27,17 +28,8 @@ type DeployAllOptions struct {
 	Region           string
 	Tag              string
 	SkipBuildAndPush bool
-	Services         []Service
+	Services         []ecsdeploy.Service
 	Infra            Infra
-}
-
-type Service struct {
-	Name              string
-	Type              string
-	Path              string
-	Image             string
-	EcsCluster        string
-	TaskDefinitionArn string
 }
 
 type Infra struct {
@@ -112,11 +104,11 @@ func setServiceFromArgs(args []string) error {
 	return nil
 }
 
-func getServices(rawServices interface{}) []Service {
-	var services []Service
+func getServices(rawServices interface{}) []ecsdeploy.Service {
+	var services []ecsdeploy.Service
 
 	for name := range rawServices.(map[string]interface{}) {
-		s := Service{}
+		s := ecsdeploy.Service{}
 		viper.UnmarshalKey(fmt.Sprintf("service.%s", name), &s)
 		s.Name = name
 		services = append(services, s)
@@ -346,7 +338,7 @@ func (o *DeployAllOptions) Run() error {
 			spinner, _ = pterm.DefaultSpinner.Start(fmt.Sprintf("deploy service %s", svc.Name))
 		}
 
-		err = deployService(
+		err = ecsdeploy.DeployService(
 			svc,
 			o.Infra.Profile,
 			o.Namespace,

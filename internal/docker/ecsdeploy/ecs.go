@@ -12,6 +12,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -34,9 +38,151 @@ type Option struct {
 	ContextDir string
 }
 
+type Service struct {
+	Name              string
+	Type              string
+	Path              string
+	Image             string
+	EcsCluster        string
+	TaskDefinitionArn string
+}
+
 const ansi = `\x1B(?:[@-Z\\-_]|\[[0-?]*[-\]*[@-~])`
 
-func Build(opts Option) error {
+func DeployService(s Service, profile string, namespace string, env string, tag string, sess *session.Session) error {
+	var err error
+
+	skipBuildAndPush := true
+
+	if len(s.Image) == 0 {
+		skipBuildAndPush = false
+	}
+
+	if !skipBuildAndPush {
+		dockerImageName := fmt.Sprintf("%s-%s", namespace, s.Name)
+		dockerRegistry := viper.GetString("DOCKER_REGISTRY")
+		tag := tag
+		tagLatest := fmt.Sprintf("%s-latest", env)
+		contextDir := s.Path
+
+		if !filepath.IsAbs(contextDir) {
+			if contextDir, err = filepath.Abs(contextDir); err != nil {
+				return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+			}
+		}
+
+		projectPath, err := filepath.Rel(viper.GetString("ROOT_DIR"), contextDir)
+		if err != nil {
+			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+		}
+
+		dockerfile := contextDir + "/Dockerfile"
+
+		if _, err := os.Stat(dockerfile); err != nil {
+			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+		}
+
+		s.Image = fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, strings.Trim(tag, "\n"))
+
+		err = buildImage(Option{
+			Tags: []string{
+				dockerImageName,
+				s.Image,
+				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
+			},
+			Dockerfile: dockerfile,
+			BuildArgs: map[string]*string{
+				"DOCKER_REGISTRY":   &dockerRegistry,
+				"DOCKER_IMAGE_NAME": &dockerImageName,
+				"ENV":               &env,
+				"PROJECT_PATH":      &projectPath,
+			},
+			CacheFrom: []string{
+				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
+			},
+			ContextDir: viper.GetString("ROOT_DIR"),
+		})
+		if err != nil {
+			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+		}
+
+		svc := ecr.New(sess)
+
+		repOut, err := svc.DescribeRepositories(&ecr.DescribeRepositoriesInput{
+			RepositoryNames: []*string{aws.String(dockerImageName)},
+		})
+		if err != nil {
+			_, ok := err.(*ecr.RepositoryNotFoundException)
+			if !ok {
+				return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+			}
+		}
+
+		if repOut == nil || len(repOut.Repositories) == 0 {
+			logrus.Info("no ECR repository detected, creating", "name", dockerImageName)
+
+			_, err := svc.CreateRepository(&ecr.CreateRepositoryInput{
+				RepositoryName: aws.String(dockerImageName),
+			})
+			if err != nil {
+				return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+			}
+		}
+
+		gat, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
+		if err != nil {
+			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+		}
+
+		if len(gat.AuthorizationData) == 0 {
+			return fmt.Errorf("cat't deploy service %s: not found authorization data", s.Name)
+		}
+
+		token := *gat.AuthorizationData[0].AuthorizationToken
+
+		err = push(
+			[]string{
+				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
+			},
+			token,
+			dockerRegistry,
+		)
+		if err != nil {
+			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+		}
+	} else {
+		tag = strings.Split(s.Image, ":")[1]
+	}
+
+	if s.TaskDefinitionArn == "" {
+		stdo, err := ecs.New(sess).DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
+			TaskDefinition: aws.String(fmt.Sprintf("%s-%s", env, s.Name)),
+		})
+		if err != nil {
+			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+		}
+
+		s.TaskDefinitionArn = *stdo.TaskDefinition.TaskDefinitionArn
+	}
+
+	err = deploy(DeployOpts{
+		Service:           s.Name,
+		Cluster:           s.EcsCluster,
+		TaskDefinitionArn: s.TaskDefinitionArn,
+		AwsProfile:        profile,
+		Tag:               tag,
+		Timeout:           "600",
+		Image:             s.Image,
+		EcsService:        fmt.Sprintf("%s-%s", env, s.Name),
+	})
+	if err != nil {
+		return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+	}
+
+	return nil
+}
+
+func buildImage(opts Option) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		logrus.Error("docker client initialization")
@@ -110,7 +256,7 @@ func Build(opts Option) error {
 	return nil
 }
 
-func Push(images []string, ecrToken string, registry string) error {
+func push(images []string, ecrToken string, registry string) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		logrus.Error("docker client initialization")
@@ -164,7 +310,7 @@ type DeployOpts struct {
 	EcsService        string
 }
 
-func Deploy(opts DeployOpts) error {
+func deploy(opts DeployOpts) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		logrus.Error("docker client initialization")
