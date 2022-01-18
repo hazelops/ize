@@ -22,8 +22,8 @@ import (
 const Filename = "ize.hcl"
 
 type Config struct {
-	AwsRegion  string `mapstructure:"aws_region"`
-	AwsProfile string `mapstructure:"aws_profile"`
+	AwsRegion  string `mapstructure:"aws-region"`
+	AwsProfile string `mapstructure:"aws-profile"`
 	Namespace  string `mapstructure:"namespace"`
 	Env        string `mapstructure:"env"`
 }
@@ -134,6 +134,11 @@ func InitializeConfig(options ...Option) (*Config, error) {
 
 	if viper.GetString("config-file") != "" {
 		cfg, err = initConfig(viper.GetString("config-file"))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		err := viper.Unmarshal(cfg)
 		if err != nil {
 			return nil, err
 		}
