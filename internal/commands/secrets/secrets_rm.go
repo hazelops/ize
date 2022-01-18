@@ -96,7 +96,7 @@ func (o *SecretsRemoveOptions) Validate() error {
 }
 
 func (o *SecretsRemoveOptions) Run() error {
-	pterm.DefaultSection.Printfln("Removing Secrets")
+	pterm.DefaultSection.Printfln("Removing Secrets for %s", o.AppName)
 
 	if o.Backend == "ssm" {
 		err := rm(
