@@ -31,21 +31,8 @@ func Execute(args []string) error {
 	return app.Execute()
 }
 
-var (
-	rootCmd = &cobra.Command{
-		Use: "ize",
-		Long: fmt.Sprintf("%s\n%s\n%s",
-			pterm.White(pterm.Bold.Sprint("Welcome to IZE")),
-			pterm.Sprintf("%s %s", pterm.Blue("Docs:"), "https://ize.sh"),
-			pterm.Sprintf("%s %s", pterm.Green("Version:"), Version),
-		),
-		Version:          Version,
-		TraverseChildren: true,
-	}
-)
-
 func newApp() (*cobra.Command, error) {
-	rootCmd = &cobra.Command{
+	rootCmd := &cobra.Command{
 		Use: "ize",
 		Long: fmt.Sprintf("%s\n%s\n%s",
 			pterm.White(pterm.Bold.Sprint("Welcome to IZE")),
@@ -54,6 +41,8 @@ func newApp() (*cobra.Command, error) {
 		),
 		Version:          Version,
 		TraverseChildren: true,
+		SilenceUsage:     true,
+		SilenceErrors:    true,
 	}
 
 	rootCmd.AddCommand(
