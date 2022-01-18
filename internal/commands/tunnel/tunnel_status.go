@@ -120,7 +120,7 @@ func (o *TunnelStatusOptions) Run(cmd *cobra.Command) error {
 
 	pterm.Info.Printfln("tunnel is up with following config:")
 	for _, h := range hosts {
-		pterm.Info.Printfln("%s:%s => localhost:%s", h[2], h[3], h[1])
+		pterm.Info.Printfln("%s:%s ➡ localhost:%s", h[2], h[3], h[1])
 	}
 	return err
 }

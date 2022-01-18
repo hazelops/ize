@@ -13,7 +13,12 @@ func NewGendocCmd() *cobra.Command {
 		DisableFlagsInUseLine: true,
 		Long:                  "Create docs.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := doc.GenMarkdownTree(rootCmd, "./commands")
+			root, err := newApp()
+			if err != nil {
+				return err
+			}
+
+			err = doc.GenMarkdownTree(root, "./commands")
 			if err != nil {
 				return err
 			}

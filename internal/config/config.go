@@ -132,6 +132,11 @@ func InitializeConfig(options ...Option) (*Config, error) {
 		return nil, fmt.Errorf("can't initialize config: this function requiment config file")
 	}
 
+	viper.SetDefault("ENV", os.Getenv("ENV"))
+	viper.SetDefault("AWS_PROFILE", os.Getenv("AWS_PROFILE"))
+	viper.SetDefault("AWS_REGION", os.Getenv("AWS_REGION"))
+	viper.SetDefault("NAMESPACE", os.Getenv("NAMESPACE"))
+
 	if viper.GetString("config-file") != "" {
 		cfg, err = initConfig(viper.GetString("config-file"))
 		if err != nil {
