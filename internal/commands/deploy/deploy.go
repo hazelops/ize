@@ -399,6 +399,12 @@ func deployService(o *DeployOptions) error {
 		return fmt.Errorf("can't deploy: %w", err)
 	}
 
+	spinner := &pterm.SpinnerPrinter{}
+
+	if logrus.GetLevel() < 4 {
+		spinner, _ = pterm.DefaultSpinner.Start(fmt.Sprintf("deploy service %s", o.ServiceName))
+	}
+
 	err = ecsdeploy.DeployService(
 		&o.Service,
 		o.ServiceName,
@@ -408,6 +414,12 @@ func deployService(o *DeployOptions) error {
 	)
 	if err != nil {
 		return fmt.Errorf("can't deploy: %w", err)
+	}
+
+	if logrus.GetLevel() < 4 {
+		spinner.Success(fmt.Sprintf("deploy service %s completed", o.ServiceName))
+	} else {
+		pterm.Success.Printfln("deploy service %s completed", o.ServiceName)
 	}
 
 	return nil
