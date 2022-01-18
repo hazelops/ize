@@ -27,6 +27,7 @@ type DeployOptions struct {
 	Services         map[string]*ecsdeploy.Service
 	Infra            Infra
 	Service          ecsdeploy.Service
+	AutoApprove      bool
 }
 
 type Infra struct {
@@ -70,6 +71,11 @@ func NewCmdDeploy() *cobra.Command {
 		Long:    deployLongDesc,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 && !o.AutoApprove {
+				pterm.Warning.Println("please set flag --auto-approve")
+				return nil
+			}
+
 			err := o.Complete(cmd, args)
 			if err != nil {
 				return err
@@ -93,6 +99,7 @@ func NewCmdDeploy() *cobra.Command {
 	cmd.Flags().StringVar(&o.Service.EcsCluster, "ecs-cluster", "", "set ECS cluster name")
 	cmd.Flags().StringVar(&o.Service.Path, "path", "", "specify the path to the service")
 	cmd.Flags().StringVar(&o.Service.TaskDefinitionArn, "task-definition-arn", "", "set task definition arn")
+	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "approve deploy all")
 
 	cmd.AddCommand(
 		NewCmdDeployInfra(),
