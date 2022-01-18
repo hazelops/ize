@@ -32,7 +32,7 @@ func NewSecretsSetFlags() *SecretsPushOptions {
 	return &SecretsPushOptions{}
 }
 
-func NewCmdSecretsSet() *cobra.Command {
+func NewCmdSecretsPush() *cobra.Command {
 	o := NewSecretsSetFlags()
 
 	cmd := &cobra.Command{
