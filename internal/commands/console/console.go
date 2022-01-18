@@ -15,12 +15,9 @@ import (
 )
 
 type ConsoleOptions struct {
+	Config      *config.Config
 	ServiceName string
 	EcsCluster  string
-	Env         string
-	Namespace   string
-	Profile     string
-	Region      string
 }
 
 func NewConsoleFlags() *ConsoleOptions {
@@ -56,50 +53,32 @@ func NewCmdConsole() *cobra.Command {
 }
 
 func (o *ConsoleOptions) Complete(cmd *cobra.Command, args []string) error {
-	err := config.InitializeConfig()
+	cfg, err := config.InitializeConfig()
 	if err != nil {
 		return err
 	}
 
-	o.Env = viper.GetString("env")
-	o.Namespace = viper.GetString("namespace")
+	o.Config = cfg
+
+	o.Config.Env = viper.GetString("env")
+	o.Config.Namespace = viper.GetString("namespace")
 
 	if o.EcsCluster == "" {
-		o.EcsCluster = fmt.Sprintf("%s-%s", o.Env, o.Namespace)
+		o.EcsCluster = fmt.Sprintf("%s-%s", o.Config.Env, o.Config.Namespace)
 	}
 
 	o.ServiceName = cmd.Flags().Args()[0]
-
-	//TODO
-	o.Profile = viper.GetString("aws_profile")
-	o.Region = viper.GetString("aws_region")
-
-	if o.Region == "" {
-		o.Region = viper.GetString("aws-region")
-	}
-
-	if o.Profile == "" {
-		o.Profile = viper.GetString("aws-profile")
-	}
 
 	return nil
 }
 
 func (o *ConsoleOptions) Validate() error {
-	if len(o.Env) == 0 {
+	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("env must be specified")
 	}
 
-	if len(o.Namespace) == 0 {
+	if len(o.Config.Namespace) == 0 {
 		return fmt.Errorf("namespace must be specified")
-	}
-
-	if len(o.Profile) == 0 {
-		return fmt.Errorf("AWS profile must be specified")
-	}
-
-	if len(o.Region) == 0 {
-		return fmt.Errorf("AWS region must be specified")
 	}
 
 	if len(o.EcsCluster) == 0 {
@@ -113,15 +92,15 @@ func (o *ConsoleOptions) Validate() error {
 }
 
 func (o *ConsoleOptions) Run() error {
-	serviceName := fmt.Sprintf("%s-%s", o.Env, o.ServiceName)
-	clusterName := fmt.Sprintf("%s-%s", o.Env, o.Namespace)
+	serviceName := fmt.Sprintf("%s-%s", o.Config.Env, o.ServiceName)
+	clusterName := fmt.Sprintf("%s-%s", o.Config.Env, o.Config.Namespace)
 
 	logrus.Infof("service name: %s, cluster name: %s", serviceName, clusterName)
-	logrus.Infof("region: %s, profile: %s", o.Region, o.Profile)
+	logrus.Infof("region: %s, profile: %s", o.Config.AwsProfile, o.Config.AwsRegion)
 
 	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  o.Region,
-		Profile: o.Profile,
+		Region:  o.Config.AwsRegion,
+		Profile: o.Config.AwsProfile,
 	})
 	if err != nil {
 		pterm.Error.Printfln("Getting AWS session")
@@ -164,7 +143,7 @@ func (o *ConsoleOptions) Run() error {
 
 	pterm.Success.Printfln("Executing command")
 
-	ssmCmd := ssmsession.NewSSMPluginCommand(o.Region)
+	ssmCmd := ssmsession.NewSSMPluginCommand(o.Config.AwsRegion)
 	ssmCmd.Start((out.Session))
 
 	if err != nil {

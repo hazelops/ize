@@ -14,7 +14,7 @@ import (
 )
 
 type DestroyInfraOptions struct {
-	Env       string
+	Config    *config.Config
 	Terraform terraformInfraConfig
 }
 
@@ -65,14 +65,14 @@ func BindFlags(flags *pflag.FlagSet) {
 }
 
 func (o *DestroyInfraOptions) Complete(cmd *cobra.Command, args []string) error {
-	err := config.InitializeConfig()
+	cfg, err := config.InitializeConfig()
 	if err != nil {
 		return err
 	}
 
-	BindFlags(cmd.Flags())
+	o.Config = cfg
 
-	o.Env = viper.GetString("env")
+	BindFlags(cmd.Flags())
 
 	if len(o.Terraform.Profile) == 0 {
 		o.Terraform.Profile = viper.GetString("infra.terraform.aws_profile")
@@ -98,7 +98,7 @@ func (o *DestroyInfraOptions) Complete(cmd *cobra.Command, args []string) error 
 func (o *DestroyInfraOptions) Validate() error {
 	fmt.Println(o.Terraform.Profile)
 
-	if len(o.Env) == 0 {
+	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("env must be specified")
 	}
 
@@ -119,7 +119,7 @@ func (o *DestroyInfraOptions) Run() error {
 		ContainerName: "terraform",
 		Cmd:           []string{"destroy", "-auto-approve"},
 		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Env),
+			fmt.Sprintf("ENV=%v", o.Config.Env),
 			fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
 			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
 			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),

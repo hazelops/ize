@@ -10,13 +10,10 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type TunnelStatusOptions struct {
-	Env     string
-	Region  string
-	Profile string
+	Config *config.Config
 }
 
 func NewTunnelStatusOptions() *TunnelStatusOptions {
@@ -54,30 +51,21 @@ func NewCmdTunnelStatus() *cobra.Command {
 }
 
 func (o *TunnelStatusOptions) Complete(cmd *cobra.Command, args []string) error {
-	err := config.InitializeConfig()
+	cfg, err := config.InitializeConfig()
 	if err != nil {
 		return err
 	}
 
-	o.Env = viper.GetString("env")
-	o.Profile = viper.GetString("aws-profile")
-	o.Region = viper.GetString("aws-region")
+	o.Config = cfg
 
 	return nil
 }
 
 func (o *TunnelStatusOptions) Validate() error {
-	if len(o.Env) == 0 {
+	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("env must be specified")
 	}
 
-	if len(o.Profile) == 0 {
-		return fmt.Errorf("AWS profile must be specified")
-	}
-
-	if len(o.Region) == 0 {
-		return fmt.Errorf("AWS region must be specified")
-	}
 	return nil
 }
 
@@ -94,14 +82,14 @@ func (o *TunnelStatusOptions) Run(cmd *cobra.Command) error {
 	logrus.Debugf("tunnel is up(pid: %d)")
 
 	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  o.Region,
-		Profile: o.Profile,
+		Region:  o.Config.AwsRegion,
+		Profile: o.Config.AwsProfile,
 	})
 	if err != nil {
 		return err
 	}
 
-	config, err := getTerraformOutput(sess, o.Env)
+	config, err := getTerraformOutput(sess, o.Config.Env)
 	if err != nil {
 		return err
 	}

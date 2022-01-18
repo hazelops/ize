@@ -15,16 +15,13 @@ import (
 	"github.com/hazelops/ize/internal/config"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type SecretSetOptions struct {
-	Env     string
-	Region  string
-	Profile string
-	Type    string
-	Path    string
-	Force   bool
+	Config *config.Config
+	Type   string
+	Path   string
+	Force  bool
 }
 
 func NewSecretSetFlags() *SecretSetOptions {
@@ -68,38 +65,21 @@ func NewCmdSecretSet() *cobra.Command {
 }
 
 func (o *SecretSetOptions) Complete(cmd *cobra.Command, args []string) error {
-	err := config.InitializeConfig()
+	cfg, err := config.InitializeConfig()
 	if err != nil {
 		return err
 	}
 
-	o.Env = viper.GetString("env")
-	o.Profile = viper.GetString("aws-profile")
-	o.Region = viper.GetString("aws-region")
-
-	if o.Profile == "" {
-		o.Profile = viper.GetString("aws_profile")
-	}
-
-	if o.Region == "" {
-		o.Region = viper.GetString("aws_region")
-	}
+	o.Config = cfg
 
 	return nil
 }
 
 func (o *SecretSetOptions) Validate() error {
-	if len(o.Env) == 0 {
+	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("env must be specified")
 	}
 
-	if len(o.Profile) == 0 {
-		return fmt.Errorf("AWS profile must be specified")
-	}
-
-	if len(o.Region) == 0 {
-		return fmt.Errorf("AWS region must be specified")
-	}
 	return nil
 }
 
@@ -126,12 +106,12 @@ func (o *SecretSetOptions) Run() error {
 func set(o *SecretSetOptions) error {
 	basename := filepath.Base(o.Path)
 	svc := strings.TrimSuffix(basename, filepath.Ext(basename))
-	path := fmt.Sprintf("/%s/%s", o.Env, svc)
+	path := fmt.Sprintf("/%s/%s", o.Config.Env, svc)
 
 	sess, err := utils.GetSession(
 		&utils.SessionConfig{
-			Region:  o.Region,
-			Profile: o.Profile,
+			Region:  o.Config.AwsRegion,
+			Profile: o.Config.AwsProfile,
 		},
 	)
 	if err != nil {

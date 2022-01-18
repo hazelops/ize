@@ -8,14 +8,12 @@ import (
 	"github.com/hazelops/ize/internal/config"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type SecretRemoveOptions struct {
-	Region  string
-	Profile string
-	Type    string
-	Path    string
+	Config *config.Config
+	Type   string
+	Path   string
 }
 
 func NewSecretRemoveFlags() *SecretRemoveOptions {
@@ -32,11 +30,6 @@ func NewCmdSecretRemove() *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := o.Complete(cmd, args)
-			if err != nil {
-				return err
-			}
-
-			err = o.Validate()
 			if err != nil {
 				return err
 			}
@@ -59,33 +52,13 @@ func NewCmdSecretRemove() *cobra.Command {
 }
 
 func (o *SecretRemoveOptions) Complete(cmd *cobra.Command, args []string) error {
-	err := config.InitializeConfig()
+	cfg, err := config.InitializeConfig()
 	if err != nil {
 		return err
 	}
 
-	o.Profile = viper.GetString("aws-profile")
-	o.Region = viper.GetString("aws-region")
+	o.Config = cfg
 
-	if o.Profile == "" {
-		o.Profile = viper.GetString("aws_profile")
-	}
-
-	if o.Region == "" {
-		o.Region = viper.GetString("aws_region")
-	}
-
-	return nil
-}
-
-func (o *SecretRemoveOptions) Validate() error {
-	if len(o.Profile) == 0 {
-		return fmt.Errorf("AWS profile must be specified")
-	}
-
-	if len(o.Region) == 0 {
-		return fmt.Errorf("AWS region must be specified")
-	}
 	return nil
 }
 
@@ -95,8 +68,8 @@ func (o *SecretRemoveOptions) Run() error {
 	if o.Type == "ssm" {
 		err := remove(
 			utils.SessionConfig{
-				Region:  o.Region,
-				Profile: o.Profile,
+				Region:  o.Config.AwsRegion,
+				Profile: o.Config.AwsRegion,
 			},
 			o.Path,
 		)

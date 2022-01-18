@@ -27,13 +27,10 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type TunnelOptions struct {
-	Env            string
-	Region         string
-	Profile        string
+	Config         *config.Config
 	PrivateKeyFile string
 	PublicKeyFile  string
 }
@@ -81,22 +78,12 @@ func NewCmdTunnel() *cobra.Command {
 }
 
 func (o *TunnelOptions) Complete(cmd *cobra.Command, args []string) error {
-	err := config.InitializeConfig()
+	cfg, err := config.InitializeConfig()
 	if err != nil {
 		return err
 	}
 
-	o.Env = viper.GetString("env")
-	o.Profile = viper.GetString("aws-profile")
-	o.Region = viper.GetString("aws-region")
-
-	if o.Profile == "" {
-		o.Profile = viper.GetString("aws_profile")
-	}
-
-	if o.Region == "" {
-		o.Region = viper.GetString("aws_region")
-	}
+	o.Config = cfg
 
 	if o.PrivateKeyFile == "" {
 		home, _ := os.UserHomeDir()
@@ -112,17 +99,10 @@ func (o *TunnelOptions) Complete(cmd *cobra.Command, args []string) error {
 }
 
 func (o *TunnelOptions) Validate() error {
-	if len(o.Env) == 0 {
+	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("env must be specified")
 	}
 
-	if len(o.Profile) == 0 {
-		return fmt.Errorf("AWS profile must be specified")
-	}
-
-	if len(o.Region) == 0 {
-		return fmt.Errorf("AWS region must be specified")
-	}
 	return nil
 }
 
@@ -130,8 +110,8 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 	pterm.DefaultSection.Printfln("Sending SSH public key")
 
 	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  o.Region,
-		Profile: o.Profile,
+		Region:  o.Config.AwsRegion,
+		Profile: o.Config.AwsProfile,
 	})
 	if err != nil {
 		return fmt.Errorf("can't get AWS session: %w", err)
@@ -139,7 +119,7 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 
 	logrus.Debug("getting AWS session")
 
-	to, err := getTerraformOutput(sess, o.Env)
+	to, err := getTerraformOutput(sess, o.Config.Env)
 	if err != nil {
 		return fmt.Errorf("can't get forward config: %w", err)
 	}
@@ -193,7 +173,7 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 	}
 	defer daemonContext(ctx).Release()
 
-	localport, sessionID, err := startPortForwardSession(to, o.Region, sess)
+	localport, sessionID, err := startPortForwardSession(to, o.Config.AwsRegion, sess)
 	if err != nil {
 		return fmt.Errorf("can't tunnel up: %w", err)
 	}

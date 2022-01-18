@@ -20,8 +20,7 @@ import (
 )
 
 type DeployInfraOptions struct {
-	Env       string
-	Namespace string
+	Config    *config.Config
 	Type      string
 	Terraform terraformInfraConfig
 }
@@ -74,17 +73,16 @@ func BindFlags(flags *pflag.FlagSet) {
 }
 
 func (o *DeployInfraOptions) Complete(cmd *cobra.Command, args []string) error {
-	err := config.InitializeConfig()
+	cfg, err := config.InitializeConfig()
 	if err != nil {
 		return err
 	}
 
+	o.Config = cfg
+
 	BindFlags(cmd.Flags())
 
 	fmt.Println(viper.GetString("infra.terraform.aws_profile"))
-
-	o.Env = viper.GetString("env")
-	o.Namespace = viper.GetString("namespace")
 
 	if len(o.Terraform.Profile) == 0 {
 		o.Terraform.Profile = viper.GetString("infra.terraform.aws_profile")
@@ -122,11 +120,11 @@ func (o *DeployInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 func (o *DeployInfraOptions) Validate() error {
 	fmt.Println(o.Terraform.Profile)
 
-	if len(o.Env) == 0 {
+	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("env must be specified")
 	}
 
-	if len(o.Namespace) == 0 {
+	if len(o.Config.Namespace) == 0 {
 		return fmt.Errorf("namespace must be specified")
 	}
 
@@ -152,7 +150,7 @@ func (o *DeployInfraOptions) Run() error {
 		ContainerName: "terraform",
 		Cmd:           []string{"init", "-input=true"},
 		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Env),
+			fmt.Sprintf("ENV=%v", o.Config.Env),
 			fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
 			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
 			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
@@ -183,7 +181,7 @@ func (o *DeployInfraOptions) Run() error {
 		ContainerName: "terraform",
 		Cmd:           []string{"plan"},
 		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Env),
+			fmt.Sprintf("ENV=%v", o.Config.Env),
 			fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
 			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
 			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
@@ -212,7 +210,7 @@ func (o *DeployInfraOptions) Run() error {
 		ContainerName: "terraform",
 		Cmd:           []string{"apply", "-auto-approve"},
 		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Env),
+			fmt.Sprintf("ENV=%v", o.Config.Env),
 			fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
 			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
 			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
@@ -243,7 +241,7 @@ func (o *DeployInfraOptions) Run() error {
 		ContainerName: "terraform",
 		Cmd:           []string{"output", "-json"},
 		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Env),
+			fmt.Sprintf("ENV=%v", o.Config.Env),
 			fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
 			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
 			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
@@ -276,7 +274,7 @@ func (o *DeployInfraOptions) Run() error {
 		return err
 	}
 
-	name := fmt.Sprintf("/%s/terraform-output", o.Env)
+	name := fmt.Sprintf("/%s/terraform-output", o.Config.Env)
 
 	outputFile, err := os.Open(outputPath)
 	if err != nil {
