@@ -86,7 +86,7 @@ func WithConfigFile() Option {
 }
 
 func InitializeConfig(options ...Option) (*Config, error) {
-	var cfg *Config
+	cfg := &Config{}
 	var err error
 
 	r := requiments{}
