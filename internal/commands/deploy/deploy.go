@@ -24,7 +24,7 @@ type DeployOptions struct {
 	ServiceName      string
 	Tag              string
 	SkipBuildAndPush bool
-	Services         map[string]ecsdeploy.Service
+	Services         map[string]*ecsdeploy.Service
 	Infra            Infra
 	Service          ecsdeploy.Service
 }
@@ -114,9 +114,9 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 		viper.UnmarshalKey("service", &o.Services)
 		viper.UnmarshalKey("infra.terraform", &o.Infra)
 
-		for _, s := range o.Services {
-			if len(s.EcsCluster) == 0 {
-				s.EcsCluster = fmt.Sprintf("%s-%s", o.Config.Env, o.Config.Namespace)
+		for i := range o.Services {
+			if len(o.Services[i].EcsCluster) == 0 {
+				o.Services[i].EcsCluster = fmt.Sprintf("%s-%s", o.Config.Env, o.Config.Namespace)
 			}
 		}
 	} else {
@@ -404,10 +404,8 @@ func deployService(o *DeployOptions) error {
 		return fmt.Errorf("can't deploy: %w", err)
 	}
 
-	svc := ecsdeploy.Service{Path: o.Service.Path, Image: o.Service.Image, EcsCluster: o.Service.EcsCluster, TaskDefinitionArn: o.Service.TaskDefinitionArn}
-
 	err = ecsdeploy.DeployService(
-		svc,
+		&o.Service,
 		o.ServiceName,
 		o.Tag,
 		o.Config,

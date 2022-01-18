@@ -49,7 +49,7 @@ type Service struct {
 
 const ansi = `\x1B(?:[@-Z\\-_]|\[[0-?]*[-\]*[@-~])`
 
-func DeployService(s Service, sname string, tag string, cfg *config.Config, sess *session.Session) error {
+func DeployService(s *Service, sname string, tag string, cfg *config.Config, sess *session.Session) error {
 	var err error
 
 	skipBuildAndPush := true
