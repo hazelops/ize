@@ -60,7 +60,7 @@ func NewCmdDeploy() *cobra.Command {
 		Example: deployExample,
 		Short:   "manage deployments",
 		Long:    deployLongDesc,
-		Args:    cobra.MinimumNArgs(1),
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := o.Complete(cmd, args)
 			if err != nil {
@@ -94,9 +94,16 @@ func NewCmdDeploy() *cobra.Command {
 }
 
 func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
-	err := config.InitializeConfig()
-	if err != nil {
-		return err
+	if len(args) == 0 {
+		err := config.InitializeConfig(config.WithConfigFile())
+		if err != nil {
+			return fmt.Errorf("can`t complete options: %w", err)
+		}
+	} else {
+		err := config.InitializeConfig()
+		if err != nil {
+			return fmt.Errorf("can`t complete options: %w", err)
+		}
 	}
 
 	viper.BindPFlags(cmd.Flags())
@@ -113,7 +120,7 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 
 	var cfg ecsServiceConfig
 
-	err = mapstructure.Decode(viper.GetStringMap(fmt.Sprintf("service.%s", o.ServiceName)), &cfg)
+	err := mapstructure.Decode(viper.GetStringMap(fmt.Sprintf("service.%s", o.ServiceName)), &cfg)
 	if err != nil {
 		return err
 	}

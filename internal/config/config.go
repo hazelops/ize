@@ -84,7 +84,24 @@ func Load(path string) (*Config, error) {
 	}, nil
 }
 
-func InitializeConfig() error {
+type requiments struct {
+	configFile bool
+}
+
+type Option func(*requiments)
+
+func WithConfigFile() Option {
+	return func(r *requiments) {
+		r.configFile = true
+	}
+}
+
+func InitializeConfig(options ...Option) error {
+	r := requiments{}
+	for _, opt := range options {
+		opt(&r)
+	}
+
 	viper.SetEnvPrefix("IZE")
 	viper.AutomaticEnv()
 
@@ -117,6 +134,10 @@ func InitializeConfig() error {
 
 	if err := CheckRequirements(); err != nil {
 		return err
+	}
+
+	if r.configFile && viper.GetString("config-file") == "" {
+		return fmt.Errorf("can't initialize config: this function requiment config file")
 	}
 
 	if viper.GetString("config-file") != "" {
