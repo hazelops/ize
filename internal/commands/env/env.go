@@ -14,10 +14,7 @@ import (
 )
 
 type EnvOptions struct {
-	Env       string
-	Namespace string
-	Profile   string
-	Region    string
+	Config *config.Config
 }
 
 func NewEnvFlags() *EnvOptions {
@@ -54,44 +51,28 @@ func NewCmdEnv() *cobra.Command {
 }
 
 func (o *EnvOptions) Complete(cmd *cobra.Command, args []string) error {
-	err := config.InitializeConfig()
+	cfg, err := config.InitializeConfig()
 	if err != nil {
 		return err
 	}
 
-	o.Env = viper.GetString("env")
-	o.Namespace = viper.GetString("namespace")
+	o.Config = cfg
 
-	o.Profile = viper.GetString("aws_profile")
-	o.Region = viper.GetString("aws_region")
-
-	if o.Region == "" {
-		o.Region = viper.GetString("aws-region")
-	}
-
-	if o.Profile == "" {
-		o.Profile = viper.GetString("aws-profile")
-	}
+	o.Config.Env = viper.GetString("env")
+	o.Config.Namespace = viper.GetString("namespace")
 
 	return nil
 }
 
 func (o *EnvOptions) Validate() error {
-	if len(o.Env) == 0 {
+	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("env must be specified")
 	}
 
-	if len(o.Namespace) == 0 {
+	if len(o.Config.Namespace) == 0 {
 		return fmt.Errorf("namespace must be specified")
 	}
 
-	if len(o.Profile) == 0 {
-		return fmt.Errorf("AWS profile must be specified")
-	}
-
-	if len(o.Region) == 0 {
-		return fmt.Errorf("AWS region must be specified")
-	}
 	return nil
 }
 
@@ -99,12 +80,12 @@ func (o *EnvOptions) Run() error {
 	pterm.DefaultSection.Printfln("Starting generate terraform files")
 
 	backendOpts := template.BackendOpts{
-		ENV:                            o.Env,
+		ENV:                            o.Config.Env,
 		LOCALSTACK_ENDPOINT:            "",
-		TERRAFORM_STATE_BUCKET_NAME:    fmt.Sprintf("%s-tf-state", o.Namespace),
-		TERRAFORM_STATE_KEY:            fmt.Sprintf("%v/terraform.tfstate", o.Env),
-		TERRAFORM_STATE_REGION:         o.Region,
-		TERRAFORM_STATE_PROFILE:        o.Profile,
+		TERRAFORM_STATE_BUCKET_NAME:    fmt.Sprintf("%s-tf-state", o.Config.Namespace),
+		TERRAFORM_STATE_KEY:            fmt.Sprintf("%v/terraform.tfstate", o.Config.Env),
+		TERRAFORM_STATE_REGION:         o.Config.AwsRegion,
+		TERRAFORM_STATE_PROFILE:        o.Config.AwsProfile,
 		TERRAFORM_STATE_DYNAMODB_TABLE: "tf-state-lock",
 		TERRAFORM_AWS_PROVIDER_VERSION: "",
 	}
@@ -140,14 +121,14 @@ func (o *EnvOptions) Run() error {
 	}
 
 	varsOpts := template.VarsOpts{
-		ENV:               o.Env,
-		AWS_PROFILE:       o.Profile,
-		AWS_REGION:        o.Region,
-		EC2_KEY_PAIR_NAME: fmt.Sprintf("%v-%v", o.Env, o.Namespace),
-		TAG:               o.Env,
+		ENV:               o.Config.Env,
+		AWS_PROFILE:       o.Config.AwsProfile,
+		AWS_REGION:        o.Config.AwsRegion,
+		EC2_KEY_PAIR_NAME: fmt.Sprintf("%v-%v", o.Config.Env, o.Config.Namespace),
+		TAG:               o.Config.Env,
 		SSH_PUBLIC_KEY:    string(key)[:len(string(key))-1],
 		DOCKER_REGISTRY:   viper.GetString("DOCKER_REGISTRY"),
-		NAMESPACE:         o.Namespace,
+		NAMESPACE:         o.Config.Namespace,
 	}
 
 	logrus.Debugf("backend opts: %s", varsOpts)

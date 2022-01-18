@@ -3,6 +3,10 @@ package secrets
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -11,21 +15,15 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 )
 
 type SecretsPushOptions struct {
-	Env      string
-	Region   string
-	Profile  string
+	Config      *config.Config
 	AppName     string
 	Backend     string
 	FilePath    string
 	SecretsPath string
-	Force    bool
-
+	Force       bool
 }
 
 func NewSecretsSetFlags() *SecretsPushOptions {
@@ -41,8 +39,6 @@ func NewCmdSecretsPush() *cobra.Command {
 		Long:  "This command pushes secrets from a local file to a key-value storage (like SSM).",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-
 
 			err := o.Complete(cmd, args)
 			if err != nil {
@@ -64,55 +60,38 @@ func NewCmdSecretsPush() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.Backend, "backend", "ssm", "backend type (default=ssm)")
-	cmd.Flags().StringVar(&o.FilePath, "file","", "file with secrets")
-	cmd.Flags().StringVar(&o.SecretsPath, "path","", "path where to store secrets (/<env>/<app> by default)")
+	cmd.Flags().StringVar(&o.FilePath, "file", "", "file with secrets")
+	cmd.Flags().StringVar(&o.SecretsPath, "path", "", "path where to store secrets (/<env>/<app> by default)")
 	cmd.Flags().BoolVar(&o.Force, "force", false, "allow values overwrite")
 
 	return cmd
 }
 
 func (o *SecretsPushOptions) Complete(cmd *cobra.Command, args []string) error {
-	err := config.InitializeConfig()
+	cfg, err := config.InitializeConfig()
 	if err != nil {
 		return err
 	}
 
-	o.Env = viper.GetString("env")
-	o.Profile = viper.GetString("aws-profile")
-	o.Region = viper.GetString("aws-region")
+	o.Config = cfg
 	o.AppName = cmd.Flags().Args()[0]
 
-	if o.Profile == "" {
-		o.Profile = viper.GetString("aws_profile")
-	}
-
-	if o.Region == "" {
-		o.Region = viper.GetString("aws_region")
-	}
-
 	if o.FilePath == "" {
-		o.FilePath = fmt.Sprintf("%s/%s/%s.json",viper.GetString("ENV_DIR"), "secrets", o.AppName)
+		o.FilePath = fmt.Sprintf("%s/%s/%s.json", viper.GetString("ENV_DIR"), "secrets", o.AppName)
 	}
 
 	if o.SecretsPath == "" {
-		o.SecretsPath = fmt.Sprintf("/%s/%s", o.Env, o.AppName)
+		o.SecretsPath = fmt.Sprintf("/%s/%s", o.Config.Env, o.AppName)
 	}
 
 	return nil
 }
 
 func (o *SecretsPushOptions) Validate() error {
-	if len(o.Env) == 0 {
+	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("env must be specified")
 	}
 
-	if len(o.Profile) == 0 {
-		return fmt.Errorf("AWS profile must be specified")
-	}
-
-	if len(o.Region) == 0 {
-		return fmt.Errorf("AWS region must be specified")
-	}
 	return nil
 }
 
@@ -139,14 +118,13 @@ func (o *SecretsPushOptions) Run() error {
 func push(o *SecretsPushOptions) error {
 	//basename := filepath.Base(o.FilePath)
 
-
 	//svc := strings.TrimSuffix(basename, filepath.Ext(basename))
 	pterm.Info.Printfln("Pushing secrets to %s://%s", o.Backend, o.SecretsPath)
 
 	sess, err := utils.GetSession(
 		&utils.SessionConfig{
-			Region:  o.Region,
-			Profile: o.Profile,
+			Region:  o.Config.AwsRegion,
+			Profile: o.Config.AwsProfile,
 		},
 	)
 	if err != nil {
@@ -211,12 +189,11 @@ func push(o *SecretsPushOptions) error {
 func getKeyValuePairs(filePath string) (map[string]string, error) {
 	if !filepath.IsAbs(filePath) {
 		var err error
-		wd, err := os.Getwd()
+		wd, _ := os.Getwd()
 		filePath, err = filepath.Abs(wd + "/" + filePath)
 		if err != nil {
 			return nil, err
 		}
-
 
 	}
 

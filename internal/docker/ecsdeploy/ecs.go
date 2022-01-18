@@ -12,6 +12,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -20,6 +24,7 @@ import (
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/hazelops/ize/internal/config"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc/codes"
@@ -34,9 +39,150 @@ type Option struct {
 	ContextDir string
 }
 
+type Service struct {
+	Type              string
+	Path              string
+	Image             string
+	EcsCluster        string
+	TaskDefinitionArn string
+}
+
 const ansi = `\x1B(?:[@-Z\\-_]|\[[0-?]*[-\]*[@-~])`
 
-func Build(opts Option) error {
+func DeployService(s *Service, sname string, tag string, cfg *config.Config, sess *session.Session) error {
+	var err error
+
+	skipBuildAndPush := true
+
+	if len(s.Image) == 0 {
+		skipBuildAndPush = false
+	}
+
+	if !skipBuildAndPush {
+		dockerImageName := fmt.Sprintf("%s-%s", cfg.Namespace, sname)
+		dockerRegistry := viper.GetString("DOCKER_REGISTRY")
+		tag := tag
+		tagLatest := fmt.Sprintf("%s-latest", cfg.Env)
+		contextDir := s.Path
+
+		if !filepath.IsAbs(contextDir) {
+			if contextDir, err = filepath.Abs(contextDir); err != nil {
+				return fmt.Errorf("cat't deploy service %s: %w", sname, err)
+			}
+		}
+
+		projectPath, err := filepath.Rel(viper.GetString("ROOT_DIR"), contextDir)
+		if err != nil {
+			return fmt.Errorf("cat't deploy service %s: %w", sname, err)
+		}
+
+		dockerfile := contextDir + "/Dockerfile"
+
+		if _, err := os.Stat(dockerfile); err != nil {
+			return fmt.Errorf("cat't deploy service %s: %w", sname, err)
+		}
+
+		s.Image = fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, strings.Trim(tag, "\n"))
+
+		err = buildImage(Option{
+			Tags: []string{
+				dockerImageName,
+				s.Image,
+				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
+			},
+			Dockerfile: dockerfile,
+			BuildArgs: map[string]*string{
+				"DOCKER_REGISTRY":   &dockerRegistry,
+				"DOCKER_IMAGE_NAME": &dockerImageName,
+				"ENV":               &cfg.Env,
+				"PROJECT_PATH":      &projectPath,
+			},
+			CacheFrom: []string{
+				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
+			},
+			ContextDir: viper.GetString("ROOT_DIR"),
+		})
+		if err != nil {
+			return fmt.Errorf("cat't deploy service %s: %w", sname, err)
+		}
+
+		svc := ecr.New(sess)
+
+		repOut, err := svc.DescribeRepositories(&ecr.DescribeRepositoriesInput{
+			RepositoryNames: []*string{aws.String(dockerImageName)},
+		})
+		if err != nil {
+			_, ok := err.(*ecr.RepositoryNotFoundException)
+			if !ok {
+				return fmt.Errorf("cat't deploy service %s: %w", sname, err)
+			}
+		}
+
+		if repOut == nil || len(repOut.Repositories) == 0 {
+			logrus.Info("no ECR repository detected, creating", "name", dockerImageName)
+
+			_, err := svc.CreateRepository(&ecr.CreateRepositoryInput{
+				RepositoryName: aws.String(dockerImageName),
+			})
+			if err != nil {
+				return fmt.Errorf("cat't deploy service %s: %w", sname, err)
+			}
+		}
+
+		gat, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
+		if err != nil {
+			return fmt.Errorf("cat't deploy service %s: %w", sname, err)
+		}
+
+		if len(gat.AuthorizationData) == 0 {
+			return fmt.Errorf("cat't deploy service %s: not found authorization data", sname)
+		}
+
+		token := *gat.AuthorizationData[0].AuthorizationToken
+
+		err = push(
+			[]string{
+				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
+			},
+			token,
+			dockerRegistry,
+		)
+		if err != nil {
+			return fmt.Errorf("cat't deploy service %s: %w", sname, err)
+		}
+	} else {
+		tag = strings.Split(s.Image, ":")[1]
+	}
+
+	if s.TaskDefinitionArn == "" {
+		stdo, err := ecs.New(sess).DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
+			TaskDefinition: aws.String(fmt.Sprintf("%s-%s", cfg.Env, sname)),
+		})
+		if err != nil {
+			return fmt.Errorf("cat't deploy service %s: %w", sname, err)
+		}
+
+		s.TaskDefinitionArn = *stdo.TaskDefinition.TaskDefinitionArn
+	}
+
+	err = deploy(DeployOpts{
+		Service:           sname,
+		Cluster:           s.EcsCluster,
+		TaskDefinitionArn: s.TaskDefinitionArn,
+		AwsProfile:        cfg.AwsProfile,
+		Tag:               tag,
+		Timeout:           "600",
+		Image:             s.Image,
+		EcsService:        fmt.Sprintf("%s-%s", cfg.Env, sname),
+	})
+	if err != nil {
+		return fmt.Errorf("cat't deploy service %s: %w", sname, err)
+	}
+
+	return nil
+}
+
+func buildImage(opts Option) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		logrus.Error("docker client initialization")
@@ -110,7 +256,7 @@ func Build(opts Option) error {
 	return nil
 }
 
-func Push(images []string, ecrToken string, registry string) error {
+func push(images []string, ecrToken string, registry string) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		logrus.Error("docker client initialization")
@@ -164,7 +310,7 @@ type DeployOpts struct {
 	EcsService        string
 }
 
-func Deploy(opts DeployOpts) error {
+func deploy(opts DeployOpts) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		logrus.Error("docker client initialization")
@@ -275,15 +421,10 @@ func Deploy(opts DeployOpts) error {
 	logrus.Debugf("terraform container started: %s", cont.ID)
 
 	scanner := bufio.NewScanner(reader)
-
 	for scanner.Scan() {
-		if strings.Contains(scanner.Text(), "Error: ") {
+		if strings.Contains(scanner.Text(), "error") {
 			r := regexp.MustCompile(ansi)
-			strErr := r.ReplaceAllString(scanner.Text(), "")
-			strErr = strErr[strings.LastIndex(strErr, "Error: "):]
-			strErr = strings.TrimPrefix(strErr, "Error: ")
-			strErr = strings.ToLower(string(strErr[0])) + strErr[1:]
-			err = fmt.Errorf(strErr)
+			err = fmt.Errorf(r.ReplaceAllString(scanner.Text(), ""))
 		}
 		if logrus.GetLevel() >= 4 {
 			fmt.Println(scanner.Text())
@@ -299,6 +440,9 @@ func Deploy(opts DeployOpts) error {
 	select {
 	case status := <-wait:
 		logrus.Debugf("container exit status code %d", status.StatusCode)
+		if status.StatusCode == 1 {
+			return err
+		}
 		return nil
 	case err := <-errC:
 		return err

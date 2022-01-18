@@ -12,8 +12,7 @@ import (
 )
 
 type TerraformOptions struct {
-	Env     string
-	Profile string
+	Config  *config.Config
 	Version string
 	Command []string
 }
@@ -75,18 +74,14 @@ func NewCmdTerraform() *cobra.Command {
 }
 
 func (o *TerraformOptions) Complete(cmd *cobra.Command, args []string, argsLenAtDash int) error {
-	err := config.InitializeConfig()
+	cfg, err := config.InitializeConfig()
 	if err != nil {
 		return err
 	}
 
-	o.Command = args[argsLenAtDash:]
-	o.Env = viper.GetString("env")
-	o.Profile = viper.GetString("aws_profile")
+	o.Config = cfg
 
-	if o.Profile == "" {
-		o.Profile = viper.GetString("aws-profile")
-	}
+	o.Command = args[argsLenAtDash:]
 
 	if o.Version == "" {
 		o.Version = viper.GetString("terraform_version")
@@ -96,15 +91,11 @@ func (o *TerraformOptions) Complete(cmd *cobra.Command, args []string, argsLenAt
 }
 
 func (o *TerraformOptions) Validate() error {
-	if len(o.Profile) == 0 {
-		return fmt.Errorf("AWS profile must be specified")
-	}
-
 	if len(o.Version) == 0 {
 		return fmt.Errorf("terraform version must be specified")
 	}
 
-	if len(o.Env) == 0 {
+	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("env must be specified")
 	}
 	return nil
@@ -115,8 +106,8 @@ func (o *TerraformOptions) Run(args []string) error {
 		ContainerName: "terraform",
 		Cmd:           o.Command,
 		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Env),
-			fmt.Sprintf("AWS_PROFILE=%v", o.Profile),
+			fmt.Sprintf("ENV=%v", o.Config.Env),
+			fmt.Sprintf("AWS_PROFILE=%v", o.Config.AwsProfile),
 			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
 			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
 		},

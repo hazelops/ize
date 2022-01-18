@@ -8,12 +8,10 @@ import (
 	"github.com/hazelops/ize/internal/config"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type MfaOptions struct {
-	Profile string
-	Region  string
+	Config *config.Config
 }
 
 func NewMfaFlags() *MfaOptions {
@@ -32,11 +30,6 @@ func NewCmdMfa() *cobra.Command {
 				return err
 			}
 
-			err = o.Validate()
-			if err != nil {
-				return err
-			}
-
 			err = o.Run()
 			if err != nil {
 				return err
@@ -50,40 +43,20 @@ func NewCmdMfa() *cobra.Command {
 }
 
 func (o *MfaOptions) Complete(cmd *cobra.Command, args []string) error {
-	err := config.InitializeConfig()
+	cfg, err := config.InitializeConfig()
 	if err != nil {
 		return err
 	}
 
-	o.Profile = viper.GetString("aws_profile")
-	o.Region = viper.GetString("aws_region")
+	o.Config = cfg
 
-	if o.Region == "" {
-		o.Region = viper.GetString("aws-region")
-	}
-
-	if o.Profile == "" {
-		o.Profile = viper.GetString("aws-profile")
-	}
-
-	return nil
-}
-
-func (o *MfaOptions) Validate() error {
-	if len(o.Profile) == 0 {
-		return fmt.Errorf("AWS profile must be specified")
-	}
-
-	if len(o.Region) == 0 {
-		return fmt.Errorf("AWS region must be specified")
-	}
 	return nil
 }
 
 func (o *MfaOptions) Run() error {
 	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  o.Region,
-		Profile: o.Profile,
+		Region:  o.Config.AwsRegion,
+		Profile: o.Config.AwsProfile,
 	})
 	if err != nil {
 		return err

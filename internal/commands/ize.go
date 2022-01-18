@@ -14,6 +14,7 @@ import (
 	"github.com/hazelops/ize/internal/commands/tunnel"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -67,8 +68,18 @@ func newApp() (*cobra.Command, error) {
 	rootCmd.Flags().StringP("tag", "t", "", "set tag")
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 
-	viper.BindPFlags(rootCmd.Flags())
+	BindFlags(rootCmd.PersistentFlags())
 	viper.BindPFlags(rootCmd.PersistentFlags())
 
 	return rootCmd, nil
+}
+
+func BindFlags(flags *pflag.FlagSet) {
+	replacer := strings.NewReplacer("-", "_")
+
+	flags.VisitAll(func(flag *pflag.Flag) {
+		if err := viper.BindPFlag(replacer.Replace(flag.Name), flag); err != nil {
+			panic("unable to bind flag " + flag.Name + ": " + err.Error())
+		}
+	})
 }

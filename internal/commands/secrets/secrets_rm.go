@@ -8,15 +8,12 @@ import (
 	"github.com/hazelops/ize/internal/config"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type SecretsRemoveOptions struct {
-	Env string
-	Region  string
-	Profile string
-	AppName string
-	Backend        string
+	Config      *config.Config
+	AppName     string
+	Backend     string
 	SecretsPath string
 }
 
@@ -38,11 +35,6 @@ func NewCmdSecretsRemove() *cobra.Command {
 				return err
 			}
 
-			err = o.Validate()
-			if err != nil {
-				return err
-			}
-
 			err = o.Run()
 			if err != nil {
 				return err
@@ -59,39 +51,26 @@ func NewCmdSecretsRemove() *cobra.Command {
 }
 
 func (o *SecretsRemoveOptions) Complete(cmd *cobra.Command, args []string) error {
-	err := config.InitializeConfig()
+	cfg, err := config.InitializeConfig()
 	if err != nil {
 		return err
 	}
 
-	o.Env = viper.GetString("env")
-	o.Profile = viper.GetString("aws-profile")
-	o.Region = viper.GetString("aws-region")
+	o.Config = cfg
 	o.AppName = cmd.Flags().Args()[0]
 
-	if o.Profile == "" {
-		o.Profile = viper.GetString("aws_profile")
-	}
-
-	if o.Region == "" {
-		o.Region = viper.GetString("aws_region")
-	}
-
 	if o.SecretsPath == "" {
-		o.SecretsPath = fmt.Sprintf("/%s/%s", o.Env, o.AppName)
+		o.SecretsPath = fmt.Sprintf("/%s/%s", o.Config.Env, o.AppName)
 	}
 
 	return nil
 }
 
 func (o *SecretsRemoveOptions) Validate() error {
-	if len(o.Profile) == 0 {
-		return fmt.Errorf("AWS profile must be specified")
+	if len(o.Config.Env) == 0 {
+		return fmt.Errorf("env must be specified")
 	}
 
-	if len(o.Region) == 0 {
-		return fmt.Errorf("AWS region must be specified")
-	}
 	return nil
 }
 
@@ -101,8 +80,8 @@ func (o *SecretsRemoveOptions) Run() error {
 	if o.Backend == "ssm" {
 		err := rm(
 			utils.SessionConfig{
-				Region:  o.Region,
-				Profile: o.Profile,
+				Region:  o.Config.AwsRegion,
+				Profile: o.Config.AwsRegion,
 			},
 			o,
 		)
@@ -116,7 +95,6 @@ func (o *SecretsRemoveOptions) Run() error {
 	}
 
 	//pterm.DefaultSection.Printfln("Done: removing secrets")
-
 
 	return nil
 }

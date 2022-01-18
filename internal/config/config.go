@@ -22,19 +22,10 @@ import (
 const Filename = "ize.hcl"
 
 type Config struct {
-	hclConfig
-}
-
-type hclConfig struct {
-	TerraformVersion string                            `mapstructure:"terraform_version"`
-	Env              string                            `mapstructure:"env"`
-	AwsRegion        string                            `mapstructure:"aws_region"`
-	AwsProfile       string                            `mapstructure:"aws_profile"`
-	Namespace        string                            `mapstructure:"namespace"`
-	Infra            map[string]map[string]interface{} `mapstructure:"infra"`
-	InfraDir         string                            `mapstructure:"infra_dir"`
-	RootDir          string                            `mapstructure:"root_dir"`
-	Tag              string                            `mapstructure:"tag"`
+	AwsRegion  string `mapstructure:"aws_region"`
+	AwsProfile string `mapstructure:"aws_profile"`
+	Namespace  string `mapstructure:"namespace"`
+	Env        string `mapstructure:"env"`
 }
 
 func FindPath(filename string) (string, error) {
@@ -74,17 +65,35 @@ func Load(path string) (*Config, error) {
 	}
 
 	//Decode
-	var cfg hclConfig
+	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, err
 	}
 
-	return &Config{
-		hclConfig: cfg,
-	}, nil
+	return &cfg, nil
 }
 
-func InitializeConfig() error {
+type requiments struct {
+	configFile bool
+}
+
+type Option func(*requiments)
+
+func WithConfigFile() Option {
+	return func(r *requiments) {
+		r.configFile = true
+	}
+}
+
+func InitializeConfig(options ...Option) (*Config, error) {
+	cfg := &Config{}
+	var err error
+
+	r := requiments{}
+	for _, opt := range options {
+		opt(&r)
+	}
+
 	viper.SetEnvPrefix("IZE")
 	viper.AutomaticEnv()
 
@@ -116,7 +125,11 @@ func InitializeConfig() error {
 	}
 
 	if err := CheckRequirements(); err != nil {
-		return err
+		return nil, err
+	}
+
+	if r.configFile && viper.GetString("config-file") == "" {
+		return nil, fmt.Errorf("can't initialize config: this function requiment config file")
 	}
 
 	viper.SetDefault("ENV", os.Getenv("ENV"))
@@ -128,24 +141,23 @@ func InitializeConfig() error {
 	viper.SetDefault("TERRAFORM_VERSION", "1.1.3")
 
 	if viper.GetString("config-file") != "" {
-		_, err := initConfig(viper.GetString("config-file"))
+		cfg, err = initConfig(viper.GetString("config-file"))
 		if err != nil {
-			return err
+			return nil, err
+		}
+	} else {
+		err := viper.Unmarshal(cfg)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	if len(viper.GetString("aws-profile")) == 0 {
-		viper.Set("aws-profile", viper.GetString("aws_profile"))
-		if len(viper.GetString("aws-profile")) == 0 {
-			return fmt.Errorf("AWS profile must be specified using flags, config file or env var")
-		}
+	if len(cfg.AwsProfile) == 0 {
+		return nil, fmt.Errorf("AWS profile must be specified using flags or config file")
 	}
 
-	if len(viper.GetString("aws-region")) == 0 {
-		viper.Set("aws-region", viper.GetString("aws_region"))
-		if len(viper.GetString("aws-region")) == 0 {
-			return fmt.Errorf("AWS region must be specified using flags or config file")
-		}
+	if len(cfg.AwsRegion) == 0 {
+		return nil, fmt.Errorf("AWS region must be specified using flags or config file")
 	}
 
 	sess, err := utils.GetSession(&utils.SessionConfig{
@@ -153,14 +165,14 @@ func InitializeConfig() error {
 		Profile: viper.GetString("aws-profile"),
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	resp, err := sts.New(sess).GetCallerIdentity(
 		&sts.GetCallerIdentityInput{},
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	cwd, err := os.Getwd()
@@ -194,7 +206,7 @@ func InitializeConfig() error {
 	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
 	viper.SetDefault("TAG", string(tag))
 
-	return nil
+	return cfg, nil
 }
 
 func CheckRequirements() error {
