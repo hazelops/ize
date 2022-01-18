@@ -133,13 +133,8 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 		if o.Service.EcsCluster == "" {
 			o.Service.EcsCluster = fmt.Sprintf("%s-%s", o.Config.Env, o.Config.Namespace)
 		}
-		fmt.Println(o.Service)
 	}
 
-	o.Config.Env = viper.GetString("env")
-	o.Config.Namespace = viper.GetString("namespace")
-	o.Config.AwsProfile = viper.GetString("aws-region")
-	o.Config.AwsRegion = viper.GetString("aws-profile")
 	o.Tag = viper.GetString("tag")
 
 	return nil
