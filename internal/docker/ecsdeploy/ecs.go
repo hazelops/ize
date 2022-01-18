@@ -24,6 +24,7 @@ import (
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/hazelops/ize/internal/config"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc/codes"
@@ -39,7 +40,6 @@ type Option struct {
 }
 
 type Service struct {
-	Name              string
 	Type              string
 	Path              string
 	Image             string
@@ -49,7 +49,7 @@ type Service struct {
 
 const ansi = `\x1B(?:[@-Z\\-_]|\[[0-?]*[-\]*[@-~])`
 
-func DeployService(s Service, profile string, namespace string, env string, tag string, sess *session.Session) error {
+func DeployService(s Service, sname string, tag string, cfg *config.Config, sess *session.Session) error {
 	var err error
 
 	skipBuildAndPush := true
@@ -59,27 +59,27 @@ func DeployService(s Service, profile string, namespace string, env string, tag 
 	}
 
 	if !skipBuildAndPush {
-		dockerImageName := fmt.Sprintf("%s-%s", namespace, s.Name)
+		dockerImageName := fmt.Sprintf("%s-%s", cfg.Namespace, sname)
 		dockerRegistry := viper.GetString("DOCKER_REGISTRY")
 		tag := tag
-		tagLatest := fmt.Sprintf("%s-latest", env)
+		tagLatest := fmt.Sprintf("%s-latest", cfg.Env)
 		contextDir := s.Path
 
 		if !filepath.IsAbs(contextDir) {
 			if contextDir, err = filepath.Abs(contextDir); err != nil {
-				return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+				return fmt.Errorf("cat't deploy service %s: %w", sname, err)
 			}
 		}
 
 		projectPath, err := filepath.Rel(viper.GetString("ROOT_DIR"), contextDir)
 		if err != nil {
-			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+			return fmt.Errorf("cat't deploy service %s: %w", sname, err)
 		}
 
 		dockerfile := contextDir + "/Dockerfile"
 
 		if _, err := os.Stat(dockerfile); err != nil {
-			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+			return fmt.Errorf("cat't deploy service %s: %w", sname, err)
 		}
 
 		s.Image = fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, strings.Trim(tag, "\n"))
@@ -94,7 +94,7 @@ func DeployService(s Service, profile string, namespace string, env string, tag 
 			BuildArgs: map[string]*string{
 				"DOCKER_REGISTRY":   &dockerRegistry,
 				"DOCKER_IMAGE_NAME": &dockerImageName,
-				"ENV":               &env,
+				"ENV":               &cfg.Env,
 				"PROJECT_PATH":      &projectPath,
 			},
 			CacheFrom: []string{
@@ -103,7 +103,7 @@ func DeployService(s Service, profile string, namespace string, env string, tag 
 			ContextDir: viper.GetString("ROOT_DIR"),
 		})
 		if err != nil {
-			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+			return fmt.Errorf("cat't deploy service %s: %w", sname, err)
 		}
 
 		svc := ecr.New(sess)
@@ -114,7 +114,7 @@ func DeployService(s Service, profile string, namespace string, env string, tag 
 		if err != nil {
 			_, ok := err.(*ecr.RepositoryNotFoundException)
 			if !ok {
-				return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+				return fmt.Errorf("cat't deploy service %s: %w", sname, err)
 			}
 		}
 
@@ -125,17 +125,17 @@ func DeployService(s Service, profile string, namespace string, env string, tag 
 				RepositoryName: aws.String(dockerImageName),
 			})
 			if err != nil {
-				return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+				return fmt.Errorf("cat't deploy service %s: %w", sname, err)
 			}
 		}
 
 		gat, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
 		if err != nil {
-			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+			return fmt.Errorf("cat't deploy service %s: %w", sname, err)
 		}
 
 		if len(gat.AuthorizationData) == 0 {
-			return fmt.Errorf("cat't deploy service %s: not found authorization data", s.Name)
+			return fmt.Errorf("cat't deploy service %s: not found authorization data", sname)
 		}
 
 		token := *gat.AuthorizationData[0].AuthorizationToken
@@ -148,7 +148,7 @@ func DeployService(s Service, profile string, namespace string, env string, tag 
 			dockerRegistry,
 		)
 		if err != nil {
-			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+			return fmt.Errorf("cat't deploy service %s: %w", sname, err)
 		}
 	} else {
 		tag = strings.Split(s.Image, ":")[1]
@@ -156,27 +156,27 @@ func DeployService(s Service, profile string, namespace string, env string, tag 
 
 	if s.TaskDefinitionArn == "" {
 		stdo, err := ecs.New(sess).DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
-			TaskDefinition: aws.String(fmt.Sprintf("%s-%s", env, s.Name)),
+			TaskDefinition: aws.String(fmt.Sprintf("%s-%s", cfg.Env, sname)),
 		})
 		if err != nil {
-			return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+			return fmt.Errorf("cat't deploy service %s: %w", sname, err)
 		}
 
 		s.TaskDefinitionArn = *stdo.TaskDefinition.TaskDefinitionArn
 	}
 
 	err = deploy(DeployOpts{
-		Service:           s.Name,
+		Service:           sname,
 		Cluster:           s.EcsCluster,
 		TaskDefinitionArn: s.TaskDefinitionArn,
-		AwsProfile:        profile,
+		AwsProfile:        cfg.AwsProfile,
 		Tag:               tag,
 		Timeout:           "600",
 		Image:             s.Image,
-		EcsService:        fmt.Sprintf("%s-%s", env, s.Name),
+		EcsService:        fmt.Sprintf("%s-%s", cfg.Env, sname),
 	})
 	if err != nil {
-		return fmt.Errorf("cat't deploy service %s: %w", s.Name, err)
+		return fmt.Errorf("cat't deploy service %s: %w", sname, err)
 	}
 
 	return nil
