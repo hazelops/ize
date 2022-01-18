@@ -124,6 +124,9 @@ func InitializeConfig() error {
 	viper.SetDefault("AWS_REGION", os.Getenv("AWS_REGION"))
 	viper.SetDefault("NAMESPACE", os.Getenv("NAMESPACE"))
 
+	// TODO: those static defaults should probably go to a separate package and/or function. Also would include image names and such.
+	viper.SetDefault("TERRAFORM_VERSION", "1.1.3")
+
 	if viper.GetString("config-file") != "" {
 		_, err := initConfig(viper.GetString("config-file"))
 		if err != nil {
