@@ -10,8 +10,8 @@ It combines infra, build and deploy workflows in one and is too simple to be con
 Let's imagine we're deploying a terraform-based infra and a Go-based  service named `goblin`.
 The general workflow that **❯ize** dictates is the following:
 
-### 1. Deploy infrastructure with Terraform
-_It generates a minimal backend config for terraform and runs it. Think of it as a minimalistic Terragrunt, but you can always switch to a vanilla Terraform_
+### 1. Deploy infrastructure
+_Currently it supports Terraform, for which it generates a minimal backend config for terraform and runs it. Think of it as a minimalistic Terragrunt, but you can always switch to a vanilla Terraform. Check out directory structure [examples](https://github.com/hazelops/ize/tree/main/examples/simple-monorepo/.infra)._
 ```shell
 ize deploy infra
 ```
