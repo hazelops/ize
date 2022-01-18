@@ -9,7 +9,7 @@ import (
 	"github.com/hazelops/ize/internal/commands/env"
 	"github.com/hazelops/ize/internal/commands/initialize"
 	"github.com/hazelops/ize/internal/commands/mfa"
-	"github.com/hazelops/ize/internal/commands/secret"
+	"github.com/hazelops/ize/internal/commands/secrets"
 	"github.com/hazelops/ize/internal/commands/terraform"
 	"github.com/hazelops/ize/internal/commands/tunnel"
 	"github.com/pterm/pterm"
@@ -50,7 +50,7 @@ func newApp() (*cobra.Command, error) {
 		env.NewCmdEnv(),
 		mfa.NewCmdMfa(),
 		terraform.NewCmdTerraform(),
-		secret.NewCmdSecret(),
+		secrets.NewCmdSecrets(),
 		initialize.NewCmdInit(),
 		tunnel.NewCmdTunnel(),
 		NewGendocCmd(),

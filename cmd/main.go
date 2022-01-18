@@ -23,8 +23,30 @@ import (
 )
 
 func main() {
+
+	// Customize default error.
+
+	pterm.Info.Prefix = pterm.Prefix{
+		Text:  "ℹ",
+		Style: pterm.NewStyle(pterm.FgBlue),
+	}
+
+	pterm.Success.Prefix = pterm.Prefix{
+		Text:  "✓",
+		Style: pterm.NewStyle(pterm.FgGreen),
+	}
+
+	pterm.Error.Prefix = pterm.Prefix{
+		Text:  "✗",
+		Style: pterm.NewStyle(pterm.FgRed),
+	}
+
+
 	err := commands.Execute(os.Args[1:])
 	if err != nil {
 		pterm.Error.Print(err)
 	}
+
+
+
 }
