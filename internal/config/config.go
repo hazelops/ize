@@ -22,10 +22,10 @@ import (
 const Filename = "ize.hcl"
 
 type Config struct {
-	AwsRegion  string
-	AwsProfile string
-	Namespace  string
-	Env        string
+	AwsRegion  string `mapstructure:"aws_region"`
+	AwsProfile string `mapstructure:"aws_profile"`
+	Namespace  string `mapstructure:"namespace"`
+	Env        string `mapstructure:"env"`
 }
 
 func FindPath(filename string) (string, error) {
