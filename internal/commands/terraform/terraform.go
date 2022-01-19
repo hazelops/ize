@@ -17,20 +17,20 @@ type TerraformOptions struct {
 	Command []string
 }
 
-var terrafromLongDesc = templates.LongDesc(`
+var terraformLongDesc = templates.LongDesc(`
 	Run terraform command via terraform docker container.
 `)
 
 var terraformExample = templates.Examples(`
 	# Run terraform init
-	ize -e dev -p default -r us-east-1 -n hazelops terraform --version 1.0.10 -- init -input=true
+	ize -e dev -p default -r us-east-1 -n hazelops terraform --version 1.0.10 init -input=true
 
 	# Run terraform plan via config file
-	ize --config-file (or -c) /path/to/config terraform -- plan -out=$(ENV_DIR)/.terraform/tfplan -input=false
+	ize --config-file (or -c) /path/to/config terraform plan -out=$(ENV_DIR)/.terraform/tfplan -input=false
 
 	# Run terraform init via config file installed from env
 	export IZE_CONFIG_FILE=/path/to/config
-	ize terraform -- init -input=true
+	ize terraform init -input=true
 `)
 
 func NewTerraformFlags() *TerraformOptions {
@@ -41,15 +41,13 @@ func NewCmdTerraform() *cobra.Command {
 	o := NewTerraformFlags()
 
 	cmd := &cobra.Command{
-		Use:                   "terraform [flags] -- <terraform command> [terraform flags]",
+		Use:                   "terraform [flags] <terraform command> [terraform flags]",
 		Short:                 "run terraform",
-		Long:                  terrafromLongDesc,
+		Long:                  terraformLongDesc,
 		Example:               terraformExample,
 		DisableFlagsInUseLine: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			argsLenAtDash := cmd.ArgsLenAtDash()
-
-			err := o.Complete(cmd, args, argsLenAtDash)
+			err := o.Complete(cmd, args)
 			if err != nil {
 				return err
 			}
@@ -68,33 +66,23 @@ func NewCmdTerraform() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&o.Version, "version", "", "set terraform version")
-
 	return cmd
 }
 
-func (o *TerraformOptions) Complete(cmd *cobra.Command, args []string, argsLenAtDash int) error {
+func (o *TerraformOptions) Complete(cmd *cobra.Command, args []string) error {
 	cfg, err := config.InitializeConfig()
 	if err != nil {
 		return err
 	}
 
 	o.Config = cfg
-
-	o.Command = args[argsLenAtDash:]
-
-	if o.Version == "" {
-		o.Version = viper.GetString("terraform_version")
-	}
+	o.Version = viper.GetString("terraform_version")
+	o.Command = args
 
 	return nil
 }
 
 func (o *TerraformOptions) Validate() error {
-	if len(o.Version) == 0 {
-		return fmt.Errorf("terraform version must be specified")
-	}
-
 	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("env must be specified")
 	}
