@@ -64,6 +64,7 @@ func newApp() (*cobra.Command, error) {
 	rootCmd.PersistentFlags().StringP("aws-profile", "p", "", "set AWS profile")
 	rootCmd.PersistentFlags().StringP("aws-region", "r", "", "set AWS region")
 	rootCmd.PersistentFlags().StringP("namespace", "n", "", "set namespace")
+	rootCmd.PersistentFlags().String("terraform-version", "", "set terraform-version")
 
 	rootCmd.Flags().StringP("tag", "t", "", "set tag")
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
