@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/signal"
 	"regexp"
+	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -153,6 +156,8 @@ func Run(opts Options) error {
 		return err
 	}
 
+	setupSignalHandlers(cli, cont.ID)
+
 	reader, err := cli.ContainerLogs(context.Background(), cont.ID, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
@@ -210,4 +215,20 @@ func Run(opts Options) error {
 	case err := <-errC:
 		return err
 	}
+}
+
+func setupSignalHandlers(cli *client.Client, containerID string) {
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel)
+
+	go func() {
+		for {
+			select {
+			case s := <-signalChannel:
+				logrus.Debug("Received signal:", s)
+
+				cli.ContainerKill(context.Background(), containerID, strconv.Itoa(int(s.(syscall.Signal))))
+			}
+		}
+	}()
 }
