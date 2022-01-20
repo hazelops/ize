@@ -26,12 +26,12 @@ type SecretsPushOptions struct {
 	Force       bool
 }
 
-func NewSecretsSetFlags() *SecretsPushOptions {
+func NewSecretsPushFlags() *SecretsPushOptions {
 	return &SecretsPushOptions{}
 }
 
 func NewCmdSecretsPush() *cobra.Command {
-	o := NewSecretsSetFlags()
+	o := NewSecretsPushFlags()
 
 	cmd := &cobra.Command{
 		Use:   "push",
