@@ -32,7 +32,6 @@ func isRepoUrl(value string) bool {
 func clone(url string, destination string) (string, error) {
 	if destination == "" {
 		destination = strings.Split(url, "/")[len(strings.Split(url, "/"))-1]
-		fmt.Println(destination)
 	}
 
 	destination, err := filepath.Abs(destination)
