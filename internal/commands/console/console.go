@@ -11,7 +11,6 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type ConsoleOptions struct {
@@ -38,6 +37,11 @@ func NewCmdConsole() *cobra.Command {
 				return err
 			}
 
+			err = o.Validate()
+			if err != nil {
+				return err
+			}
+
 			err = o.Run()
 			if err != nil {
 				return err
@@ -60,9 +64,6 @@ func (o *ConsoleOptions) Complete(cmd *cobra.Command, args []string) error {
 
 	o.Config = cfg
 
-	o.Config.Env = viper.GetString("env")
-	o.Config.Namespace = viper.GetString("namespace")
-
 	if o.EcsCluster == "" {
 		o.EcsCluster = fmt.Sprintf("%s-%s", o.Config.Env, o.Config.Namespace)
 	}
@@ -74,28 +75,23 @@ func (o *ConsoleOptions) Complete(cmd *cobra.Command, args []string) error {
 
 func (o *ConsoleOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified")
+		return fmt.Errorf("can't validate: env must be specified")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("namespace must be specified")
-	}
-
-	if len(o.EcsCluster) == 0 {
-		return fmt.Errorf("ECS cluster must be specified")
+		return fmt.Errorf("can't validate: namespace must be specified")
 	}
 
 	if len(o.ServiceName) == 0 {
-		return fmt.Errorf("service name must be specified")
+		return fmt.Errorf("can't validate: service name must be specified")
 	}
 	return nil
 }
 
 func (o *ConsoleOptions) Run() error {
 	serviceName := fmt.Sprintf("%s-%s", o.Config.Env, o.ServiceName)
-	clusterName := fmt.Sprintf("%s-%s", o.Config.Env, o.Config.Namespace)
 
-	logrus.Infof("service name: %s, cluster name: %s", serviceName, clusterName)
+	logrus.Infof("service name: %s, cluster name: %s", serviceName, o.EcsCluster)
 	logrus.Infof("region: %s, profile: %s", o.Config.AwsProfile, o.Config.AwsRegion)
 
 	sess, err := utils.GetSession(&utils.SessionConfig{
@@ -103,16 +99,13 @@ func (o *ConsoleOptions) Run() error {
 		Profile: o.Config.AwsProfile,
 	})
 	if err != nil {
-		pterm.Error.Printfln("Getting AWS session")
-		return err
+		return fmt.Errorf("can't run console: failed to create aws session")
 	}
-
-	pterm.Success.Printfln("Getting AWS session")
 
 	ecsSvc := ecs.New(sess)
 
 	lto, err := ecsSvc.ListTasks(&ecs.ListTasksInput{
-		Cluster:       &clusterName,
+		Cluster:       &o.EcsCluster,
 		DesiredStatus: aws.String(ecs.DesiredStatusRunning),
 		ServiceName:   &serviceName,
 	})
@@ -132,7 +125,7 @@ func (o *ConsoleOptions) Run() error {
 	out, err := ecsSvc.ExecuteCommand(&ecs.ExecuteCommandInput{
 		Container:   &o.ServiceName,
 		Interactive: aws.Bool(true),
-		Cluster:     &clusterName,
+		Cluster:     &o.EcsCluster,
 		Task:        lto.TaskArns[0],
 		Command:     aws.String("/bin/sh"),
 	})
@@ -145,7 +138,6 @@ func (o *ConsoleOptions) Run() error {
 
 	ssmCmd := ssmsession.NewSSMPluginCommand(o.Config.AwsRegion)
 	ssmCmd.Start((out.Session))
-
 	if err != nil {
 		return err
 	}
