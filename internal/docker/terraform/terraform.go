@@ -194,11 +194,10 @@ func Run(opts Options) error {
 			strErr = strings.ToLower(string(strErr[0])) + strErr[1:]
 			err = fmt.Errorf(strErr)
 		}
-		if logrus.GetLevel() >= 4 || strings.Contains(strings.Join(opts.Cmd, ""), "output") {
-			fmt.Println(scanner.Text())
-		}
 		if f != nil {
 			f.WriteString(scanner.Text())
+		} else {
+			fmt.Println(scanner.Text())
 		}
 	}
 
