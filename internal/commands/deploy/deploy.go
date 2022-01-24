@@ -126,6 +126,18 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 				o.Services[i].EcsCluster = fmt.Sprintf("%s-%s", o.Config.Env, o.Config.Namespace)
 			}
 		}
+
+		if len(o.Infra.Profile) == 0 {
+			o.Infra.Profile = o.Config.AwsProfile
+		}
+
+		if len(o.Infra.Region) == 0 {
+			o.Infra.Region = o.Config.AwsRegion
+		}
+
+		if len(o.Infra.Version) == 0 {
+			o.Infra.Version = viper.GetString("terraform_version")
+		}
 	} else {
 		o.Config, err = config.InitializeConfig()
 		viper.BindPFlags(cmd.Flags())
@@ -205,6 +217,10 @@ func validate(o *DeployOptions) error {
 	}
 
 	if len(o.ServiceName) == 0 {
+		return fmt.Errorf("can't validate options: service name be specified")
+	}
+
+	if len(o.Infra.Profile) == 0 {
 		return fmt.Errorf("can't validate options: service name be specified")
 	}
 	return nil

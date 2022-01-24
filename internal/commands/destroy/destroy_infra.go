@@ -79,15 +79,15 @@ func (o *DestroyInfraOptions) Complete(cmd *cobra.Command, args []string) error 
 	}
 
 	if len(o.Terraform.Profile) == 0 {
-		o.Terraform.Profile = viper.GetString("aws_profile")
-	}
-
-	if len(o.Terraform.Profile) == 0 {
-		o.Terraform.Profile = viper.GetString("aws-profile")
+		o.Terraform.Profile = o.Config.AwsProfile
 	}
 
 	if len(o.Terraform.Version) == 0 {
 		o.Terraform.Version = viper.GetString("infra.terraform.terraform_version")
+	}
+
+	if len(o.Terraform.Version) == 0 {
+		o.Terraform.Version = viper.GetString("terraform_version")
 	}
 
 	fmt.Println(o.Terraform)
@@ -96,19 +96,10 @@ func (o *DestroyInfraOptions) Complete(cmd *cobra.Command, args []string) error 
 }
 
 func (o *DestroyInfraOptions) Validate() error {
-	fmt.Println(o.Terraform.Profile)
-
 	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("env must be specified")
 	}
 
-	if len(o.Terraform.Profile) == 0 {
-		return fmt.Errorf("AWS profile must be specified")
-	}
-
-	if len(o.Terraform.Version) == 0 {
-		return fmt.Errorf("terraform version must be specified")
-	}
 	return nil
 }
 
