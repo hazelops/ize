@@ -102,7 +102,8 @@ Input your root password and run:
 ize completion zsh > "${fpath[1]}/_ize"
 ```
 
-You will need to start a new shell for this setup to take effect.
+To take effect for this setup you should run `source ~/.zshrc` or simply restart shell.
+
 
 ##### 2. Bash:
 Autocompletion script depends on the `bash-completion` package.
@@ -128,4 +129,4 @@ Input your root password and run:
 ize completion bash > /etc/bash_completion.d/ize
 ```
 
-You will need to start a new shell for this setup to take effect.
+To take effect for this setup you should run `source ~/.bashrc` or simply restart shell.
