@@ -12,7 +12,6 @@ import (
 	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/docker/terraform"
-	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -145,99 +144,99 @@ func (o *DeployInfraOptions) Validate() error {
 func (o *DeployInfraOptions) Run() error {
 	logrus.Infof("infra: %s", o.Terraform)
 
-	//terraform init
-	opts := terraform.Options{
-		ContainerName: "terraform",
-		Cmd:           []string{"init", "-input=true"},
-		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Config.Env),
-			fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
-			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		},
-		TerraformVersion: o.Terraform.Version,
-	}
+	// //terraform init
+	// opts := terraform.Options{
+	// 	ContainerName: "terraform",
+	// 	Cmd:           []string{"init", "-input=true"},
+	// 	Env: []string{
+	// 		fmt.Sprintf("ENV=%v", o.Config.Env),
+	// 		fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
+	// 		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
+	// 		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
+	// 	},
+	// 	TerraformVersion: o.Terraform.Version,
+	// }
 
-	spinner := &pterm.SpinnerPrinter{}
+	// spinner := &pterm.SpinnerPrinter{}
 
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start("execution terraform init")
-	}
+	// if logrus.GetLevel() < 4 {
+	// 	spinner, _ = pterm.DefaultSpinner.Start("execution terraform init")
+	// }
 
-	err := terraform.Run(opts)
-	if err != nil {
-		logrus.Errorf("terraform %s not completed", "init")
-		return err
-	}
+	// err := terraform.Run(opts)
+	// if err != nil {
+	// 	logrus.Errorf("terraform %s not completed", "init")
+	// 	return err
+	// }
 
-	if logrus.GetLevel() < 4 {
-		spinner.Success("terraform init completed")
-	} else {
-		pterm.Success.Println("terraform init completed")
-	}
+	// if logrus.GetLevel() < 4 {
+	// 	spinner.Success("terraform init completed")
+	// } else {
+	// 	pterm.Success.Println("terraform init completed")
+	// }
 
-	//terraform plan
-	opts = terraform.Options{
-		ContainerName: "terraform",
-		Cmd:           []string{"plan"},
-		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Config.Env),
-			fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
-			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		},
-		TerraformVersion: o.Terraform.Version,
-	}
+	// //terraform plan
+	// opts = terraform.Options{
+	// 	ContainerName: "terraform",
+	// 	Cmd:           []string{"plan"},
+	// 	Env: []string{
+	// 		fmt.Sprintf("ENV=%v", o.Config.Env),
+	// 		fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
+	// 		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
+	// 		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
+	// 	},
+	// 	TerraformVersion: o.Terraform.Version,
+	// }
 
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start("execution terraform plan")
-	}
+	// if logrus.GetLevel() < 4 {
+	// 	spinner, _ = pterm.DefaultSpinner.Start("execution terraform plan")
+	// }
 
-	err = terraform.Run(opts)
-	if err != nil {
-		logrus.Errorf("terraform %s not completed", "plan")
-		return err
-	}
+	// err = terraform.Run(opts)
+	// if err != nil {
+	// 	logrus.Errorf("terraform %s not completed", "plan")
+	// 	return err
+	// }
 
-	if logrus.GetLevel() < 4 {
-		spinner.Success("terraform plan completed")
-	} else {
-		pterm.Success.Println("terraform plan completed")
-	}
+	// if logrus.GetLevel() < 4 {
+	// 	spinner.Success("terraform plan completed")
+	// } else {
+	// 	pterm.Success.Println("terraform plan completed")
+	// }
 
-	//terraform apply
-	opts = terraform.Options{
-		ContainerName: "terraform",
-		Cmd:           []string{"apply", "-auto-approve"},
-		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Config.Env),
-			fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
-			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		},
-		TerraformVersion: o.Terraform.Version,
-	}
+	// //terraform apply
+	// opts = terraform.Options{
+	// 	ContainerName: "terraform",
+	// 	Cmd:           []string{"apply", "-auto-approve"},
+	// 	Env: []string{
+	// 		fmt.Sprintf("ENV=%v", o.Config.Env),
+	// 		fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
+	// 		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
+	// 		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
+	// 	},
+	// 	TerraformVersion: o.Terraform.Version,
+	// }
 
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start("execution terraform apply")
-	}
+	// if logrus.GetLevel() < 4 {
+	// 	spinner, _ = pterm.DefaultSpinner.Start("execution terraform apply")
+	// }
 
-	err = terraform.Run(opts)
-	if err != nil {
-		logrus.Errorf("terraform %s not completed", "apply")
-		return err
-	}
+	// err = terraform.Run(opts)
+	// if err != nil {
+	// 	logrus.Errorf("terraform %s not completed", "apply")
+	// 	return err
+	// }
 
-	if logrus.GetLevel() < 4 {
-		spinner.Success("terraform apply completed")
-	} else {
-		pterm.Success.Println("terraform apply completed")
-	}
+	// if logrus.GetLevel() < 4 {
+	// 	spinner.Success("terraform apply completed")
+	// } else {
+	// 	pterm.Success.Println("terraform apply completed")
+	// }
 
 	// terraform output
 	outputPath := fmt.Sprintf("%s/.terraform/output.json", viper.Get("ENV_DIR"))
 
-	opts = terraform.Options{
+	opts := terraform.Options{
 		ContainerName: "terraform",
 		Cmd:           []string{"output", "-json"},
 		Env: []string{
@@ -250,21 +249,21 @@ func (o *DeployInfraOptions) Run() error {
 		OutputPath:       outputPath,
 	}
 
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start("execution terraform output")
-	}
+	// if logrus.GetLevel() < 4 {
+	// 	spinner, _ = pterm.DefaultSpinner.Start("execution terraform output")
+	// }
 
-	err = terraform.Run(opts)
+	err := terraform.Run(opts)
 	if err != nil {
 		logrus.Errorf("terraform %s not completed", "output")
 		return err
 	}
 
-	if logrus.GetLevel() < 4 {
-		spinner.Success("terraform output completed")
-	} else {
-		pterm.Success.Println("terraform output completed")
-	}
+	// if logrus.GetLevel() < 4 {
+	// 	spinner.Success("terraform output completed")
+	// } else {
+	// 	pterm.Success.Println("terraform output completed")
+	// }
 
 	sess, err := utils.GetSession(&utils.SessionConfig{
 		Region:  o.Terraform.Region,

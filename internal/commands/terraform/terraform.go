@@ -45,6 +45,7 @@ func NewCmdTerraform() *cobra.Command {
 		Short:                 "run terraform",
 		Long:                  terraformLongDesc,
 		Example:               terraformExample,
+		DisableFlagParsing:    true,
 		DisableFlagsInUseLine: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := o.Complete(cmd, args)
