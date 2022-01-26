@@ -1,20 +1,19 @@
 package tunnel
 
 import (
-	"context"
+	"bytes"
 	"fmt"
+	"io"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
+	"os/exec"
+	"strings"
 
-	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/elliotchance/sshtunnel"
 	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type TunnelUpOptions struct {
@@ -83,13 +82,28 @@ func (o *TunnelUpOptions) Validate() error {
 }
 
 func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+	c := exec.Command(
+		"ssh", "-S", "bastion.sock", "-O", "check", "",
+	)
+	out := &bytes.Buffer{}
+	c.Stdout = out
+	c.Stderr = out
 
-	ctx, cancel := context.WithCancel(cmd.Context())
-	defer cancel()
+	err := c.Run()
+	if err == nil {
+		sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
+		sshConfig, err := getSSHConfig(sshConfigPath)
+		if err != nil {
+			return fmt.Errorf("can't run tunnel up: %w", err)
+		}
+		hosts := getHosts(sshConfig)
+		pterm.Info.Printfln("tunnel is already up. Forwarding config:")
+		for _, h := range hosts {
+			pterm.Info.Printfln("%s:%s ➡ localhost:%s", h[2], h[3], h[1])
+		}
 
-	pterm.DefaultSection.Printfln("Running SSH Tunnel Up")
+		return nil
+	}
 
 	sess, err := utils.GetSession(&utils.SessionConfig{
 		Region:  o.Config.AwsRegion,
@@ -97,7 +111,7 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 	})
 	if err != nil {
 		logrus.Error("getting AWS session")
-		return err
+		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
 
 	logrus.Debug("getting AWS session")
@@ -105,75 +119,46 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 	to, err := getTerraformOutput(sess, o.Config.Env)
 	if err != nil {
 		logrus.Error("get forward config")
-		return err
+		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
 
-	hosts := getForwardConfig(to)
+	sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
 
-	logrus.Debug("getting SSH forward config")
+	f, err := os.Create(sshConfigPath)
+	if err != nil {
+		return fmt.Errorf("can't run tunnel up: %w", err)
+	}
 
+	sshConfig := strings.Join(to.SSHForwardConfig.Value, "\n")
+	_, err = io.WriteString(f, sshConfig)
+	if err != nil {
+		return fmt.Errorf("can't run tunnel up: %w", err)
+	}
+	if err = f.Close(); err != nil {
+		return fmt.Errorf("can't run tunnel up: %w", err)
+	}
+
+	hosts := getHosts(sshConfig)
+	if len(hosts) == 0 {
+		return fmt.Errorf("can't tunnel up: forwarding config is not valid")
+	}
 	logrus.Debugf("hosts: %s", hosts)
 
-	if len(hosts) == 0 {
-		return fmt.Errorf("can't tunnel up: forward config is not valid")
+	c = exec.Command(
+		"ssh", "-M", "-S", "bastion.sock", "-fNT",
+		fmt.Sprintf("ubuntu@%s", to.BastionInstanceID.Value),
+		"-F", sshConfigPath,
+	)
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	if err = c.Run(); err != nil {
+		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
 
-	logrus.Debug("forwarding config is valid")
-
-	_ = killDaemon(daemonContext(ctx))
-
-	p, err := daemonContext(ctx).Reborn()
-	if err != nil {
-		return fmt.Errorf("restarted tunnel process: %w", err)
-	}
-	if p != nil {
-		pterm.Info.Printf("tunnel is up(pid: %d)\n", p.Pid)
-		return nil
-	}
-	defer daemonContext(ctx).Release()
-
-	localport, sessionID, err := startPortForwardSession(to, o.Config.AwsRegion, sess)
-	if err != nil {
-		return fmt.Errorf("can't tunnel up: %w", err)
-	}
-
-	logrus.Debugf("private key path: %s", o.PrivateKeyFile)
-
+	pterm.Success.Printfln("tunnel is up. Forwarded ports:")
 	for _, h := range hosts {
-		destinationHost := h[2] + ":" + h[3]
-
-		localPort := h[1]
-
-		tunnel := sshtunnel.NewSSHTunnel(
-			"ubuntu@localhost",
-			sshtunnel.PrivateKeyFile(getPrivateKey(o.PrivateKeyFile)),
-			destinationHost,
-			localPort,
-		)
-
-		tunnel.Server.Port = localport
-
-		go func() {
-			if err := tunnel.Start(); err != nil {
-				pterm.Error.Printfln("Forward destination host to localhost")
-				os.Exit(1)
-			}
-		}()
-		pterm.Info.Printfln("%s ➡ localhost:%s", destinationHost, localPort)
-		time.Sleep(100 * time.Millisecond)
+		pterm.Info.Printfln("%s:%s ➡ localhost:%s", h[2], h[3], h[1])
 	}
 
-	for {
-		select {
-		case sig := <-sigCh:
-			switch sig {
-			case syscall.SIGTERM:
-				ssm.New(sess).TerminateSession(&ssm.TerminateSessionInput{
-					SessionId: &sessionID,
-				})
-				cancel()
-				return nil
-			}
-		}
-	}
+	return nil
 }

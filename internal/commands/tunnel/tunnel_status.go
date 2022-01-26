@@ -1,15 +1,16 @@
 package tunnel
 
 import (
+	"bytes"
 	"fmt"
-	"regexp"
-	"strings"
+	"os/exec"
+	"syscall"
 
-	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type TunnelStatusOptions struct {
@@ -70,57 +71,36 @@ func (o *TunnelStatusOptions) Validate() error {
 }
 
 func (o *TunnelStatusOptions) Run(cmd *cobra.Command) error {
-	process, running, err := daemonRunning(daemonContext(cmd.Context()))
+	c := exec.Command(
+		"ssh", "-S", "bastion.sock", "-O", "check", "",
+	)
+	out := &bytes.Buffer{}
+	c.Stdout = out
+	c.Stderr = out
+
+	err := c.Run()
 	if err != nil {
-		return err
-	}
-	if !running {
-		pterm.Info.Println("no background tunnel found")
+		exiterr := err.(*exec.ExitError)
+		status := exiterr.Sys().(syscall.WaitStatus)
+		if status.ExitStatus() != 255 {
+			return err
+		}
+		logrus.Debug(out.String())
+		pterm.Info.Printfln("tunnel is down")
 		return nil
 	}
 
-	logrus.Debugf("tunnel is up(pid: %d)")
-
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  o.Config.AwsRegion,
-		Profile: o.Config.AwsProfile,
-	})
+	sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
+	sshConfig, err := getSSHConfig(sshConfigPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
+	hosts := getHosts(sshConfig)
 
-	config, err := getTerraformOutput(sess, o.Config.Env)
-	if err != nil {
-		return err
-	}
-
-	re, err := regexp.Compile(`LocalForward\s(?P<localPort>\d+)\s(?P<remoteHost>.+):(?P<remotePort>\d+)`)
-	if err != nil {
-		logrus.Error("getting SSH forward config")
-		return err
-	}
-
-	hosts := re.FindAllStringSubmatch(
-		strings.Join(config.SSHForwardConfig.Value, "\n"),
-		-1,
-	)
-
-	logrus.Debug("getting SSH forward config")
-
-	logrus.Debugf("hosts: %s", hosts)
-
-	if len(hosts) == 0 {
-		logrus.Error("getting SSH forward config")
-		return err
-	}
-
-	logrus.Debug("port forwarding config is valid")
-
-	logrus.Debugf("tunnel is up(pid: %s)", process.Pid)
-
-	pterm.Info.Printfln("tunnel is up with following config:")
+	pterm.Info.Printfln("tunnel is up. Forwarded ports:")
 	for _, h := range hosts {
 		pterm.Info.Printfln("%s:%s ➡ localhost:%s", h[2], h[3], h[1])
 	}
-	return err
+
+	return nil
 }

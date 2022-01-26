@@ -2,31 +2,27 @@ package tunnel
 
 import (
 	"bufio"
-	"context"
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
-	"net"
 	"os"
-	"os/signal"
+	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
-	"syscall"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/elliotchance/sshtunnel"
 	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/pkg/ssmsession"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type TunnelOptions struct {
@@ -107,21 +103,44 @@ func (o *TunnelOptions) Validate() error {
 }
 
 func (o *TunnelOptions) Run(cmd *cobra.Command) error {
-	pterm.DefaultSection.Printfln("Sending SSH public key")
+	c := exec.Command(
+		"ssh", "-S", "bastion.sock", "-O", "check", "",
+	)
+	out := &bytes.Buffer{}
+	c.Stdout = out
+	c.Stderr = out
+
+	err := c.Run()
+	if err == nil {
+		sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
+		sshConfig, err := getSSHConfig(sshConfigPath)
+		if err != nil {
+			return fmt.Errorf("can't run tunnel: %w", err)
+		}
+		hosts := getHosts(sshConfig)
+		pterm.Info.Printfln("tunnel is already up. Forwarded ports:")
+		for _, h := range hosts {
+			pterm.Info.Printfln("%s:%s ➡ localhost:%s", h[2], h[3], h[1])
+		}
+
+		return nil
+	}
+
+	pterm.Success.Println("checking for an existing tunnel")
 
 	sess, err := utils.GetSession(&utils.SessionConfig{
 		Region:  o.Config.AwsRegion,
 		Profile: o.Config.AwsProfile,
 	})
 	if err != nil {
-		return fmt.Errorf("can't get AWS session: %w", err)
+		return fmt.Errorf("can't run tunnel: %w", err)
 	}
 
 	logrus.Debug("getting AWS session")
 
 	to, err := getTerraformOutput(sess, o.Config.Env)
 	if err != nil {
-		return fmt.Errorf("can't get forward config: %w", err)
+		return fmt.Errorf("can't run tunnel: %w", err)
 	}
 
 	logrus.Debug("getting bastion instance ID")
@@ -130,93 +149,50 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 
 	err = sendSSHPublicKey(to.BastionInstanceID.Value, getPublicKey(o.PublicKeyFile), sess)
 	if err != nil {
-		logrus.Error("sending user SSH public key")
+		return fmt.Errorf("can't run tunnel: %s", err)
+	}
+
+	pterm.Success.Println("sending user SSH public key")
+
+	sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
+
+	f, err := os.Create(sshConfigPath)
+	if err != nil {
+		return fmt.Errorf("can't run tunnel: %w", err)
+	}
+
+	sshConfig := strings.Join(to.SSHForwardConfig.Value, "\n")
+	_, err = io.WriteString(f, sshConfig)
+	if err != nil {
+		return fmt.Errorf("can't run tunnel: %w", err)
+	}
+	if err = f.Close(); err != nil {
 		return err
 	}
 
-	logrus.Debug("sending user SSH public key")
-
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
-
-	ctx, cancel := context.WithCancel(cmd.Context())
-	defer cancel()
-
-	pterm.DefaultSection.Printfln("Running SSH Tunnel Up")
-
-	hosts := getForwardConfig(to)
-
-	logrus.Debug("getting SSH forward config")
-
+	hosts := getHosts(sshConfig)
+	if len(hosts) == 0 {
+		return fmt.Errorf("can't tunnel: forward config is not valid")
+	}
 	logrus.Debugf("hosts: %s", hosts)
 
-	if len(hosts) == 0 {
-		return fmt.Errorf("can't tunnel up: forward config is not valid")
+	c = exec.Command(
+		"ssh", "-M", "-S", "bastion.sock", "-fNT",
+		fmt.Sprintf("ubuntu@%s", to.BastionInstanceID.Value),
+		"-F", sshConfigPath,
+	)
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	if err = c.Run(); err != nil {
+		return fmt.Errorf("can't run tunnel: %w", err)
 	}
 
-	logrus.Debug("forwarding config is valid")
-
-	_ = killDaemon(daemonContext(ctx))
-
-	p, err := daemonContext(ctx).Reborn()
-	if err != nil {
-		return fmt.Errorf("restarted tunnel process: %w", err)
-	}
-	if p != nil {
-		logrus.Debugf("tunnel is up(pid: %d)", p.Pid)
-		pterm.Success.Printfln("tunnel is up")
-		pterm.Info.Printfln("forward config:")
-		for _, h := range hosts {
-			pterm.Info.Printfln("%s:%s ➡ localhost:%s", h[2], h[3], h[1])
-		}
-		return nil
-	}
-	defer daemonContext(ctx).Release()
-
-	localport, sessionID, err := startPortForwardSession(to, o.Config.AwsRegion, sess)
-	if err != nil {
-		return fmt.Errorf("can't tunnel up: %w", err)
-	}
-
-	logrus.Debugf("private key path: %s", o.PrivateKeyFile)
-
+	pterm.Success.Printfln("tunnel is up. Forwarding config:")
 	for _, h := range hosts {
-		destinationHost := h[2] + ":" + h[3]
-
-		localPort := h[1]
-
-		tunnel := sshtunnel.NewSSHTunnel(
-			"ubuntu@localhost",
-			sshtunnel.PrivateKeyFile(getPrivateKey(o.PrivateKeyFile)),
-			destinationHost,
-			localPort,
-		)
-
-		tunnel.Server.Port = localport
-
-		go func() {
-			if err := tunnel.Start(); err != nil {
-				pterm.Error.Printfln("Forward destination host to localhost")
-				os.Exit(1)
-			}
-		}()
-		pterm.Info.Printfln("%s ➡ localhost:%s", destinationHost, localPort)
-		time.Sleep(100 * time.Millisecond)
+		pterm.Info.Printfln("%s:%s ➡ localhost:%s", h[2], h[3], h[1])
 	}
 
-	for {
-		select {
-		case sig := <-sigCh:
-			switch sig {
-			case syscall.SIGTERM:
-				ssm.New(sess).TerminateSession(&ssm.TerminateSessionInput{
-					SessionId: &sessionID,
-				})
-				cancel()
-				return nil
-			}
-		}
-	}
+	return nil
 }
 
 func getTerraformOutput(sess *session.Session, env string) (terraformOutput, error) {
@@ -225,24 +201,21 @@ func getTerraformOutput(sess *session.Session, env string) (terraformOutput, err
 		WithDecryption: aws.Bool(true),
 	})
 	if err != nil {
-		logrus.Error("getting SSH forward config")
-		return terraformOutput{}, err
+		return terraformOutput{}, fmt.Errorf("can't get terraform output: %w", err)
 	}
 
 	var value []byte
 
 	value, err = base64.StdEncoding.DecodeString(*resp.Parameter.Value)
 	if err != nil {
-		logrus.Error("getting SSH forward config")
-		return terraformOutput{}, err
+		return terraformOutput{}, fmt.Errorf("can't get terraform output: %w", err)
 	}
 
 	var config terraformOutput
 
 	err = json.Unmarshal(value, &config)
 	if err != nil {
-		logrus.Error("getting SSH forward config")
-		return terraformOutput{}, err
+		return terraformOutput{}, fmt.Errorf("can't get terraform output: %w", err)
 	}
 
 	logrus.Debugf("output: %s", config)
@@ -281,50 +254,6 @@ func sendSSHPublicKey(bastionID string, key string, sess *session.Session) error
 	return nil
 }
 
-func startPortForwardSession(to terraformOutput, region string, sess *session.Session) (int, string, error) {
-	localport, err := getFreePort()
-	if err != nil {
-		return 0, "", fmt.Errorf("can't start port forward session: %w", err)
-	}
-
-	input := &ssm.StartSessionInput{
-		DocumentName: aws.String("AWS-StartPortForwardingSession"),
-		Parameters: map[string][]*string{
-			"portNumber":      {aws.String(strconv.Itoa(22))},
-			"localPortNumber": {aws.String(strconv.Itoa(localport))},
-		},
-		Target: &to.BastionInstanceID.Value,
-	}
-
-	out, err := ssm.New(sess).StartSession(input)
-	if err != nil {
-		return 0, "", fmt.Errorf("can't start port forward session: %w", err)
-	}
-
-	err = ssmsession.NewSSMPluginCommand(region).Forward(out, input)
-	if err != nil {
-		return 0, "", fmt.Errorf("can't start port forward session: %w", err)
-	}
-
-	return localport, *out.SessionId, nil
-}
-
-func getPrivateKey(path string) string {
-	if !filepath.IsAbs(path) {
-		var err error
-		path, err = filepath.Abs(path)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	if _, err := os.Stat(path); err != nil {
-		log.Fatalf("%s does not exist", path)
-	}
-
-	return path
-}
-
 func getPublicKey(path string) string {
 	if !filepath.IsAbs(path) {
 		var err error
@@ -357,30 +286,30 @@ func getPublicKey(path string) string {
 	return key
 }
 
-func getFreePort() (int, error) {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		return 0, err
-	}
-
-	l, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		return 0, err
-	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port, nil
-}
-
-func getForwardConfig(to terraformOutput) [][]string {
+func getHosts(sshconfig string) [][]string {
 	re, err := regexp.Compile(`LocalForward\s(?P<localPort>\d+)\s(?P<remoteHost>.+):(?P<remotePort>\d+)`)
 	if err != nil {
 		log.Fatal(fmt.Errorf("can't get forwaed config: %w", err))
 	}
 
 	hosts := re.FindAllStringSubmatch(
-		strings.Join(to.SSHForwardConfig.Value, "\n"),
+		sshconfig,
 		-1,
 	)
 
 	return hosts
+}
+
+func getSSHConfig(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("can't get ssh config: %w", err)
+	}
+
+	b, err := io.ReadAll(f)
+	if err != nil {
+		return "", fmt.Errorf("can't get ssh config: %w", err)
+	}
+
+	return string(b), nil
 }
