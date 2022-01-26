@@ -8,6 +8,7 @@ import (
 
 	"github.com/hazelops/ize/internal/config"
 	"github.com/pterm/pterm"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -84,7 +85,9 @@ func (o *TunnelStatusOptions) Run(cmd *cobra.Command) error {
 		if status.ExitStatus() != 255 {
 			return err
 		}
-		return fmt.Errorf("can't tunnel status: %s", out)
+		logrus.Debug(out.String())
+		pterm.Info.Printfln("tunnel is down")
+		return nil
 	}
 
 	sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
@@ -94,8 +97,7 @@ func (o *TunnelStatusOptions) Run(cmd *cobra.Command) error {
 	}
 	hosts := getHosts(sshConfig)
 
-	pterm.Success.Printfln("tunnel is up")
-	pterm.Info.Printfln("forward config:")
+	pterm.Info.Printfln("tunnel is up. Forwarded ports:")
 	for _, h := range hosts {
 		pterm.Info.Printfln("%s:%s ➡ localhost:%s", h[2], h[3], h[1])
 	}

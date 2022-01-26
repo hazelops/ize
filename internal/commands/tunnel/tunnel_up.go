@@ -97,8 +97,7 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 			return fmt.Errorf("can't run tunnel up: %w", err)
 		}
 		hosts := getHosts(sshConfig)
-		pterm.Success.Printfln("tunnel is already up")
-		pterm.Info.Printfln("forward config:")
+		pterm.Info.Printfln("tunnel is already up. Forwarding config:")
 		for _, h := range hosts {
 			pterm.Info.Printfln("%s:%s ➡ localhost:%s", h[2], h[3], h[1])
 		}
@@ -141,7 +140,7 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 
 	hosts := getHosts(sshConfig)
 	if len(hosts) == 0 {
-		return fmt.Errorf("can't tunnel up: forward config is not valid")
+		return fmt.Errorf("can't tunnel up: forwarding config is not valid")
 	}
 	logrus.Debugf("hosts: %s", hosts)
 
@@ -156,8 +155,7 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
 
-	pterm.Success.Printfln("tunnel is up")
-	pterm.Info.Printfln("forward config:")
+	pterm.Success.Printfln("tunnel is up. Forwarded ports:")
 	for _, h := range hosts {
 		pterm.Info.Printfln("%s:%s ➡ localhost:%s", h[2], h[3], h[1])
 	}

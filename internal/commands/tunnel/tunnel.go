@@ -118,8 +118,7 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 			return fmt.Errorf("can't run tunnel: %w", err)
 		}
 		hosts := getHosts(sshConfig)
-		pterm.Success.Printfln("tunnel is already up")
-		pterm.Info.Printfln("forward config:")
+		pterm.Info.Printfln("tunnel is already up. Forwarded ports:")
 		for _, h := range hosts {
 			pterm.Info.Printfln("%s:%s ➡ localhost:%s", h[2], h[3], h[1])
 		}
@@ -188,8 +187,7 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 		return fmt.Errorf("can't run tunnel: %w", err)
 	}
 
-	pterm.Success.Printfln("tunnel is up")
-	pterm.Info.Printfln("forward config:")
+	pterm.Success.Printfln("tunnel is up. Forwarding config:")
 	for _, h := range hosts {
 		pterm.Info.Printfln("%s:%s ➡ localhost:%s", h[2], h[3], h[1])
 	}
