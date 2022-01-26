@@ -42,6 +42,7 @@ func NewCmdTunnel() *cobra.Command {
 		Use:              "tunnel",
 		Short:            "tunnel management",
 		Long:             "Tunnel management.",
+		Args:             cobra.NoArgs,
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := o.Complete(cmd, args)
