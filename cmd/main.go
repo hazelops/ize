@@ -41,12 +41,14 @@ func main() {
 		Style: pterm.NewStyle(pterm.FgRed),
 	}
 
+	pterm.Warning.Prefix = pterm.Prefix{
+		Text:  "⚠",
+		Style: pterm.NewStyle(pterm.FgYellow),
+	}
 
 	err := commands.Execute(os.Args[1:])
 	if err != nil {
 		pterm.Error.Print(err)
 	}
-
-
 
 }
