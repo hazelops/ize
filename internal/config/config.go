@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -15,7 +14,6 @@ import (
 	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
@@ -28,43 +26,23 @@ type Config struct {
 	Env        string `mapstructure:"env"`
 }
 
-func FindPath(filename string) (string, error) {
-	if !path.IsAbs(filename) {
-		wd, err := os.Getwd()
-		if err != nil {
-			return "", err
-		}
-
-		if filename == "" {
-			filename = Filename
-		}
-
-		filename = filepath.Join(wd, filename)
-	}
-
-	if _, err := os.Stat(filename); err == nil {
-		return filename, nil
-	} else {
-		return "", err
-	}
-}
-
-func Load(path string) (*Config, error) {
-
-	if !filepath.IsAbs(path) {
-		var err error
-		path, err = filepath.Abs(path)
-		if err != nil {
+func readConfigFile(path string, required bool) (*Config, error) {
+	viper.SetConfigName("ize")
+	viper.SetConfigType("toml")
+	viper.AddConfigPath(strings.TrimRight(path, "/ize.toml"))
+	viper.AddConfigPath(".")
+	viper.AddConfigPath(viper.GetString("ENV_DIR"))
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			if required {
+				return nil, fmt.Errorf("this command required config file")
+			}
+			logrus.Warn("config file not found")
+		} else {
 			return nil, err
 		}
 	}
 
-	viper.SetConfigFile(path)
-	if err := viper.ReadInConfig(); err != nil {
-		return nil, err
-	}
-
-	//Decode
 	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, err
@@ -128,28 +106,31 @@ func InitializeConfig(options ...Option) (*Config, error) {
 		return nil, err
 	}
 
-	if r.configFile && viper.GetString("config-file") == "" {
-		return nil, fmt.Errorf("can't initialize config: this function requiment config file")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("can't initialize config: %w", err)
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("can't initialize config: %w", err)
 	}
 
 	viper.SetDefault("ENV", os.Getenv("ENV"))
 	viper.SetDefault("AWS_PROFILE", os.Getenv("AWS_PROFILE"))
 	viper.SetDefault("AWS_REGION", os.Getenv("AWS_REGION"))
 	viper.SetDefault("NAMESPACE", os.Getenv("NAMESPACE"))
+	// Default paths
+	viper.SetDefault("ROOT_DIR", cwd)
+	viper.SetDefault("INFRA_DIR", fmt.Sprintf("%v/.infra", cwd))
+	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, viper.GetString("ENV")))
+	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
 
 	// TODO: those static defaults should probably go to a separate package and/or function. Also would include image names and such.
 	viper.SetDefault("TERRAFORM_VERSION", "1.1.3")
 
-	if viper.GetString("config-file") != "" {
-		cfg, err = initConfig(viper.GetString("config-file"))
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		err := viper.Unmarshal(cfg)
-		if err != nil {
-			return nil, err
-		}
+	cfg, err = readConfigFile(viper.GetString("config-file"), r.configFile)
+	if err != nil {
+		return nil, fmt.Errorf("can't initialize config: %w", err)
 	}
 
 	if len(cfg.AwsProfile) == 0 {
@@ -175,19 +156,6 @@ func InitializeConfig(options ...Option) (*Config, error) {
 		return nil, err
 	}
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		fmt.Println("Error getting current directory")
-	}
-
-	// Find home directory.
-	home, err := os.UserHomeDir()
-	cobra.CheckErr(err)
-
-	viper.AutomaticEnv()
-
-	//TODO ensure values of the variables are checked for nil before passing down to docker.
-
 	tag := ""
 	out, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output()
 	if err != nil {
@@ -198,13 +166,11 @@ func InitializeConfig(options ...Option) (*Config, error) {
 	}
 
 	viper.SetDefault("DOCKER_REGISTRY", fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, viper.GetString("aws-region")))
-	viper.SetDefault("ROOT_DIR", cwd)
-	viper.SetDefault("INFRA_DIR", fmt.Sprintf("%v/.infra", cwd))
-	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, viper.GetString("ENV")))
-	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
 	viper.SetDefault("TF_LOG", fmt.Sprintf(""))
 	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
 	viper.SetDefault("TAG", string(tag))
+	// Reset env directory to default because env may change
+	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, viper.GetString("ENV")))
 
 	return cfg, nil
 }
@@ -289,37 +255,4 @@ func CheckRequirements() error {
 	}
 
 	return nil
-}
-
-func initConfig(filename string) (*Config, error) {
-	path, err := initConfigPath(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	if path == "" {
-		return nil, errors.New("an Ize configuration file (ize.hcl) is required but wasn't found")
-	}
-
-	return initConfigLoad(path)
-}
-
-func initConfigPath(filename string) (string, error) {
-	path, err := FindPath(filename)
-	if err != nil {
-		return "", fmt.Errorf("error looking for a Ize configuration: %s", err)
-	}
-
-	return path, nil
-}
-
-func initConfigLoad(path string) (*Config, error) {
-	cfg, err := Load(path)
-	if err != nil {
-		return nil, err
-	}
-
-	//TODO: Validate
-
-	return cfg, nil
 }
