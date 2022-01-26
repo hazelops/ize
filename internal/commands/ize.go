@@ -25,6 +25,8 @@ type Response struct {
 }
 
 func Execute(args []string) error {
+	go CheckLatestRealese()
+
 	app, err := newApp()
 	if err != nil {
 		return err
