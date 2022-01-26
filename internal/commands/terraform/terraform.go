@@ -71,7 +71,7 @@ func NewCmdTerraform() *cobra.Command {
 }
 
 func (o *TerraformOptions) Complete(cmd *cobra.Command, args []string) error {
-	cfg, err := config.InitializeConfig()
+	cfg, err := config.InitializeConfig(config.WithDocker())
 	if err != nil {
 		return err
 	}

@@ -32,7 +32,7 @@ const (
 	ssmMacOsUrl = "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/sessionmanager-bundle.zip"
 )
 
-func DownloadSSMAgentPlugin() error {
+func downloadSSMAgentPlugin() error {
 	switch goos := runtime.GOOS; goos {
 	case "darwin":
 		client := http.Client{
@@ -130,7 +130,7 @@ func DownloadSSMAgentPlugin() error {
 	return nil
 }
 
-func CleanupSSMAgent() error {
+func cleanupSSMAgent() error {
 	command := []string{}
 
 	if runtime.GOOS == "darwin" {
@@ -158,7 +158,7 @@ func CleanupSSMAgent() error {
 	return nil
 }
 
-func InstallSSMAgent() error {
+func installSSMAgent() error {
 	command := []string{}
 
 	if runtime.GOOS == "darwin" {

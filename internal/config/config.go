@@ -75,6 +75,8 @@ func Load(path string) (*Config, error) {
 
 type requiments struct {
 	configFile bool
+	docker     bool
+	smplugin   bool
 }
 
 type Option func(*requiments)
@@ -82,6 +84,18 @@ type Option func(*requiments)
 func WithConfigFile() Option {
 	return func(r *requiments) {
 		r.configFile = true
+	}
+}
+
+func WithDocker() Option {
+	return func(r *requiments) {
+		r.docker = true
+	}
+}
+
+func WithSSMPlugin() Option {
+	return func(r *requiments) {
+		r.smplugin = true
 	}
 }
 
@@ -124,8 +138,16 @@ func InitializeConfig(options ...Option) (*Config, error) {
 		logrus.SetLevel(0)
 	}
 
-	if err := CheckRequirements(); err != nil {
-		return nil, err
+	if r.smplugin {
+		if err := checkSessionManagerPlugin(); err != nil {
+			return nil, err
+		}
+	}
+
+	if r.docker {
+		if err := checkDocker(); err != nil {
+			return nil, err
+		}
 	}
 
 	if r.configFile && viper.GetString("config-file") == "" {
@@ -209,14 +231,17 @@ func InitializeConfig(options ...Option) (*Config, error) {
 	return cfg, nil
 }
 
-func CheckRequirements() error {
-	//Check Docker and SSM Agent
+func checkDocker() error {
 	_, err := CheckCommand("docker", []string{"info"})
 	if err != nil {
 		return errors.New("docker is not running or is not installed (visit https://www.docker.com/get-started)")
 	}
 
-	_, err = CheckCommand("session-manager-plugin", []string{})
+	return nil
+}
+
+func checkSessionManagerPlugin() error {
+	_, err := CheckCommand("session-manager-plugin", []string{})
 	if err != nil {
 		pterm.Warning.Println("SSM Agent plugin is not installed. Trying to install SSM Agent plugin")
 
@@ -261,21 +286,21 @@ func CheckRequirements() error {
 
 		pterm.DefaultSection.Println("Installing SSM Agent plugin")
 
-		err = DownloadSSMAgentPlugin()
+		err = downloadSSMAgentPlugin()
 		if err != nil {
 			return fmt.Errorf("download SSM Agent plugin error: %v (visit https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)", err)
 		}
 
 		pterm.Success.Println("Downloading SSM Agent plugin")
 
-		err = InstallSSMAgent()
+		err = installSSMAgent()
 		if err != nil {
 			return fmt.Errorf("install SSM Agent plugin error: %v (visit https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)", err)
 		}
 
 		pterm.Success.Println("Installing SSM Agent plugin")
 
-		err = CleanupSSMAgent()
+		err = cleanupSSMAgent()
 		if err != nil {
 			return fmt.Errorf("cleanup SSM Agent plugin error: %v (visit https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)", err)
 		}
