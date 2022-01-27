@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/pterm/pterm"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -28,9 +29,10 @@ func NewCmdTunnelDown() *cobra.Command {
 				exiterr := err.(*exec.ExitError)
 				status := exiterr.Sys().(syscall.WaitStatus)
 				if status.ExitStatus() != 255 {
-					return err
+					logrus.Debug(out.String())
+					return fmt.Errorf("unable to bring the tunnel down: %w", err)
 				}
-				return fmt.Errorf("can't run tunnel down: %s", out.String())
+				return fmt.Errorf("unable to bring the tunnel down: tunnel is not active")
 			}
 
 			pterm.Success.Println("tunnel is down")

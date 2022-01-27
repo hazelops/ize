@@ -60,7 +60,7 @@ func NewCmdTunnelUp() *cobra.Command {
 func (o *TunnelUpOptions) Complete(cmd *cobra.Command, args []string) error {
 	cfg, err := config.InitializeConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("can`t complete options: %w", err)
 	}
 
 	o.Config = cfg
@@ -110,7 +110,6 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 		Profile: o.Config.AwsProfile,
 	})
 	if err != nil {
-		logrus.Error("getting AWS session")
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
 
@@ -118,7 +117,6 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 
 	to, err := getTerraformOutput(sess, o.Config.Env)
 	if err != nil {
-		logrus.Error("get forward config")
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
 
@@ -148,10 +146,12 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 		"ssh", "-M", "-S", "bastion.sock", "-fNT",
 		fmt.Sprintf("ubuntu@%s", to.BastionInstanceID.Value),
 		"-F", sshConfigPath,
+		"-i", getPrivateKey(o.PrivateKeyFile),
 	)
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	if err = c.Run(); err != nil {
+		logrus.Debug(out.String())
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
 

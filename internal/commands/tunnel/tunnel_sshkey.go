@@ -55,7 +55,7 @@ func NewCmdSSHKey() *cobra.Command {
 func (o *TunnelSSHKeyOptions) Complete(cmd *cobra.Command, args []string) error {
 	cfg, err := config.InitializeConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("can`t complete options: %w", err)
 	}
 
 	o.Config = cfg
@@ -86,14 +86,14 @@ func (o *TunnelSSHKeyOptions) Run() error {
 	if err != nil {
 		pterm.Error.Printfln("Getting AWS session")
 		logrus.Error("getting AWS session")
-		return err
+		return fmt.Errorf("can't send ssh key: %w", err)
 	}
 
 	logrus.Debug("getting AWS session")
 
 	to, err := getTerraformOutput(sess, o.Config.Env)
 	if err != nil {
-		return fmt.Errorf("can't get forward config: %w", err)
+		return fmt.Errorf("can't send ssh key: %w", err)
 	}
 
 	logrus.Debug("getting bastion instance ID")
@@ -101,12 +101,8 @@ func (o *TunnelSSHKeyOptions) Run() error {
 	logrus.Debugf("public key path: %s", o.PublicKeyFile)
 
 	err = sendSSHPublicKey(to.BastionInstanceID.Value, getPublicKey(o.PublicKeyFile), sess)
-
-	logrus.Debug("reading user SSH public key")
-
 	if err != nil {
-		logrus.Error("sending user SSH public key")
-		return err
+		return fmt.Errorf("can't send ssh key: %w", err)
 	}
 
 	logrus.Debug("sending user SSH public key")
