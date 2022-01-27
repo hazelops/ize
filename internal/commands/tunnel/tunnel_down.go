@@ -16,6 +16,7 @@ func NewCmdTunnelDown() *cobra.Command {
 		Short: "close tunnel",
 		Long:  "Close tunnel.",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			c := exec.Command(
 				"ssh", "-S", "bastion.sock", "-O", "exit", "",
 			)

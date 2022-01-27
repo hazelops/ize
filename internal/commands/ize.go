@@ -43,7 +43,6 @@ func newApp() (*cobra.Command, error) {
 			pterm.Sprintf("%s %s", pterm.Green("Version:"), Version),
 		),
 		TraverseChildren: true,
-		SilenceUsage:     true,
 		SilenceErrors:    true,
 	}
 

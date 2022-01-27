@@ -29,6 +29,7 @@ func NewCmdDestroyInfra() *cobra.Command {
 		Use:   "destroy",
 		Short: "destroy anything",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)
 			if err != nil {
 				return err

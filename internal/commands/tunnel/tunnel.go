@@ -103,6 +103,7 @@ func (o *TunnelOptions) Validate() error {
 }
 
 func (o *TunnelOptions) Run(cmd *cobra.Command) error {
+	cmd.SilenceUsage = true
 	c := exec.Command(
 		"ssh", "-S", "bastion.sock", "-O", "check", "",
 	)

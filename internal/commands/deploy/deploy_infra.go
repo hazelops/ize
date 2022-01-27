@@ -36,6 +36,7 @@ func NewCmdDeployInfra() *cobra.Command {
 		Use:   "infra",
 		Short: "manage infra deployments",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)
 			if err != nil {
 				return err

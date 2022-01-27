@@ -32,6 +32,7 @@ func NewCmdSecretsEdit() *cobra.Command {
 		Long:  "This open secrets file in default editor.",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			err := o.Complete(cmd, args)
 			if err != nil {
