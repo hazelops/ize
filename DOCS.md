@@ -76,7 +76,6 @@ You could use integrated option to add autocompletion to Ize commands (bash, fis
 
 To add autocompletion script, use the following manual:
 
-#### On MacOS:
 ##### 1. ZSH:
 If shell completion is not already enabled in your environment you will need to enable it. You should execute the following once:
 
@@ -103,7 +102,8 @@ Input your root password and run:
 ize completion zsh > "${fpath[1]}/_ize"
 ```
 
-You will need to start a new shell for this setup to take effect.
+To take effect for this setup you should run `source ~/.zshrc` or simply restart shell.
+
 
 ##### 2. Bash:
 Autocompletion script depends on the `bash-completion` package.
@@ -129,4 +129,4 @@ Input your root password and run:
 ize completion bash > /etc/bash_completion.d/ize
 ```
 
-You will need to start a new
+To take effect for this setup you should run `source ~/.bashrc` or simply restart shell.
