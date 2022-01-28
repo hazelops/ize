@@ -39,7 +39,7 @@ func newApp() (*cobra.Command, error) {
 		Use: "ize",
 		Long: fmt.Sprintf("%s\n%s\n%s",
 			pterm.White(pterm.Bold.Sprint("Welcome to IZE")),
-			pterm.Sprintf("%s %s", pterm.Blue("Docs:"), "https://ize.sh"),
+			pterm.Sprintf("%s %s", pterm.Blue("Docs:"), "https://ize.sh/docs"),
 			pterm.Sprintf("%s %s", pterm.Green("Version:"), Version),
 		),
 		TraverseChildren: true,
