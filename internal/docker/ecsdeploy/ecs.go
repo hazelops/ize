@@ -8,9 +8,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -408,6 +411,8 @@ func deploy(opts DeployOpts) error {
 		return err
 	}
 
+	setupSignalHandlers(cli, cont.ID)
+
 	reader, err := cli.ContainerLogs(context.Background(), cont.ID, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
@@ -441,7 +446,7 @@ func deploy(opts DeployOpts) error {
 	case status := <-wait:
 		logrus.Debugf("container exit status code %d", status.StatusCode)
 		if status.StatusCode == 1 {
-			return err
+			return fmt.Errorf("container exit status code %d", status.StatusCode)
 		}
 		return nil
 	case err := <-errC:
@@ -464,4 +469,20 @@ func getAuthToken(ecrToken, registry string) (string, error) {
 	authBytes, _ := json.Marshal(auth)
 
 	return base64.URLEncoding.EncodeToString(authBytes), nil
+}
+
+func setupSignalHandlers(cli *client.Client, containerID string) {
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel)
+
+	go func() {
+		for {
+			select {
+			case s := <-signalChannel:
+				logrus.Debug("Received signal:", s)
+
+				cli.ContainerKill(context.Background(), containerID, strconv.Itoa(int(s.(syscall.Signal))))
+			}
+		}
+	}()
 }
