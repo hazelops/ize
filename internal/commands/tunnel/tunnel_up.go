@@ -58,7 +58,7 @@ func NewCmdTunnelUp() *cobra.Command {
 }
 
 func (o *TunnelUpOptions) Complete(cmd *cobra.Command, args []string) error {
-	cfg, err := config.InitializeConfig()
+	cfg, err := config.InitializeConfig(config.WithSSMPlugin())
 	if err != nil {
 		return err
 	}

@@ -139,7 +139,7 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 			o.Infra.Version = viper.GetString("terraform_version")
 		}
 	} else {
-		o.Config, err = config.InitializeConfig()
+		o.Config, err = config.InitializeConfig(config.WithDocker())
 		viper.BindPFlags(cmd.Flags())
 		if err != nil {
 			return fmt.Errorf("can`t complete options: %w", err)
