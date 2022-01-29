@@ -25,6 +25,7 @@ func NewCmdInit() *cobra.Command {
 		Use:   "init",
 		Short: "Creates an IZE configuration file.",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)
 			if err != nil {
 				return err

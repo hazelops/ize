@@ -32,6 +32,7 @@ func NewCmdConsole() *cobra.Command {
 		Long:  "Connect to a container in the ECS service via AWS SSM.\nTakes ECS service name as an argument.",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)
 			if err != nil {
 				return err

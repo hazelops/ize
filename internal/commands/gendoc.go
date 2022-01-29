@@ -13,6 +13,7 @@ func NewGendocCmd() *cobra.Command {
 		DisableFlagsInUseLine: true,
 		Long:                  "Create docs.",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			root, err := newApp()
 			if err != nil {
 				return err

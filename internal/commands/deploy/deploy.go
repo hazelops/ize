@@ -71,6 +71,7 @@ func NewCmdDeploy() *cobra.Command {
 		Long:    deployLongDesc,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			if len(args) == 0 && !o.AutoApprove {
 				pterm.Warning.Println("please set flag --auto-approve")
 				return nil

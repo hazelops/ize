@@ -30,6 +30,7 @@ func NewCmdSecretsRemove() *cobra.Command {
 		Long:             "This command removes secrets from storage",
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)
 			if err != nil {
 				return err

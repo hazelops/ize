@@ -25,6 +25,7 @@ func NewCmdMfa() *cobra.Command {
 		Use:   "mfa",
 		Short: "generate terraform files",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)
 			if err != nil {
 				return err
