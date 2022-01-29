@@ -220,9 +220,6 @@ func validate(o *DeployOptions) error {
 		return fmt.Errorf("can't validate options: service name be specified")
 	}
 
-	if len(o.Infra.Profile) == 0 {
-		return fmt.Errorf("can't validate options: service name be specified")
-	}
 	return nil
 }
 
@@ -381,6 +378,8 @@ func deployAll(o *DeployOptions) error {
 	if err != nil {
 		return fmt.Errorf("can't deploy all: %w", err)
 	}
+
+	logrus.Debug(o.Services)
 
 	for sname, svc := range o.Services {
 		if logrus.GetLevel() < 4 {
