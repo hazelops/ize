@@ -54,7 +54,7 @@ func NewCmdTunnelStatus() *cobra.Command {
 func (o *TunnelStatusOptions) Complete(cmd *cobra.Command, args []string) error {
 	cfg, err := config.InitializeConfig()
 	if err != nil {
-		return fmt.Errorf("can`t complete options: %w", err)
+		return fmt.Errorf("can't complete options: %w", err)
 	}
 
 	o.Config = cfg

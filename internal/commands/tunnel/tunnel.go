@@ -79,7 +79,7 @@ func NewCmdTunnel() *cobra.Command {
 func (o *TunnelOptions) Complete(cmd *cobra.Command, args []string) error {
 	cfg, err := config.InitializeConfig()
 	if err != nil {
-		return fmt.Errorf("can`t complete options: %w", err)
+		return fmt.Errorf("can't complete options: %w", err)
 	}
 
 	o.Config = cfg
@@ -335,7 +335,7 @@ func getPrivateKey(path string) string {
 	}
 
 	if f.IsDir() {
-		logrus.Fatalf("%s is directory", path)
+		logrus.Fatalf("%s is a directory", path)
 	}
 
 	return path
