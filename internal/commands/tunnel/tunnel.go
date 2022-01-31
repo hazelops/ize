@@ -71,13 +71,16 @@ func NewCmdTunnel() *cobra.Command {
 		NewCmdTunnelStatus(),
 	)
 
+	cmd.Flags().StringVar(&o.PrivateKeyFile, "ssh-private-key", "", "set ssh key private path")
+	cmd.Flags().StringVar(&o.PublicKeyFile, "ssh-public-key", "", "set ssh key public path")
+
 	return cmd
 }
 
 func (o *TunnelOptions) Complete(cmd *cobra.Command, args []string) error {
 	cfg, err := config.InitializeConfig(config.WithSSMPlugin())
 	if err != nil {
-		return err
+		return fmt.Errorf("can't complete options: %w", err)
 	}
 
 	o.Config = cfg
@@ -117,6 +120,7 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 		sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
 		sshConfig, err := getSSHConfig(sshConfigPath)
 		if err != nil {
+			logrus.Debug(out.String())
 			return fmt.Errorf("can't run tunnel: %w", err)
 		}
 		hosts := getHosts(sshConfig)
@@ -169,7 +173,7 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 		return fmt.Errorf("can't run tunnel: %w", err)
 	}
 	if err = f.Close(); err != nil {
-		return err
+		return fmt.Errorf("can't run tunnel: %w", err)
 	}
 
 	hosts := getHosts(sshConfig)
@@ -182,10 +186,12 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 		"ssh", "-M", "-S", "bastion.sock", "-fNT",
 		fmt.Sprintf("ubuntu@%s", to.BastionInstanceID.Value),
 		"-F", sshConfigPath,
+		"-i", getPrivateKey(o.PrivateKeyFile),
 	)
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	if err = c.Run(); err != nil {
+		logrus.Debug(out.String())
 		return fmt.Errorf("can't run tunnel: %w", err)
 	}
 
@@ -261,12 +267,12 @@ func getPublicKey(path string) string {
 		var err error
 		path, err = filepath.Abs(path)
 		if err != nil {
-			log.Fatal(err)
+			logrus.Fatal(err)
 		}
 	}
 
 	if _, err := os.Stat(path); err != nil {
-		log.Fatalf("%s does not exist", path)
+		logrus.Fatalf("%s does not exist", path)
 	}
 
 	var key string
@@ -314,4 +320,25 @@ func getSSHConfig(path string) (string, error) {
 	}
 
 	return string(b), nil
+}
+
+func getPrivateKey(path string) string {
+	if !filepath.IsAbs(path) {
+		var err error
+		path, err = filepath.Abs(path)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+	}
+
+	f, err := os.Stat(path)
+	if err != nil {
+		logrus.Fatalf("%s does not exist", path)
+	}
+
+	if f.IsDir() {
+		logrus.Fatalf("%s is a directory", path)
+	}
+
+	return path
 }

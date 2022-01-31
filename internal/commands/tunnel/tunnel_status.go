@@ -55,7 +55,7 @@ func NewCmdTunnelStatus() *cobra.Command {
 func (o *TunnelStatusOptions) Complete(cmd *cobra.Command, args []string) error {
 	cfg, err := config.InitializeConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("can't complete options: %w", err)
 	}
 
 	o.Config = cfg
@@ -84,7 +84,8 @@ func (o *TunnelStatusOptions) Run(cmd *cobra.Command) error {
 		exiterr := err.(*exec.ExitError)
 		status := exiterr.Sys().(syscall.WaitStatus)
 		if status.ExitStatus() != 255 {
-			return err
+			logrus.Debug(out.String())
+			return fmt.Errorf("can't get tunnel status: %w", err)
 		}
 		logrus.Debug(out.String())
 		pterm.Info.Printfln("tunnel is down")
@@ -94,7 +95,7 @@ func (o *TunnelStatusOptions) Run(cmd *cobra.Command) error {
 	sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
 	sshConfig, err := getSSHConfig(sshConfigPath)
 	if err != nil {
-		return fmt.Errorf("can't run tunnel up: %w", err)
+		return fmt.Errorf("can't get tunnel status: %w", err)
 	}
 	hosts := getHosts(sshConfig)
 

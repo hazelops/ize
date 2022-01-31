@@ -112,8 +112,10 @@ func InitializeConfig(options ...Option) (*Config, error) {
 		logrus.SetLevel(logrus.WarnLevel)
 	case "error":
 		logrus.SetLevel(logrus.ErrorLevel)
+	case "fatal":
+		logrus.SetLevel(logrus.FatalLevel)
 	default:
-		logrus.SetLevel(0)
+		logrus.SetLevel(logrus.FatalLevel)
 	}
 
 	if r.smplugin {
