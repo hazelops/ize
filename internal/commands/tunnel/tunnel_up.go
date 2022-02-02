@@ -1,17 +1,15 @@
 package tunnel
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/pterm/pterm"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -19,6 +17,9 @@ import (
 type TunnelUpOptions struct {
 	Config         *config.Config
 	PrivateKeyFile string
+	BastionHostID  string
+	ForwardHost    []string
+	sess           *session.Session
 }
 
 func NewTunnelUpFlags() *TunnelUpOptions {
@@ -52,6 +53,8 @@ func NewCmdTunnelUp() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&o.BastionHostID, "bastion-host-id", "", "set bastion host id")
+	cmd.Flags().StringSliceVar(&o.ForwardHost, "forward-host", nil, "set forward host for redirect with next format: host:port:localport")
 	cmd.Flags().StringVar(&o.PrivateKeyFile, "ssh-private-key", "", "set ssh key private path")
 
 	return cmd
@@ -65,9 +68,50 @@ func (o *TunnelUpOptions) Complete(cmd *cobra.Command, args []string) error {
 
 	o.Config = cfg
 
+	isUp, err := checkTunnel()
+	if err != nil {
+		return fmt.Errorf("can't run tunnel up: %w", err)
+	}
+	if isUp {
+		os.Exit(0)
+	}
+
+	sess, err := utils.GetSession(&utils.SessionConfig{
+		Region:  o.Config.AwsRegion,
+		Profile: o.Config.AwsProfile,
+	})
+	if err != nil {
+		return fmt.Errorf("can't complete options: %w", err)
+	}
+
+	o.sess = sess
+
 	if o.PrivateKeyFile == "" {
 		home, _ := os.UserHomeDir()
 		o.PrivateKeyFile = fmt.Sprintf("%s/.ssh/id_rsa", home)
+	}
+
+	if len(o.BastionHostID) == 0 && len(o.ForwardHost) != 0 {
+		return fmt.Errorf("cat't complete options: for forward-host should be specified bastion host id")
+	}
+
+	if len(o.ForwardHost) == 0 && len(o.BastionHostID) != 0 {
+		return fmt.Errorf("cat't complete options: for bastion host id should be specified forward-host")
+	}
+
+	if len(o.BastionHostID) == 0 && len(o.ForwardHost) == 0 {
+		bastionHostID, forwardHost, err := writeSSHConfigFromSSM(o.sess, o.Config.Env)
+		if err != nil {
+			return err
+		}
+
+		o.BastionHostID = bastionHostID
+		o.ForwardHost = forwardHost
+	} else {
+		err := writeSSHConfigFromFlags(o.ForwardHost)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -83,82 +127,25 @@ func (o *TunnelUpOptions) Validate() error {
 
 func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 	cmd.SilenceUsage = true
-	c := exec.Command(
-		"ssh", "-S", "bastion.sock", "-O", "check", "",
-	)
-	out := &bytes.Buffer{}
-	c.Stdout = out
-	c.Stderr = out
-
-	err := c.Run()
-	if err == nil {
-		sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
-		sshConfig, err := getSSHConfig(sshConfigPath)
-		if err != nil {
-			return fmt.Errorf("can't run tunnel up: %w", err)
-		}
-		hosts := getHosts(sshConfig)
-		pterm.Info.Printfln("tunnel is already up. Forwarding config:")
-		for _, h := range hosts {
-			pterm.Info.Printfln("%s:%s ➡ localhost:%s", h[2], h[3], h[1])
-		}
-
-		return nil
-	}
-
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  o.Config.AwsRegion,
-		Profile: o.Config.AwsProfile,
-	})
-	if err != nil {
-		return fmt.Errorf("can't run tunnel up: %w", err)
-	}
-
-	logrus.Debug("getting AWS session")
-
-	to, err := getTerraformOutput(sess, o.Config.Env)
-	if err != nil {
-		return fmt.Errorf("can't run tunnel up: %w", err)
-	}
 
 	sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
 
-	f, err := os.Create(sshConfigPath)
-	if err != nil {
-		return fmt.Errorf("can't run tunnel up: %w", err)
-	}
-
-	sshConfig := strings.Join(to.SSHForwardConfig.Value, "\n")
-	_, err = io.WriteString(f, sshConfig)
-	if err != nil {
-		return fmt.Errorf("can't run tunnel up: %w", err)
-	}
-	if err = f.Close(); err != nil {
-		return fmt.Errorf("can't run tunnel up: %w", err)
-	}
-
-	hosts := getHosts(sshConfig)
-	if len(hosts) == 0 {
-		return fmt.Errorf("can't tunnel up: forwarding config is not valid")
-	}
-	logrus.Debugf("hosts: %s", hosts)
-
-	c = exec.Command(
+	c := exec.Command(
 		"ssh", "-M", "-S", "bastion.sock", "-fNT",
-		fmt.Sprintf("ubuntu@%s", to.BastionInstanceID.Value),
+		fmt.Sprintf("ubuntu@%s", o.BastionHostID),
 		"-F", sshConfigPath,
 		"-i", getPrivateKey(o.PrivateKeyFile),
 	)
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
-	if err = c.Run(); err != nil {
-		logrus.Debug(out.String())
+	if err := c.Run(); err != nil {
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
 
 	pterm.Success.Printfln("tunnel is up. Forwarded ports:")
-	for _, h := range hosts {
-		pterm.Info.Printfln("%s:%s ➡ localhost:%s", h[2], h[3], h[1])
+	for _, h := range o.ForwardHost {
+		ss := strings.Split(h, ":")
+		pterm.Info.Printfln("%s:%s ➡ localhost:%s", ss[0], ss[1], ss[2])
 	}
 
 	return nil
