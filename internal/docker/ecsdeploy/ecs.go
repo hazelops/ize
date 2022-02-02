@@ -145,6 +145,7 @@ func DeployService(s *Service, sname string, tag string, cfg *config.Config, ses
 
 		err = push(
 			[]string{
+				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tag),
 				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
 			},
 			token,
