@@ -7,6 +7,7 @@ import (
 	"github.com/hazelops/ize/internal/commands/console"
 	"github.com/hazelops/ize/internal/commands/deploy"
 	"github.com/hazelops/ize/internal/commands/env"
+	"github.com/hazelops/ize/internal/commands/exec"
 	"github.com/hazelops/ize/internal/commands/initialize"
 	"github.com/hazelops/ize/internal/commands/mfa"
 	"github.com/hazelops/ize/internal/commands/secrets"
@@ -55,6 +56,7 @@ func newApp() (*cobra.Command, error) {
 		secrets.NewCmdSecrets(),
 		initialize.NewCmdInit(),
 		tunnel.NewCmdTunnel(),
+		exec.NewCmdExec(),
 		NewGendocCmd(),
 		NewVersionCmd(),
 	)
