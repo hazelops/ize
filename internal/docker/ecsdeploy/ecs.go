@@ -48,6 +48,7 @@ type Service struct {
 	Image             string
 	EcsCluster        string
 	TaskDefinitionArn string
+	DependsOn         []string `mapstructure:"depends_on"`
 }
 
 const ansi = `\x1B(?:[@-Z\\-_]|\[[0-?]*[-\]*[@-~])`

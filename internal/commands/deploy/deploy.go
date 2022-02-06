@@ -1,6 +1,7 @@
 package deploy
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -24,11 +25,13 @@ type DeployOptions struct {
 	ServiceName      string
 	Tag              string
 	SkipBuildAndPush bool
-	Services         map[string]*ecsdeploy.Service
+	Services         Services
 	Infra            Infra
 	Service          ecsdeploy.Service
 	AutoApprove      bool
 }
+
+type Services map[string]*ecsdeploy.Service
 
 type Infra struct {
 	Version string `mapstructure:"terraform_version"`
@@ -382,16 +385,16 @@ func deployAll(o *DeployOptions) error {
 
 	logrus.Debug(o.Services)
 
-	for sname, svc := range o.Services {
+	err = InDependencyOrder(aws.BackgroundContext(), &o.Services, func(c context.Context, name string) error {
 		if logrus.GetLevel() < 4 {
-			spinner, _ = pterm.DefaultSpinner.Start(fmt.Sprintf("deploy service %s", sname))
+			spinner, _ = pterm.DefaultSpinner.Start(fmt.Sprintf("deploy service %s", name))
 		}
 
 		o.Config.AwsProfile = o.Infra.Profile
 
 		err = ecsdeploy.DeployService(
-			svc,
-			sname,
+			o.Services[name],
+			name,
 			o.Tag,
 			o.Config,
 			sess,
@@ -402,10 +405,15 @@ func deployAll(o *DeployOptions) error {
 		}
 
 		if logrus.GetLevel() < 4 {
-			spinner.Success(fmt.Sprintf("deploy service %s completed", sname))
+			spinner.Success(fmt.Sprintf("deploy service %s completed", name))
 		} else {
-			pterm.Success.Printfln("deploy service %s completed", sname)
+			pterm.Success.Printfln("deploy service %s completed", name)
 		}
+
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	return nil
