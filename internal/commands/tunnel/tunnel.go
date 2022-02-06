@@ -88,8 +88,8 @@ func NewCmdTunnel() *cobra.Command {
 
 	cmd.Flags().StringVar(&o.PrivateKeyFile, "ssh-private-key", "", "set ssh key private path")
 	cmd.Flags().StringVar(&o.PublicKeyFile, "ssh-public-key", "", "set ssh key public path")
-	cmd.Flags().StringVar(&o.BastionHostID, "bastion-host-id", "", "set bastion host id")
-	cmd.Flags().StringSliceVar(&o.ForwardHost, "forward-host", nil, "set forward host for redirect with next format: host:port:localport")
+	cmd.Flags().StringVar(&o.BastionHostID, "bastion-instance-id", "", "set bastion host instance id (i-xxxxxxxxxxxxxxxxx)")
+	cmd.Flags().StringSliceVar(&o.ForwardHost, "forward-host", nil, "set forward host for redirect with next format: <remote-host>:<remote-port>. In this case a free local port will be selected automatically.  It's possible to set local manually using <remote-host>:<remote-port>:<local-port>")
 
 	return cmd
 }
@@ -133,11 +133,11 @@ func (o *TunnelOptions) Complete(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) != 0 {
-		return fmt.Errorf("cat't complete options: for forward-host should be specified bastion host id")
+		return fmt.Errorf("cat't complete options: --forward-host parameter requires --bastion-instance-id")
 	}
 
 	if len(o.ForwardHost) == 0 && len(o.BastionHostID) != 0 {
-		return fmt.Errorf("cat't complete options: for bastion host id should be specified forward-host")
+		return fmt.Errorf("cat't complete options: --bastion-instance-id requires --forward-host parameter")
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) == 0 {
