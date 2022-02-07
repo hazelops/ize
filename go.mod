@@ -20,7 +20,6 @@ require (
 	github.com/moby/sys/mount v0.3.0 // indirect
 	github.com/moby/sys/symlink v0.2.0 // indirect
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
-	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/opencontainers/runc v1.0.3 // indirect
 	github.com/pterm/pterm v0.12.34
 	github.com/sirupsen/logrus v1.8.1
@@ -29,9 +28,6 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
 	github.com/zclconf/go-cty v1.10.0
-	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.7.0 // indirect
-	go.uber.org/zap v1.20.0
 	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect
 	google.golang.org/genproto v0.0.0-20211223182754-3ac035c7e7cb // indirect
@@ -40,4 +36,5 @@ require (
 )
 
 replace github.com/spf13/pflag => github.com/cornfeedhobo/pflag v1.1.0
-require github.com/containerd/containerd v1.5.9
+
+require github.com/containerd/containerd v1.5.9 // indirect
