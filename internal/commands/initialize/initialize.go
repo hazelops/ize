@@ -3,16 +3,29 @@ package initialize
 import (
 	"fmt"
 
-	_ "embed"
-
 	"github.com/hazelops/ize/internal/generate"
+	"github.com/hazelops/ize/pkg/templates"
 	"github.com/spf13/cobra"
 )
 
 type InitOptions struct {
-	Path   string
-	Output string
+	Output   string
+	Template string
 }
+
+var initLongDesc = templates.LongDesc(`
+	Initialize project from git or internal examples.
+`)
+
+var initExample = templates.Examples(`
+	# Init project from url
+	ize init --template https://github.com/<org>/<repo>
+
+	# Init project from internal examples (https://github.com/hazelops/ize/tree/main/examples)
+	ize init --template simple-monorepo
+
+
+`)
 
 func NewInitFlags() *InitOptions {
 	return &InitOptions{}
@@ -22,16 +35,14 @@ func NewCmdInit() *cobra.Command {
 	o := NewInitFlags()
 
 	cmd := &cobra.Command{
-		Use:   "init",
-		Short: "Creates an IZE configuration file.",
+		Use:     "init",
+		Short:   "initialize project",
+		Long:    initLongDesc,
+		Example: initExample,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			err := o.Complete(cmd, args)
-			if err != nil {
-				return err
-			}
 
-			err = o.Validate()
+			err := o.Validate()
 			if err != nil {
 				return err
 			}
@@ -45,31 +56,23 @@ func NewCmdInit() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&o.Path, "path", "", "set path to template (url)")
+	cmd.Flags().StringVar(&o.Template, "template", "", "set template (url or internal)")
 	cmd.Flags().StringVar(&o.Output, "output", "", "set output dir")
-	cmd.MarkFlagRequired("path")
+	cmd.MarkFlagRequired("template")
 
 	return cmd
 }
 
-func (o *InitOptions) Complete(cmd *cobra.Command, args []string) error {
-	if o.Path == "" {
-		o.Path = "./ize.toml"
-	}
-
-	return nil
-}
-
 func (o *InitOptions) Validate() error {
-	if len(o.Path) == 0 {
-		return fmt.Errorf("path must be specified")
+	if len(o.Template) == 0 {
+		return fmt.Errorf("template must be specified")
 	}
 
 	return nil
 }
 
 func (o *InitOptions) Run() error {
-	_, err := generate.GenerateFiles(o.Path, o.Output)
+	_, err := generate.GenerateFiles(o.Template, o.Output)
 	if err != nil {
 		return err
 	}

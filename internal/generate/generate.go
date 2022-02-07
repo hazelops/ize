@@ -2,12 +2,16 @@ package generate
 
 import (
 	"bytes"
+	"embed"
 	"fmt"
+	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/hazelops/ize/examples"
 	"github.com/pterm/pterm"
 )
 
@@ -20,13 +24,27 @@ func GenerateFiles(repoDir string, destionation string) (string, error) {
 func determineRepoDir(template string, destionation string) (string, error) {
 	if isRepoUrl(template) {
 		return clone(template, destionation)
+	} else if isInternalTemplate(template) {
+		if destionation == "" {
+			destionation = strings.Split(template, "/")[len(strings.Split(template, "/"))-1]
+		}
+		err := copyEmbedExamples(examples.Examples, template, destionation)
+		if err != nil {
+			return "", err
+		}
+		return "", nil
 	} else {
-		return "", fmt.Errorf("supported only repository url")
+		return "", fmt.Errorf("supported only repository url or internal examples")
 	}
 }
 
 func isRepoUrl(value string) bool {
 	return regexp.MustCompile(repoRegex).Match([]byte(value))
+}
+
+func isInternalTemplate(value string) bool {
+	_, err := examples.Examples.ReadDir(value)
+	return err == nil
 }
 
 func clone(url string, destination string) (string, error) {
@@ -60,4 +78,36 @@ func clone(url string, destination string) (string, error) {
 	}
 
 	return destination, nil
+}
+
+func copyEmbedExamples(fsys embed.FS, sourceDir string, targetDir string) error {
+	subdirs, err := fsys.ReadDir(sourceDir)
+	if err != nil {
+		return err
+	}
+	for _, d := range subdirs {
+		sourcePath := path.Join(sourceDir, d.Name())
+		if d.IsDir() {
+			err = copyEmbedExamples(fsys, path.Join(sourceDir, d.Name()), path.Join(targetDir, d.Name()))
+			if err != nil {
+				return err
+			}
+		} else {
+			localPath := filepath.Join(targetDir, d.Name())
+
+			content, err := fsys.ReadFile(sourcePath)
+			if err != nil {
+				return err
+			}
+			err = os.MkdirAll(filepath.Dir(localPath), 0755)
+			if err != nil {
+				return err
+			}
+			err = os.WriteFile(localPath, content, 0755)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
