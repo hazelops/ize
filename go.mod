@@ -7,7 +7,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/Microsoft/go-winio v0.5.1 // indirect
 	github.com/Microsoft/hcsshim v0.9.1 // indirect
-	github.com/aws/aws-sdk-go v1.42.46
+	github.com/aws/aws-sdk-go v1.42.47
 	github.com/containerd/cgroups v1.0.2 // indirect
 	github.com/docker/cli v20.10.12+incompatible
 	github.com/docker/docker v20.10.12+incompatible
@@ -20,7 +20,6 @@ require (
 	github.com/moby/sys/mount v0.3.0 // indirect
 	github.com/moby/sys/symlink v0.2.0 // indirect
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
-	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/opencontainers/runc v1.0.3 // indirect
 	github.com/pterm/pterm v0.12.36
 	github.com/sirupsen/logrus v1.8.1
@@ -41,4 +40,5 @@ require (
 )
 
 replace github.com/spf13/pflag => github.com/cornfeedhobo/pflag v1.1.0
-require github.com/containerd/containerd v1.5.9
+
+require github.com/containerd/containerd v1.5.9 // indirect
