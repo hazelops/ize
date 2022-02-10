@@ -49,10 +49,13 @@ jobs:
         # Default is true, can set to false to only get PDF files
         build_html: true
 
-    - name: remove pdfs #This needs because action creates PDF by default
+    - name: remove pdfs and rename links #This needs because action creates PDF by default
       run: |
         cd docs
         sudo rm *.pdf
+        sudo mv ize.html index.html
+        sudo sed -i 's/.md/.html/g' *
+        sudo sed -i 's/ize.html/index.html/g' *
 
     - name: Pushes ize commands to ize.sh
       uses: dmnemec/copy_file_to_another_repo_action@main
