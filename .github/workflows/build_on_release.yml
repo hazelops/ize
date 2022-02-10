@@ -41,14 +41,27 @@ jobs:
         mkdir -p commands
         go run ./cmd gendoc
 
+    - name: convert MD to HTML
+      uses: baileyjm02/markdown-to-pdf@v1
+      with:
+        input_dir: commands
+        output_dir: docs
+        # Default is true, can set to false to only get PDF files
+        build_html: true
+
+    - name: remove pdfs #This needs because action creates PDF by default
+      run: |
+        cd docs
+        sudo rm *.pdf
+
     - name: Pushes ize commands to ize.sh
       uses: dmnemec/copy_file_to_another_repo_action@main
       env:
         API_TOKEN_GITHUB: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
       with:
-        source_file: 'commands'
+        source_file: 'docs'
         destination_repo: 'hazelops/ize.sh'
-        destination_folder: 'content'
+#        destination_folder: 'content'
         user_email: 'ize@hazelops.com'
         user_name: 'ize'
         commit_message: 'Add commands from Ize'
