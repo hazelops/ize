@@ -17,6 +17,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/docker/cli/cli/command/image/build"
@@ -28,10 +29,9 @@ import (
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type Option struct {
@@ -181,6 +181,11 @@ func DeployService(s *Service, sname string, tag string, cfg *config.Config, ses
 		EcsService:        fmt.Sprintf("%s-%s", cfg.Env, sname),
 	})
 	if err != nil {
+		e := lastLogStream(fmt.Sprintf("%s-%s", cfg.Env, sname), sess)
+		if e != nil {
+			return fmt.Errorf("cat't deploy service %s: %w", sname, e)
+		}
+
 		return fmt.Errorf("cat't deploy service %s: %w", sname, err)
 	}
 
@@ -206,11 +211,11 @@ func buildImage(opts Option) error {
 
 	excludes, err := build.ReadDockerignore(contextDir)
 	if err != nil {
-		return status.Errorf(codes.Internal, "unable to read .dockerignore: %s", err)
+		return fmt.Errorf("unable to read .dockerignore: %s", err)
 	}
 
 	if err := build.ValidateContextDirectory(contextDir, excludes); err != nil {
-		return status.Errorf(codes.Internal, "error checking context: %s", err)
+		return fmt.Errorf("error checking context: %s", err)
 	}
 
 	excludes = build.TrimBuildFilesFromExcludes(excludes, opts.Dockerfile, false)
@@ -220,7 +225,7 @@ func buildImage(opts Option) error {
 		ChownOpts:       &idtools.Identity{UID: 0, GID: 0},
 	})
 	if err != nil {
-		return status.Errorf(codes.Internal, "unable to compress context: %s", err)
+		return fmt.Errorf("unable to compress context: %s", err)
 	}
 
 	logrus.Debug("CacheFrom:", opts.CacheFrom)
@@ -261,6 +266,38 @@ func buildImage(opts Option) error {
 	return nil
 }
 
+func lastLogStream(logGroup string, sess *session.Session) error {
+	cwl := cloudwatchlogs.New(sess)
+
+	out, err := cwl.DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
+		LogGroupName: &logGroup,
+		Limit:        aws.Int64(1),
+		Descending:   aws.Bool(true),
+		OrderBy:      aws.String("LastEventTime"),
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, v := range out.LogStreams {
+		o, err := cwl.GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
+			LogGroupName:  &logGroup,
+			LogStreamName: v.LogStreamName,
+		})
+		if err != nil {
+			return err
+		}
+
+		messages := ""
+		for _, event := range o.Events {
+			messages += *event.Message + "\n"
+		}
+		pterm.Info.Println(messages)
+	}
+
+	return nil
+}
+
 func push(images []string, ecrToken string, registry string) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
@@ -279,7 +316,7 @@ func push(images []string, ecrToken string, registry string) error {
 			RegistryAuth: authBase64,
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("can't push image %s: %w", i, err)
 		}
 
 		wr := ioutil.Discard
@@ -447,10 +484,10 @@ func deploy(opts DeployOpts) error {
 	select {
 	case status := <-wait:
 		logrus.Debugf("container exit status code %d", status.StatusCode)
-		if status.StatusCode == 1 {
-			return fmt.Errorf("container exit status code %d", status.StatusCode)
+		if status.StatusCode == 0 {
+			return nil
 		}
-		return nil
+		return fmt.Errorf("container exit status code %d", status.StatusCode)
 	case err := <-errC:
 		return err
 	}
