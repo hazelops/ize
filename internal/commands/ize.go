@@ -14,11 +14,24 @@ import (
 	"github.com/hazelops/ize/internal/commands/secrets"
 	"github.com/hazelops/ize/internal/commands/terraform"
 	"github.com/hazelops/ize/internal/commands/tunnel"
+	"github.com/hazelops/ize/pkg/templates"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
+
+var deployIzeDesc = templates.LongDesc(`
+Opinionated tool for infrastructure and code.
+
+This tool is designed as a simple wrapper around popular tools, 
+so they can be easily integrated in one infra: terraform, 
+ECS deployment, serverless, and others.
+
+It combines infra, build and deploy workflows in one 
+and is too simple to be considered sophisticated. 
+So let's not do it but rather embrace the simplicity and minimalism.
+`)
 
 type Response struct {
 	Err error
@@ -38,14 +51,18 @@ func Execute(args []string) error {
 
 func newApp() (*cobra.Command, error) {
 	rootCmd := &cobra.Command{
-		Use: "ize",
-		Long: fmt.Sprintf("%s\n%s\n%s",
-			pterm.White(pterm.Bold.Sprint("Welcome to IZE")),
-			pterm.Sprintf("%s %s", pterm.Blue("Docs:"), "https://ize.sh/docs"),
-			pterm.Sprintf("%s %s", pterm.Green("Version:"), Version),
-		),
+		Use:              "ize",
 		TraverseChildren: true,
 		SilenceErrors:    true,
+		Long:             deployIzeDesc,
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("%s\n%s\n%s\n\n",
+				pterm.White(pterm.Bold.Sprint("Welcome to IZE")),
+				pterm.Sprintf("%s %s", pterm.Blue("Docs:"), "https://ize.sh/docs"),
+				pterm.Sprintf("%s %s", pterm.Green("Version:"), Version),
+			)
+			cmd.Help()
+		},
 	}
 
 	rootCmd.AddCommand(
