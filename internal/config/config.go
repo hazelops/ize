@@ -24,31 +24,7 @@ type Config struct {
 	AwsProfile string `mapstructure:"aws_profile"`
 	Namespace  string `mapstructure:"namespace"`
 	Env        string `mapstructure:"env"`
-}
-
-func readConfigFile(path string, required bool) (*Config, error) {
-	viper.SetConfigName("ize")
-	viper.SetConfigType("toml")
-	viper.AddConfigPath(strings.TrimRight(path, "/ize.toml"))
-	viper.AddConfigPath(".")
-	viper.AddConfigPath(viper.GetString("ENV_DIR"))
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			if required {
-				return nil, fmt.Errorf("this command required config file")
-			}
-			logrus.Warn("config file not found")
-		} else {
-			return nil, err
-		}
-	}
-
-	var cfg Config
-	if err := viper.Unmarshal(&cfg); err != nil {
-		return nil, err
-	}
-
-	return &cfg, nil
+	IsGlobal   bool
 }
 
 type requiments struct {
@@ -152,9 +128,25 @@ func InitializeConfig(options ...Option) (*Config, error) {
 	// TODO: those static defaults should probably go to a separate package and/or function. Also would include image names and such.
 	viper.SetDefault("TERRAFORM_VERSION", "1.1.3")
 
-	cfg, err = readConfigFile(viper.GetString("config-file"), r.configFile)
+	cfg, err = readConfigFile(viper.GetString("config-file"))
 	if err != nil {
 		return nil, fmt.Errorf("can't initialize config: %w", err)
+	}
+
+	if cfg == nil {
+		cfg, err = readGlobalConfigFile()
+		if err != nil {
+			return nil, fmt.Errorf("can't initialize config: %w", err)
+		}
+	}
+
+	if cfg == nil && r.configFile {
+		return nil, fmt.Errorf("this command required config file")
+	}
+	if cfg == nil {
+		if err := viper.Unmarshal(&cfg); err != nil {
+			return nil, err
+		}
 	}
 
 	if len(cfg.AwsProfile) == 0 {
@@ -282,4 +274,68 @@ func checkSessionManagerPlugin() error {
 	}
 
 	return nil
+}
+
+func readGlobalConfigFile() (*Config, error) {
+	env := viper.GetString("env")
+	namespace := viper.GetString("namespace")
+
+	if len(env) == 0 || len(namespace) == 0 {
+		pterm.Warning.Println("can't load global config without env and namespace")
+		return nil, nil
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	viper.SetConfigName("config")
+	viper.SetConfigType("toml")
+	viper.AddConfigPath(fmt.Sprintf("%s/.ize", home))
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			pterm.Warning.Println("global config file not found")
+			return nil, nil
+		} else {
+			return nil, err
+		}
+	}
+
+	var cfg Config
+	if viper.IsSet(fmt.Sprintf("%s.%s", namespace, env)) {
+		if err := viper.UnmarshalKey(fmt.Sprintf("%s.%s", namespace, env), &cfg); err != nil {
+			return nil, err
+		}
+	} else {
+		pterm.Warning.Println(fmt.Sprintf("config for %s.%s not found", namespace, env))
+	}
+
+	cfg.Env = env
+	cfg.Namespace = namespace
+	cfg.IsGlobal = true
+
+	return &cfg, nil
+}
+
+func readConfigFile(path string) (*Config, error) {
+	viper.SetConfigName("ize")
+	viper.SetConfigType("toml")
+	viper.AddConfigPath(strings.TrimRight(path, "/ize.toml"))
+	viper.AddConfigPath(".")
+	viper.AddConfigPath(viper.GetString("ENV_DIR"))
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			pterm.Warning.Println("config file not found")
+			return nil, nil
+		} else {
+			return nil, err
+		}
+	}
+
+	var cfg Config
+	if err := viper.Unmarshal(&cfg); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
 }
