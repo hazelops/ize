@@ -168,6 +168,10 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 
 	sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
 
+	if err := setAWSCredentials(o.Config.Session); err != nil {
+		return fmt.Errorf("can't run tunnel: %w", err)
+	}
+
 	c := exec.Command(
 		"ssh", "-M", "-S", "bastion.sock", "-fNT",
 		fmt.Sprintf("ubuntu@%s", o.BastionHostID),
@@ -448,4 +452,17 @@ func checkTunnel() (bool, error) {
 	}
 
 	return false, nil
+}
+
+func setAWSCredentials(sess *session.Session) error {
+	v, err := sess.Config.Credentials.Get()
+	if err != nil {
+		return fmt.Errorf("can't set AWS credentials: %w", err)
+	}
+
+	os.Setenv("AWS_SECRET_ACCESS_KEY", v.SecretAccessKey)
+	os.Setenv("AWS_ACCESS_KEY_ID", v.AccessKeyID)
+	os.Setenv("AWS_SESSION_TOKEN", v.SessionToken)
+
+	return nil
 }

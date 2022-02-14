@@ -117,6 +117,10 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 
 	sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
 
+	if err := setAWSCredentials(o.Config.Session); err != nil {
+		return fmt.Errorf("can't run tunnel up: %w", err)
+	}
+
 	c := exec.Command(
 		"ssh", "-M", "-S", "bastion.sock", "-fNT",
 		fmt.Sprintf("ubuntu@%s", o.BastionHostID),
