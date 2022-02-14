@@ -20,7 +20,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
@@ -43,7 +42,6 @@ type TunnelOptions struct {
 	PublicKeyFile  string
 	BastionHostID  string
 	ForwardHost    []string
-	sess           *session.Session
 }
 
 func NewTunnelFlags() *TunnelOptions {
@@ -112,16 +110,6 @@ func (o *TunnelOptions) Complete(cmd *cobra.Command, args []string) error {
 
 	pterm.Success.Println("checking for an existing tunnel")
 
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  o.Config.AwsRegion,
-		Profile: o.Config.AwsProfile,
-	})
-	if err != nil {
-		return fmt.Errorf("can't complete options: %w", err)
-	}
-
-	o.sess = sess
-
 	if o.PrivateKeyFile == "" {
 		home, _ := os.UserHomeDir()
 		o.PrivateKeyFile = fmt.Sprintf("%s/.ssh/id_rsa", home)
@@ -141,7 +129,7 @@ func (o *TunnelOptions) Complete(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) == 0 {
-		bastionHostID, forwardHost, err := writeSSHConfigFromSSM(o.sess, o.Config.Env)
+		bastionHostID, forwardHost, err := writeSSHConfigFromSSM(o.Config.Session, o.Config.Env)
 		if err != nil {
 			return err
 		}
@@ -171,7 +159,7 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 
 	logrus.Debugf("public key path: %s", o.PublicKeyFile)
 
-	err := sendSSHPublicKey(o.BastionHostID, getPublicKey(o.PublicKeyFile), o.sess)
+	err := sendSSHPublicKey(o.BastionHostID, getPublicKey(o.PublicKeyFile), o.Config.Session)
 	if err != nil {
 		return fmt.Errorf("can't run tunnel: %s", err)
 	}

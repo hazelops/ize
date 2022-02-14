@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
@@ -80,19 +79,7 @@ func (o *TunnelSSHKeyOptions) Validate() error {
 func (o *TunnelSSHKeyOptions) Run() error {
 	pterm.DefaultSection.Printfln("Running SSH Tunnel Up")
 
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  o.Config.AwsRegion,
-		Profile: o.Config.AwsProfile,
-	})
-	if err != nil {
-		pterm.Error.Printfln("Getting AWS session")
-		logrus.Error("getting AWS session")
-		return fmt.Errorf("can't send ssh key: %w", err)
-	}
-
-	logrus.Debug("getting AWS session")
-
-	to, err := getTerraformOutput(sess, o.Config.Env)
+	to, err := getTerraformOutput(o.Config.Session, o.Config.Env)
 	if err != nil {
 		return fmt.Errorf("can't send ssh key: %w", err)
 	}
@@ -101,7 +88,7 @@ func (o *TunnelSSHKeyOptions) Run() error {
 
 	logrus.Debugf("public key path: %s", o.PublicKeyFile)
 
-	err = sendSSHPublicKey(to.BastionInstanceID.Value, getPublicKey(o.PublicKeyFile), sess)
+	err = sendSSHPublicKey(to.BastionInstanceID.Value, getPublicKey(o.PublicKeyFile), o.Config.Session)
 	if err != nil {
 		return fmt.Errorf("can't send ssh key: %w", err)
 	}
