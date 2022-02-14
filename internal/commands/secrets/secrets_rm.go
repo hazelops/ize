@@ -82,7 +82,7 @@ func (o *SecretsRemoveOptions) Run() error {
 		err := rm(
 			utils.SessionConfig{
 				Region:  o.Config.AwsRegion,
-				Profile: o.Config.AwsRegion,
+				Profile: o.Config.AwsProfile,
 			},
 			o,
 		)
