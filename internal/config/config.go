@@ -178,10 +178,10 @@ func InitializeConfig(options ...Option) (*Config, error) {
 		tag = viper.GetString("ENV")
 		pterm.Warning.Printfln("could not run git rev-parse, the default tag was set: %s", tag)
 	} else {
-		tag = string(out)
+		tag = strings.Trim(string(out), "\n")
 	}
 
-	viper.SetDefault("DOCKER_REGISTRY", fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, viper.GetString("aws-region")))
+	viper.SetDefault("DOCKER_REGISTRY", fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, viper.GetString("aws_region")))
 	viper.SetDefault("TF_LOG", fmt.Sprintf(""))
 	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
 	viper.SetDefault("TAG", string(tag))
