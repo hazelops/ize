@@ -9,7 +9,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/docker/terraform"
 	"github.com/pterm/pterm"
@@ -246,14 +245,6 @@ func (o *DeployInfraOptions) Run() error {
 		pterm.Success.Println("terraform output completed")
 	}
 
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  o.Terraform.Region,
-		Profile: o.Terraform.Profile,
-	})
-	if err != nil {
-		return err
-	}
-
 	name := fmt.Sprintf("/%s/terraform-output", o.Config.Env)
 
 	outputFile, err := os.Open(outputPath)
@@ -269,7 +260,7 @@ func (o *DeployInfraOptions) Run() error {
 		return err
 	}
 
-	ssm.New(sess).PutParameter(&ssm.PutParameterInput{
+	ssm.New(o.Config.Session).PutParameter(&ssm.PutParameterInput{
 		Name:      &name,
 		Value:     aws.String(string(sDec)),
 		Type:      aws.String(ssm.ParameterTypeSecureString),

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -55,15 +54,7 @@ func (o *MfaOptions) Complete(cmd *cobra.Command, args []string) error {
 }
 
 func (o *MfaOptions) Run() error {
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  o.Config.AwsRegion,
-		Profile: o.Config.AwsProfile,
-	})
-	if err != nil {
-		return err
-	}
-
-	devices, err := iam.New(sess).ListMFADevices(&iam.ListMFADevicesInput{})
+	devices, err := iam.New(o.Config.Session).ListMFADevices(&iam.ListMFADevicesInput{})
 	if err != nil {
 		return err
 	}
@@ -73,7 +64,7 @@ func (o *MfaOptions) Run() error {
 		return fmt.Errorf("MFA hasn't configured")
 	}
 
-	v, err := sess.Config.Credentials.Get()
+	v, err := o.Config.Session.Config.Credentials.Get()
 	if err != nil {
 		return err
 	}

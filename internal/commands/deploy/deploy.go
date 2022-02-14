@@ -9,7 +9,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/docker/ecsdeploy"
 	"github.com/hazelops/ize/internal/docker/terraform"
@@ -256,14 +255,6 @@ func validateAll(o *DeployOptions) error {
 }
 
 func deployAll(o *DeployOptions) error {
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  o.Infra.Region,
-		Profile: o.Infra.Profile,
-	})
-	if err != nil {
-		return fmt.Errorf("can't deploy all: %w", err)
-	}
-
 	logrus.Infof("infra: %s", o.Infra)
 	spinner := &pterm.SpinnerPrinter{}
 
@@ -284,7 +275,7 @@ func deployAll(o *DeployOptions) error {
 		spinner, _ = pterm.DefaultSpinner.Start("execution terraform init")
 	}
 
-	err = terraform.Run(opts)
+	err := terraform.Run(opts)
 	if err != nil {
 		logrus.Errorf("terraform %s not completed", "init")
 		return fmt.Errorf("can't deploy all: %w", err)
@@ -371,7 +362,7 @@ func deployAll(o *DeployOptions) error {
 		return fmt.Errorf("can't deploy all: %w", err)
 	}
 
-	_, err = ssm.New(sess).PutParameter(&ssm.PutParameterInput{
+	_, err = ssm.New(o.Config.Session).PutParameter(&ssm.PutParameterInput{
 		Name:      &name,
 		Value:     aws.String(string(sDec)),
 		Type:      aws.String(ssm.ParameterTypeSecureString),
@@ -397,7 +388,6 @@ func deployAll(o *DeployOptions) error {
 			name,
 			o.Tag,
 			o.Config,
-			sess,
 		)
 		if err != nil {
 			spinner.Stop()
@@ -420,28 +410,17 @@ func deployAll(o *DeployOptions) error {
 }
 
 func deployService(o *DeployOptions) error {
-	logrus.Debugf("profile: %s, region: %s", o.Config.AwsProfile, o.Config.AwsRegion)
-
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  o.Config.AwsRegion,
-		Profile: o.Config.AwsProfile,
-	})
-	if err != nil {
-		return fmt.Errorf("can't deploy: %w", err)
-	}
-
 	spinner := &pterm.SpinnerPrinter{}
 
 	if logrus.GetLevel() < 4 {
 		spinner, _ = pterm.DefaultSpinner.Start(fmt.Sprintf("deploy service %s", o.ServiceName))
 	}
 
-	err = ecsdeploy.DeployService(
+	err := ecsdeploy.DeployService(
 		&o.Service,
 		o.ServiceName,
 		o.Tag,
 		o.Config,
-		sess,
 	)
 	if err != nil {
 		return fmt.Errorf("can't deploy: %w", err)

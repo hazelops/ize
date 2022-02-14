@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -79,13 +78,7 @@ func (o *SecretsRemoveOptions) Run() error {
 	pterm.DefaultSection.Printfln("Removing Secrets for %s", o.AppName)
 
 	if o.Backend == "ssm" {
-		err := rm(
-			utils.SessionConfig{
-				Region:  o.Config.AwsRegion,
-				Profile: o.Config.AwsRegion,
-			},
-			o,
-		)
+		err := rm(o)
 		if err != nil {
 			pterm.DefaultSection.Sprintfln("Secrets have been removed from %s", o.SecretsPath)
 			return err
@@ -100,7 +93,7 @@ func (o *SecretsRemoveOptions) Run() error {
 	return nil
 }
 
-func rm(sessCfg utils.SessionConfig, o *SecretsRemoveOptions) error {
+func rm(o *SecretsRemoveOptions) error {
 	if o.SecretsPath == "" {
 		pterm.Info.Printfln("Path was not set")
 		return nil
@@ -108,14 +101,7 @@ func rm(sessCfg utils.SessionConfig, o *SecretsRemoveOptions) error {
 
 	pterm.Info.Printfln("Removing secrets from %s://%s", o.Backend, o.SecretsPath)
 
-	sess, err := utils.GetSession(&sessCfg)
-	if err != nil {
-		return err
-	}
-
-	pterm.Success.Printfln("Establish AWS session")
-
-	ssmSvc := ssm.New(sess)
+	ssmSvc := ssm.New(o.Config.Session)
 
 	out, err := ssmSvc.GetParametersByPath(&ssm.GetParametersByPathInput{
 		Path: &o.SecretsPath,

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/pterm/pterm"
@@ -24,6 +25,7 @@ type Config struct {
 	AwsProfile string `mapstructure:"aws_profile"`
 	Namespace  string `mapstructure:"namespace"`
 	Env        string `mapstructure:"env"`
+	Session    *session.Session
 	IsGlobal   bool
 }
 
@@ -164,6 +166,8 @@ func InitializeConfig(options ...Option) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	cfg.Session = sess
 
 	resp, err := sts.New(sess).GetCallerIdentity(
 		&sts.GetCallerIdentityInput{},

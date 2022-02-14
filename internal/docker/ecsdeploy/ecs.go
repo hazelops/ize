@@ -53,7 +53,7 @@ type Service struct {
 
 const ansi = `\x1B(?:[@-Z\\-_]|\[[0-?]*[-\]*[@-~])`
 
-func DeployService(s *Service, sname string, tag string, cfg *config.Config, sess *session.Session) error {
+func DeployService(s *Service, sname string, tag string, cfg *config.Config) error {
 	var err error
 
 	skipBuildAndPush := true
@@ -110,7 +110,7 @@ func DeployService(s *Service, sname string, tag string, cfg *config.Config, ses
 			return fmt.Errorf("cat't deploy service %s: %w", sname, err)
 		}
 
-		svc := ecr.New(sess)
+		svc := ecr.New(cfg.Session)
 
 		repOut, err := svc.DescribeRepositories(&ecr.DescribeRepositoriesInput{
 			RepositoryNames: []*string{aws.String(dockerImageName)},
@@ -160,7 +160,7 @@ func DeployService(s *Service, sname string, tag string, cfg *config.Config, ses
 	}
 
 	if s.TaskDefinitionArn == "" {
-		stdo, err := ecs.New(sess).DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
+		stdo, err := ecs.New(cfg.Session).DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
 			TaskDefinition: aws.String(fmt.Sprintf("%s-%s", cfg.Env, sname)),
 		})
 		if err != nil {
@@ -181,7 +181,7 @@ func DeployService(s *Service, sname string, tag string, cfg *config.Config, ses
 		EcsService:        fmt.Sprintf("%s-%s", cfg.Env, sname),
 	})
 	if err != nil {
-		e := lastLogStream(fmt.Sprintf("%s-%s", cfg.Env, sname), sess)
+		e := lastLogStream(fmt.Sprintf("%s-%s", cfg.Env, sname), cfg.Session)
 		if e != nil {
 			return fmt.Errorf("cat't deploy service %s: %w", sname, e)
 		}

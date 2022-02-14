@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -122,16 +121,6 @@ func push(o *SecretsPushOptions) error {
 	//svc := strings.TrimSuffix(basename, filepath.Ext(basename))
 	pterm.Info.Printfln("Pushing secrets to %s://%s", o.Backend, o.SecretsPath)
 
-	sess, err := utils.GetSession(
-		&utils.SessionConfig{
-			Region:  o.Config.AwsRegion,
-			Profile: o.Config.AwsProfile,
-		},
-	)
-	if err != nil {
-		return err
-	}
-
 	pterm.Success.Printfln("Establish AWS session")
 
 	values, err := getKeyValuePairs(o.FilePath)
@@ -141,7 +130,7 @@ func push(o *SecretsPushOptions) error {
 
 	pterm.Success.Printfln("Reading secrets from file")
 
-	ssmSvc := ssm.New(sess)
+	ssmSvc := ssm.New(o.Config.Session)
 
 	for key, value := range values {
 		name := fmt.Sprintf("%s/%s", o.SecretsPath, key)

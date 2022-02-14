@@ -5,7 +5,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/ssmsession"
 	"github.com/pterm/pterm"
@@ -95,15 +94,7 @@ func (o *ConsoleOptions) Run() error {
 	logrus.Infof("service name: %s, cluster name: %s", serviceName, o.EcsCluster)
 	logrus.Infof("region: %s, profile: %s", o.Config.AwsProfile, o.Config.AwsRegion)
 
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  o.Config.AwsRegion,
-		Profile: o.Config.AwsProfile,
-	})
-	if err != nil {
-		return fmt.Errorf("can't run console: failed to create aws session")
-	}
-
-	ecsSvc := ecs.New(sess)
+	ecsSvc := ecs.New(o.Config.Session)
 
 	lto, err := ecsSvc.ListTasks(&ecs.ListTasksInput{
 		Cluster:       &o.EcsCluster,
