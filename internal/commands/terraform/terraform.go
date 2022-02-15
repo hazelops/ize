@@ -92,21 +92,31 @@ func (o *TerraformOptions) Validate() error {
 }
 
 func (o *TerraformOptions) Run(args []string) error {
+	v, err := o.Config.Session.Config.Credentials.Get()
+	if err != nil {
+		return fmt.Errorf("can't set AWS credentials: %w", err)
+	}
+
+	env := []string{
+		fmt.Sprintf("ENV=%v", o.Config.Env),
+		fmt.Sprintf("AWS_PROFILE=%v", o.Config.AwsProfile),
+		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
+		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
+		fmt.Sprintf("AWS_ACCESS_KEY_ID=%v", v.AccessKeyID),
+		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%v", v.SecretAccessKey),
+		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
+	}
+
 	opts := terraform.Options{
-		ContainerName: "terraform",
-		Cmd:           o.Command,
-		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Config.Env),
-			fmt.Sprintf("AWS_PROFILE=%v", o.Config.AwsProfile),
-			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		},
+		ContainerName:    "terraform",
+		Cmd:              o.Command,
+		Env:              env,
 		TerraformVersion: o.Version,
 	}
 
 	logrus.Debug("starting terraform")
 
-	err := terraform.Run(opts)
+	err = terraform.Run(opts)
 	if err != nil {
 		logrus.Errorf("terraform %s not completed", args[0])
 		return err

@@ -160,8 +160,8 @@ func InitializeConfig(options ...Option) (*Config, error) {
 	}
 
 	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  viper.GetString("aws-region"),
-		Profile: viper.GetString("aws-profile"),
+		Region:  cfg.AwsRegion,
+		Profile: cfg.AwsProfile,
 	})
 	if err != nil {
 		return nil, err
