@@ -14,7 +14,8 @@ import (
 )
 
 type EnvOptions struct {
-	Config *config.Config
+	Config                   *config.Config
+	TerraformStateBucketName string
 }
 
 func NewEnvFlags() *EnvOptions {
@@ -48,6 +49,8 @@ func NewCmdEnv() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&o.TerraformStateBucketName, "terraform-state-bucket-name", "", "set terraform state bucket name (default <NAMESPACE>-tf-state)")
+
 	return cmd
 }
 
@@ -62,6 +65,15 @@ func (o *EnvOptions) Complete(cmd *cobra.Command, args []string) error {
 	o.Config.Env = viper.GetString("env")
 	o.Config.Namespace = viper.GetString("namespace")
 
+	// Viper can't automaticly bind ENV to flag variable
+	if len(o.TerraformStateBucketName) == 0 {
+		o.TerraformStateBucketName = viper.GetString("terraform-state-bucket-name")
+	}
+
+	if len(o.TerraformStateBucketName) == 0 {
+		o.TerraformStateBucketName = viper.GetString("infra.terraform.terraform_state_bucket_name")
+	}
+
 	return nil
 }
 
@@ -74,6 +86,10 @@ func (o *EnvOptions) Validate() error {
 		return fmt.Errorf("namespace must be specified")
 	}
 
+	if len(o.TerraformStateBucketName) == 0 {
+		o.TerraformStateBucketName = fmt.Sprintf("%s-tf-state", o.Config.Namespace)
+	}
+
 	return nil
 }
 
@@ -83,7 +99,7 @@ func (o *EnvOptions) Run() error {
 	backendOpts := template.BackendOpts{
 		ENV:                            o.Config.Env,
 		LOCALSTACK_ENDPOINT:            "",
-		TERRAFORM_STATE_BUCKET_NAME:    fmt.Sprintf("%s-tf-state", o.Config.Namespace),
+		TERRAFORM_STATE_BUCKET_NAME:    o.TerraformStateBucketName,
 		TERRAFORM_STATE_KEY:            fmt.Sprintf("%v/terraform.tfstate", o.Config.Env),
 		TERRAFORM_STATE_REGION:         o.Config.AwsRegion,
 		TERRAFORM_STATE_PROFILE:        o.Config.AwsProfile,
