@@ -151,6 +151,8 @@ func InitializeConfig(options ...Option) (*Config, error) {
 		}
 	}
 
+	logrus.Debug("config file used:", viper.ConfigFileUsed())
+
 	if len(cfg.AwsProfile) == 0 {
 		return nil, fmt.Errorf("AWS profile must be specified using flags or config file")
 	}
@@ -322,11 +324,14 @@ func readGlobalConfigFile() (*Config, error) {
 }
 
 func readConfigFile(path string) (*Config, error) {
-	viper.SetConfigName("ize")
-	viper.SetConfigType("toml")
-	viper.AddConfigPath(strings.TrimRight(path, "/ize.toml"))
-	viper.AddConfigPath(".")
-	viper.AddConfigPath(viper.GetString("ENV_DIR"))
+	if len(path) != 0 {
+		viper.SetConfigFile(path)
+	} else {
+		viper.SetConfigName("ize")
+		viper.SetConfigType("toml")
+		viper.AddConfigPath(".")
+		viper.AddConfigPath(viper.GetString("ENV_DIR"))
+	}
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			pterm.Warning.Println("config file not found")
