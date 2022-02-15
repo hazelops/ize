@@ -55,6 +55,7 @@ func newApp() (*cobra.Command, error) {
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		Long:             deployIzeDesc,
+		Version:          Version,
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Printf("%s\n%s\n%s\n\n",
 				pterm.White(pterm.Bold.Sprint("Welcome to IZE")),
