@@ -3,14 +3,17 @@ package initialize
 import (
 	"fmt"
 
+	"github.com/hazelops/ize/examples"
 	"github.com/hazelops/ize/internal/generate"
 	"github.com/hazelops/ize/pkg/templates"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 type InitOptions struct {
 	Output   string
 	Template string
+	ShowList bool
 }
 
 var initLongDesc = templates.LongDesc(`
@@ -24,7 +27,8 @@ var initExample = templates.Examples(`
 	# Init project from internal examples (https://github.com/hazelops/ize/tree/main/examples)
 	ize init --template simple-monorepo
 
-
+	# Display all internal templates
+	ize init --list
 `)
 
 func NewInitFlags() *InitOptions {
@@ -42,7 +46,12 @@ func NewCmdInit() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
-			err := o.Validate()
+			if o.ShowList {
+				internalTemplates()
+				return nil
+			}
+
+			err := o.Validate(cmd)
 			if err != nil {
 				return err
 			}
@@ -58,13 +67,14 @@ func NewCmdInit() *cobra.Command {
 
 	cmd.Flags().StringVar(&o.Template, "template", "", "set template (url or internal)")
 	cmd.Flags().StringVar(&o.Output, "output", "", "set output dir")
-	cmd.MarkFlagRequired("template")
+	cmd.Flags().BoolVar(&o.ShowList, "list", false, "show list of examples")
 
 	return cmd
 }
 
-func (o *InitOptions) Validate() error {
+func (o *InitOptions) Validate(cmd *cobra.Command) error {
 	if len(o.Template) == 0 {
+		cmd.Help()
 		return fmt.Errorf("template must be specified")
 	}
 
@@ -86,4 +96,17 @@ type ConfigOpts struct {
 	Aws_region        string
 	Terraform_version string
 	Namespace         string
+}
+
+func internalTemplates() {
+	dirs, err := examples.Examples.ReadDir(".")
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	for _, d := range dirs {
+		if d.IsDir() {
+			fmt.Println(d.Name())
+		}
+	}
 }
