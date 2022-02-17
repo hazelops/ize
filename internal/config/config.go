@@ -18,7 +18,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-const Filename = "ize.hcl"
+const (
+	Filename    = "ize.hcl"
+	defaultPerm = 0774
+)
 
 type Config struct {
 	AwsRegion  string `mapstructure:"aws_region"`
@@ -193,6 +196,13 @@ func InitializeConfig(options ...Option) (*Config, error) {
 	viper.SetDefault("TAG", string(tag))
 	// Reset env directory to default because env may change
 	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, viper.GetString("ENV")))
+	if cfg.IsGlobal {
+		viper.SetDefault("ENV_DIR", fmt.Sprintf("%s/.ize/%s/%s", home, viper.GetString("NAMESPACE"), viper.GetString("ENV")))
+		_, err := os.Stat(viper.GetString("ENV_DIR"))
+		if os.IsNotExist(err) {
+			os.MkdirAll(viper.GetString("ENV_DIR"), defaultPerm)
+		}
+	}
 
 	return cfg, nil
 }
