@@ -10,6 +10,7 @@ import (
 	"github.com/hazelops/ize/internal/commands/env"
 	"github.com/hazelops/ize/internal/commands/exec"
 	"github.com/hazelops/ize/internal/commands/initialize"
+	"github.com/hazelops/ize/internal/commands/logs"
 	"github.com/hazelops/ize/internal/commands/mfa"
 	"github.com/hazelops/ize/internal/commands/secrets"
 	"github.com/hazelops/ize/internal/commands/terraform"
@@ -77,6 +78,7 @@ func newApp() (*cobra.Command, error) {
 		tunnel.NewCmdTunnel(),
 		exec.NewCmdExec(),
 		config.NewCmdConfig(),
+		logs.NewCmdLogs(),
 		NewGendocCmd(),
 		NewVersionCmd(),
 	)
