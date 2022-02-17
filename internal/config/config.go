@@ -20,7 +20,7 @@ import (
 
 const (
 	Filename    = "ize.hcl"
-	defaultPerm = 0774
+	defaultPerm = 0665
 )
 
 type Config struct {

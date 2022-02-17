@@ -180,6 +180,7 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 	)
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
+	c.Dir = viper.GetString("ENV_DIR")
 	if err := c.Run(); err != nil {
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
@@ -434,6 +435,7 @@ func checkTunnel() (bool, error) {
 	out := &bytes.Buffer{}
 	c.Stdout = out
 	c.Stderr = out
+	c.Dir = viper.GetString("ENV_DIR")
 
 	err := c.Run()
 	if err == nil {

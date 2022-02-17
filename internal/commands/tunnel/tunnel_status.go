@@ -78,6 +78,7 @@ func (o *TunnelStatusOptions) Run(cmd *cobra.Command) error {
 	out := &bytes.Buffer{}
 	c.Stdout = out
 	c.Stderr = out
+	c.Dir = viper.GetString("ENV_DIR")
 
 	err := c.Run()
 	if err != nil {
