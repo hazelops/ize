@@ -18,7 +18,14 @@ ize deploy infra
 ize destroy infra
 ```
 
+### Commands to deploy "goblin" project
+```shell
+ize deploy goblin
+ize destroy goblin
+```
+
 ### Establish SSM tunnel
+__Note:__ ssh key at `~/.ssh/id_rsa` should be created before establishing tunnel 
 ```shell
 ize tunnel ssh-key
 ize tunnel up
