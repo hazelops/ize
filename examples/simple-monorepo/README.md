@@ -6,7 +6,7 @@ export IZE_CONFIG_FILE=<path to your infra folder>/.infra/env/dev/ize.toml
 ```
 
 ### Commands for generate terraform files
-
+__Note:__ Use the `--terraform-state-bucket-name` flag for overwriting default value (<NAMESPACE>-tf-state)
 ```shell
 ize env terraform
 ```
@@ -25,7 +25,7 @@ ize destroy goblin
 ```
 
 ### Establish SSM tunnel
-__Note:__ ssh key at `~/.ssh/id_rsa` should be created before establishing tunnel or please use the `--ssh-private-key` flag
+__Note:__ ssh key at `~/.ssh/id_rsa` should be created before establishing tunnel or use the `--ssh-private-key` flag
 ```shell
 ize tunnel up
 ize tunnel down
