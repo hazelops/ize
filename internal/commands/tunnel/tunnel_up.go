@@ -79,11 +79,11 @@ func (o *TunnelUpOptions) Complete(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) != 0 {
-		return fmt.Errorf("cat't complete options: --forward-host parameter requires --bastion-instance-id")
+		return fmt.Errorf("cat't complete options: --forward-host parameter requires --bastion-instance-id\n")
 	}
 
 	if len(o.ForwardHost) == 0 && len(o.BastionHostID) != 0 {
-		return fmt.Errorf("cat't complete options: --bastion-instance-id requires --forward-host parameter")
+		return fmt.Errorf("cat't complete options: --bastion-instance-id requires --forward-host parameter\n")
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) == 0 {
@@ -106,7 +106,7 @@ func (o *TunnelUpOptions) Complete(cmd *cobra.Command, args []string) error {
 
 func (o *TunnelUpOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified")
+		return fmt.Errorf("env must be specified\n")
 	}
 
 	return nil

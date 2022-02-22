@@ -121,11 +121,11 @@ func (o *TunnelOptions) Complete(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) != 0 {
-		return fmt.Errorf("cat't complete options: --forward-host parameter requires --bastion-instance-id")
+		return fmt.Errorf("cat't complete options: --forward-host parameter requires --bastion-instance-id\n")
 	}
 
 	if len(o.ForwardHost) == 0 && len(o.BastionHostID) != 0 {
-		return fmt.Errorf("cat't complete options: --bastion-instance-id requires --forward-host parameter")
+		return fmt.Errorf("cat't complete options: --bastion-instance-id requires --forward-host parameter\n")
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) == 0 {
@@ -148,7 +148,7 @@ func (o *TunnelOptions) Complete(cmd *cobra.Command, args []string) error {
 
 func (o *TunnelOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified")
+		return fmt.Errorf("env must be specified\n")
 	}
 
 	return nil
@@ -398,7 +398,7 @@ func writeSSHConfigFromFlags(forwardHost []string) error {
 	for k, v := range forwardHost {
 		ss := strings.Split(v, ":")
 		if len(ss) < 2 || len(ss) > 3 {
-			return fmt.Errorf("can't complete options: invalid format for forward host (should be host:port:localport)")
+			return fmt.Errorf("can't complete options: invalid format for forward host (should be host:port:localport)\n")
 		}
 		if len(ss) == 2 {
 			p, err := getFreePort()
@@ -408,7 +408,7 @@ func writeSSHConfigFromFlags(forwardHost []string) error {
 			forwardHost[k] = forwardHost[k] + ":" + strconv.Itoa(p)
 			ss = append(ss, strconv.Itoa(p))
 		} else if len(ss[2]) == 0 {
-			return fmt.Errorf("can't complete options: invalid format for forward host (should be host:port:localport)")
+			return fmt.Errorf("can't complete options: invalid format for forward host (should be host:port:localport)\n")
 		}
 		tmplData = append(tmplData, fmt.Sprintf("%s %s:%s", ss[2], ss[0], ss[1]))
 	}

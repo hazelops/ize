@@ -197,30 +197,30 @@ func (o *DeployOptions) Run() error {
 func validate(o *DeployOptions) error {
 	if o.Service.Image == "" {
 		if o.Service.Path == "" {
-			return fmt.Errorf("can't validate options: image or path must be specified")
+			return fmt.Errorf("can't validate options: image or path must be specified\n")
 		}
 	} else {
 		o.SkipBuildAndPush = true
 	}
 
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("can't validate options: env must be specified")
+		return fmt.Errorf("can't validate options: env must be specified\n")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("can't validate options: namespace must be specified")
+		return fmt.Errorf("can't validate options: namespace must be specified\n")
 	}
 
 	if len(o.Service.EcsCluster) == 0 {
-		return fmt.Errorf("can't validate options: ECS cluster must be specified")
+		return fmt.Errorf("can't validate options: ECS cluster must be specified\n")
 	}
 
 	if len(o.Tag) == 0 {
-		return fmt.Errorf("can't validate options: tag must be specified")
+		return fmt.Errorf("can't validate options: tag must be specified\n")
 	}
 
 	if len(o.ServiceName) == 0 {
-		return fmt.Errorf("can't validate options: service name be specified")
+		return fmt.Errorf("can't validate options: service name be specified\n")
 	}
 
 	return nil
@@ -228,20 +228,20 @@ func validate(o *DeployOptions) error {
 
 func validateAll(o *DeployOptions) error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("can't validate options: env must be specified")
+		return fmt.Errorf("can't validate options: env must be specified\n")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("can't validate options: namespace must be specified")
+		return fmt.Errorf("can't validate options: namespace must be specified\n")
 	}
 
 	if len(o.Tag) == 0 {
-		return fmt.Errorf("can't validate options: tag must be specified")
+		return fmt.Errorf("can't validate options: tag must be specified\n")
 	}
 
 	for sname, svc := range o.Services {
 		if len(svc.Type) == 0 {
-			return fmt.Errorf("can't validate options: type for service %s must be specified", sname)
+			return fmt.Errorf("can't validate options: type for service %s must be specified\n", sname)
 		}
 
 		if len(svc.Image) == 0 {
@@ -258,16 +258,26 @@ func deployAll(o *DeployOptions) error {
 	logrus.Infof("infra: %s", o.Infra)
 	spinner := &pterm.SpinnerPrinter{}
 
+	v, err := o.Config.Session.Config.Credentials.Get()
+	if err != nil {
+		return fmt.Errorf("can't set AWS credentials: %w", err)
+	}
+
+	env := []string{
+		fmt.Sprintf("ENV=%v", o.Config.Env),
+		fmt.Sprintf("AWS_PROFILE=%v", o.Infra.Profile),
+		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
+		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
+		fmt.Sprintf("AWS_ACCESS_KEY_ID=%v", v.AccessKeyID),
+		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%v", v.SecretAccessKey),
+		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
+	}
+
 	//terraform init run options
 	opts := terraform.Options{
-		ContainerName: "terraform",
-		Cmd:           []string{"init", "-input=true"},
-		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Config.Env),
-			fmt.Sprintf("AWS_PROFILE=%v", o.Infra.Profile),
-			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		},
+		ContainerName:    "terraform",
+		Cmd:              []string{"init", "-input=true"},
+		Env:              env,
 		TerraformVersion: o.Infra.Version,
 	}
 
@@ -275,7 +285,7 @@ func deployAll(o *DeployOptions) error {
 		spinner, _ = pterm.DefaultSpinner.Start("execution terraform init")
 	}
 
-	err := terraform.Run(opts)
+	err = terraform.Run(opts)
 	if err != nil {
 		logrus.Errorf("terraform %s not completed", "init")
 		return fmt.Errorf("can't deploy all: %w", err)

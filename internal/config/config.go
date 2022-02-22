@@ -146,7 +146,7 @@ func InitializeConfig(options ...Option) (*Config, error) {
 	}
 
 	if cfg == nil && r.configFile {
-		return nil, fmt.Errorf("this command required config file")
+		return nil, fmt.Errorf("this command required config file\n")
 	}
 	if cfg == nil {
 		if err := viper.Unmarshal(&cfg); err != nil {
@@ -157,11 +157,11 @@ func InitializeConfig(options ...Option) (*Config, error) {
 	logrus.Debug("config file used:", viper.ConfigFileUsed())
 
 	if len(cfg.AwsProfile) == 0 {
-		return nil, fmt.Errorf("AWS profile must be specified using flags or config file")
+		return nil, fmt.Errorf("AWS profile must be specified using flags or config file\n")
 	}
 
 	if len(cfg.AwsRegion) == 0 {
-		return nil, fmt.Errorf("AWS region must be specified using flags or config file")
+		return nil, fmt.Errorf("AWS region must be specified using flags or config file\n")
 	}
 
 	sess, err := utils.GetSession(&utils.SessionConfig{
@@ -241,9 +241,9 @@ func checkSessionManagerPlugin() error {
 			}
 
 			if c.Check(v) {
-				return fmt.Errorf("python version %s below required %s", v.String(), "2.6.5")
+				return fmt.Errorf("python version %s below required %s\n", v.String(), "2.6.5")
 			}
-			return errors.New("python is not installed")
+			return errors.New("python is not installed\n")
 		}
 
 		c, err := semver.NewConstraint("<= 3.3.0")
@@ -257,7 +257,7 @@ func checkSessionManagerPlugin() error {
 		}
 
 		if c.Check(v) {
-			return fmt.Errorf("python version %s below required %s", v.String(), "3.3.0")
+			return fmt.Errorf("python version %s below required %s\n", v.String(), "3.3.0")
 		}
 
 		pterm.DefaultSection.Println("Installing SSM Agent plugin")

@@ -98,7 +98,7 @@ func (o *DestroyInfraOptions) Complete(cmd *cobra.Command, args []string) error 
 
 func (o *DestroyInfraOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified")
+		return fmt.Errorf("env must be specified\n")
 	}
 
 	return nil
