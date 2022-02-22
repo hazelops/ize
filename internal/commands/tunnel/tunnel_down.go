@@ -33,7 +33,7 @@ func NewCmdTunnelDown() *cobra.Command {
 					logrus.Debug(out.String())
 					return fmt.Errorf("unable to bring the tunnel down: %w", err)
 				}
-				return fmt.Errorf("unable to bring the tunnel down: tunnel is not active")
+				return fmt.Errorf("unable to bring the tunnel down: tunnel is not active\n")
 			}
 
 			pterm.Success.Println("tunnel is down")

@@ -111,11 +111,11 @@ func (o *DeployInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 
 func (o *DeployInfraOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified")
+		return fmt.Errorf("env must be specified\n")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("namespace must be specified")
+		return fmt.Errorf("namespace must be specified\n")
 	}
 
 	return nil

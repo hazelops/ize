@@ -61,7 +61,7 @@ func (o *MfaOptions) Run() error {
 
 	if len(devices.MFADevices) == 0 {
 		logrus.Error("MFA hasn't configured")
-		return fmt.Errorf("MFA hasn't configured")
+		return fmt.Errorf("MFA hasn't configured\n")
 	}
 
 	v, err := o.Config.Session.Config.Credentials.Get()

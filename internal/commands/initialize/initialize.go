@@ -75,7 +75,7 @@ func NewCmdInit() *cobra.Command {
 func (o *InitOptions) Validate(cmd *cobra.Command) error {
 	if len(o.Template) == 0 {
 		cmd.Help()
-		return fmt.Errorf("template must be specified")
+		return fmt.Errorf("template must be specified\n")
 	}
 
 	return nil

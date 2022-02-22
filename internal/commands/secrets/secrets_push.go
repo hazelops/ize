@@ -89,7 +89,7 @@ func (o *SecretsPushOptions) Complete(cmd *cobra.Command, args []string) error {
 
 func (o *SecretsPushOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified")
+		return fmt.Errorf("env must be specified\n")
 	}
 
 	return nil
@@ -145,7 +145,7 @@ func push(o *SecretsPushOptions) error {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case "ParameterAlreadyExists":
-				return fmt.Errorf("secret already exists, you can use --force to overwrite it")
+				return fmt.Errorf("secret already exists, you can use --force to overwrite it\n")
 			default:
 				return err
 			}

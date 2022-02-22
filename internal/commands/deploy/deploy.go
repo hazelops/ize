@@ -204,23 +204,23 @@ func validate(o *DeployOptions) error {
 	}
 
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("can't validate options: env must be specified")
+		return fmt.Errorf("can't validate options: env must be specified\n")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("can't validate options: namespace must be specified")
+		return fmt.Errorf("can't validate options: namespace must be specified\n")
 	}
 
 	if len(o.Service.EcsCluster) == 0 {
-		return fmt.Errorf("can't validate options: ECS cluster must be specified")
+		return fmt.Errorf("can't validate options: ECS cluster must be specified\n")
 	}
 
 	if len(o.Tag) == 0 {
-		return fmt.Errorf("can't validate options: tag must be specified")
+		return fmt.Errorf("can't validate options: tag must be specified\n")
 	}
 
 	if len(o.ServiceName) == 0 {
-		return fmt.Errorf("can't validate options: service name be specified")
+		return fmt.Errorf("can't validate options: service name be specified\n")
 	}
 
 	return nil
@@ -228,20 +228,20 @@ func validate(o *DeployOptions) error {
 
 func validateAll(o *DeployOptions) error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("can't validate options: env must be specified")
+		return fmt.Errorf("can't validate options: env must be specified\n")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("can't validate options: namespace must be specified")
+		return fmt.Errorf("can't validate options: namespace must be specified\n")
 	}
 
 	if len(o.Tag) == 0 {
-		return fmt.Errorf("can't validate options: tag must be specified")
+		return fmt.Errorf("can't validate options: tag must be specified\n")
 	}
 
 	for sname, svc := range o.Services {
 		if len(svc.Type) == 0 {
-			return fmt.Errorf("can't validate options: type for service %s must be specified", sname)
+			return fmt.Errorf("can't validate options: type for service %s must be specified\n", sname)
 		}
 
 		if len(svc.Image) == 0 {

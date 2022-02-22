@@ -75,15 +75,15 @@ func (o *ConsoleOptions) Complete(cmd *cobra.Command, args []string) error {
 
 func (o *ConsoleOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("can't validate: env must be specified")
+		return fmt.Errorf("can't validate: env must be specified\n")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("can't validate: namespace must be specified")
+		return fmt.Errorf("can't validate: namespace must be specified\n")
 	}
 
 	if len(o.ServiceName) == 0 {
-		return fmt.Errorf("can't validate: service name must be specified")
+		return fmt.Errorf("can't validate: service name must be specified\n")
 	}
 	return nil
 }
@@ -109,7 +109,7 @@ func (o *ConsoleOptions) Run() error {
 	logrus.Debugf("list task output: %s", lto)
 
 	if len(lto.TaskArns) == 0 {
-		return fmt.Errorf("running task not found")
+		return fmt.Errorf("running task not found\n")
 	}
 
 	pterm.Success.Printfln("Getting running task")
