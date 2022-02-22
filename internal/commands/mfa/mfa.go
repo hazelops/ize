@@ -5,7 +5,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +21,7 @@ func NewCmdMfa() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "mfa",
-		Short: "generate terraform files",
+		Short: "return export command with AWS MFA credentials",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)
@@ -60,7 +59,6 @@ func (o *MfaOptions) Run() error {
 	}
 
 	if len(devices.MFADevices) == 0 {
-		logrus.Error("MFA hasn't configured")
 		return fmt.Errorf("MFA hasn't configured\n")
 	}
 
@@ -69,7 +67,7 @@ func (o *MfaOptions) Run() error {
 		return err
 	}
 
-	fmt.Printf("export AWS_SECRET_ACCESS_KEY=%s && \\ \nexport AWS_SESSION_TOKEN=%s && \\ \nexport AWS_ACCESS_KEY_ID=%s",
+	fmt.Printf("export AWS_SECRET_ACCESS_KEY=%s && \\ \nexport AWS_SESSION_TOKEN=%s && \\ \nexport AWS_ACCESS_KEY_ID=%s\n",
 		v.SecretAccessKey, v.SessionToken, v.AccessKeyID,
 	)
 
