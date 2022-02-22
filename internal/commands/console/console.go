@@ -102,7 +102,7 @@ func (o *ConsoleOptions) Run() error {
 		ServiceName:   &serviceName,
 	})
 	if err != nil {
-		pterm.Error.Printfln("Getting running task")
+		pterm.Error.Printfln("Accessing container")
 		return err
 	}
 
@@ -112,7 +112,7 @@ func (o *ConsoleOptions) Run() error {
 		return fmt.Errorf("running task not found")
 	}
 
-	pterm.Success.Printfln("Getting running task")
+	pterm.Success.Printfln("Accessing container")
 
 	out, err := ecsSvc.ExecuteCommand(&ecs.ExecuteCommandInput{
 		Container:   &o.ServiceName,
