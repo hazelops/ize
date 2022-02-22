@@ -124,29 +124,39 @@ func (o *DeployInfraOptions) Validate() error {
 func (o *DeployInfraOptions) Run() error {
 	logrus.Infof("infra: %s", o.Terraform)
 
-	//terraform init
-	opts := terraform.Options{
-		ContainerName: "terraform",
-		Cmd:           []string{"init", "-input=true"},
-		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Config.Env),
-			fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
-			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		},
-		TerraformVersion: o.Terraform.Version,
+	spinner := &pterm.SpinnerPrinter{}
+
+	v, err := o.Config.Session.Config.Credentials.Get()
+	if err != nil {
+		return fmt.Errorf("can't set AWS credentials: %w", err)
 	}
 
-	spinner := &pterm.SpinnerPrinter{}
+	env := []string{
+		fmt.Sprintf("ENV=%v", o.Config.Env),
+		fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
+		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
+		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
+		fmt.Sprintf("AWS_ACCESS_KEY_ID=%v", v.AccessKeyID),
+		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%v", v.SecretAccessKey),
+		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
+	}
+
+	//terraform init run options
+	opts := terraform.Options{
+		ContainerName:    "terraform",
+		Cmd:              []string{"init", "-input=true"},
+		Env:              env,
+		TerraformVersion: o.Terraform.Version,
+	}
 
 	if logrus.GetLevel() < 4 {
 		spinner, _ = pterm.DefaultSpinner.Start("execution terraform init")
 	}
 
-	err := terraform.Run(opts)
+	err = terraform.Run(opts)
 	if err != nil {
 		logrus.Errorf("terraform %s not completed", "init")
-		return err
+		return fmt.Errorf("can't deploy all: %w", err)
 	}
 
 	if logrus.GetLevel() < 4 {
@@ -155,18 +165,8 @@ func (o *DeployInfraOptions) Run() error {
 		pterm.Success.Println("terraform init completed")
 	}
 
-	//terraform plan
-	opts = terraform.Options{
-		ContainerName: "terraform",
-		Cmd:           []string{"plan"},
-		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Config.Env),
-			fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
-			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		},
-		TerraformVersion: o.Terraform.Version,
-	}
+	//terraform plan run options
+	opts.Cmd = []string{"plan"}
 
 	if logrus.GetLevel() < 4 {
 		spinner, _ = pterm.DefaultSpinner.Start("execution terraform plan")
@@ -184,18 +184,8 @@ func (o *DeployInfraOptions) Run() error {
 		pterm.Success.Println("terraform plan completed")
 	}
 
-	//terraform apply
-	opts = terraform.Options{
-		ContainerName: "terraform",
-		Cmd:           []string{"apply", "-auto-approve"},
-		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Config.Env),
-			fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
-			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		},
-		TerraformVersion: o.Terraform.Version,
-	}
+	//terraform apply run options
+	opts.Cmd = []string{"apply", "-auto-approve"}
 
 	if logrus.GetLevel() < 4 {
 		spinner, _ = pterm.DefaultSpinner.Start("execution terraform apply")
@@ -213,21 +203,11 @@ func (o *DeployInfraOptions) Run() error {
 		pterm.Success.Println("terraform apply completed")
 	}
 
-	// terraform output
+	//terraform output run options
 	outputPath := fmt.Sprintf("%s/.terraform/output.json", viper.Get("ENV_DIR"))
 
-	opts = terraform.Options{
-		ContainerName: "terraform",
-		Cmd:           []string{"output", "-json"},
-		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Config.Env),
-			fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
-			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		},
-		TerraformVersion: o.Terraform.Version,
-		OutputPath:       outputPath,
-	}
+	opts.Cmd = []string{"output", "-json"}
+	opts.OutputPath = outputPath
 
 	if logrus.GetLevel() < 4 {
 		spinner, _ = pterm.DefaultSpinner.Start("execution terraform output")
