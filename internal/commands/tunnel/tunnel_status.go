@@ -1,16 +1,12 @@
 package tunnel
 
 import (
-	"bytes"
+	"context"
 	"fmt"
-	"os/exec"
-	"syscall"
 
 	"github.com/hazelops/ize/internal/config"
-	"github.com/pterm/pterm"
-	"github.com/sirupsen/logrus"
+	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type TunnelStatusOptions struct {
@@ -72,36 +68,17 @@ func (o *TunnelStatusOptions) Validate() error {
 }
 
 func (o *TunnelStatusOptions) Run(cmd *cobra.Command) error {
-	c := exec.Command(
-		"ssh", "-S", "bastion.sock", "-O", "check", "",
-	)
-	out := &bytes.Buffer{}
-	c.Stdout = out
-	c.Stderr = out
+	ui := terminal.ConsoleUI(context.Background())
+	sg := ui.StepGroup()
+	defer sg.Wait()
 
-	err := c.Run()
-	if err != nil {
-		exiterr := err.(*exec.ExitError)
-		status := exiterr.Sys().(syscall.WaitStatus)
-		if status.ExitStatus() != 255 {
-			logrus.Debug(out.String())
-			return fmt.Errorf("can't get tunnel status: %w", err)
-		}
-		logrus.Debug(out.String())
-		pterm.Info.Printfln("tunnel is down")
-		return nil
-	}
-
-	sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
-	sshConfig, err := getSSHConfig(sshConfigPath)
+	isUp, err := checkTunnel(ui, sg)
 	if err != nil {
 		return fmt.Errorf("can't get tunnel status: %w", err)
 	}
-	hosts := getHosts(sshConfig)
 
-	pterm.Info.Printfln("tunnel is up. Forwarded ports:")
-	for _, h := range hosts {
-		pterm.Info.Printfln("%s:%s ➡ localhost:%s", h[2], h[3], h[1])
+	if !isUp {
+		ui.Output("tunnel is down\n", terminal.WithWarningStyle())
 	}
 
 	return nil

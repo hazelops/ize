@@ -2,14 +2,17 @@ package tunnel
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"syscall"
 
-	"github.com/pterm/pterm"
+	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+var IsNotActive = "tunnel is not active\n"
 
 func NewCmdTunnelDown() *cobra.Command {
 	cmd := &cobra.Command{
@@ -18,6 +21,9 @@ func NewCmdTunnelDown() *cobra.Command {
 		Long:  "Close tunnel.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
+
+			ui := terminal.ConsoleUI(context.Background())
+
 			c := exec.Command(
 				"ssh", "-S", "bastion.sock", "-O", "exit", "",
 			)
@@ -36,7 +42,7 @@ func NewCmdTunnelDown() *cobra.Command {
 				return fmt.Errorf("unable to bring the tunnel down: tunnel is not active\n")
 			}
 
-			pterm.Success.Println("tunnel is down")
+			ui.Output("tunnel is down!\n", terminal.WithSuccessStyle())
 
 			return nil
 		},
