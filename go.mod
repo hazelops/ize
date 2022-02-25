@@ -39,8 +39,20 @@ require (
 replace github.com/spf13/pflag => github.com/cornfeedhobo/pflag v1.1.0
 
 require (
+	github.com/bgentry/speakeasy v0.1.0
+	github.com/briandowns/spinner v1.18.1
+	github.com/containerd/console v1.0.3
 	github.com/containerd/containerd v1.5.9 // indirect
+	github.com/fatih/color v1.13.0
 	github.com/google/go-cmp v0.5.7 // indirect
+	github.com/kr/pretty v0.3.0 // indirect
+	github.com/lab47/vterm v0.0.0-20211107042118-80c3d2849f9c
+	github.com/mattn/go-isatty v0.0.14
+	github.com/mitchellh/go-glint v0.0.0-20210722152315-6515ceb4a127
 	github.com/moby/sys/mountinfo v0.6.0 // indirect
+	github.com/morikuni/aec v1.0.0
+	github.com/olekukonko/tablewriter v0.0.5 // indirect
+	github.com/stretchr/testify v1.7.0
+	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
 )
