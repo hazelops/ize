@@ -3,7 +3,6 @@ package tunnel
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -50,7 +49,7 @@ func NewTunnelFlags() *TunnelOptions {
 	return &TunnelOptions{}
 }
 
-func NewCmdTunnel() *cobra.Command {
+func NewCmdTunnel(ui terminal.UI) *cobra.Command {
 	o := NewTunnelFlags()
 
 	cmd := &cobra.Command{
@@ -61,7 +60,6 @@ func NewCmdTunnel() *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			ui := terminal.ConsoleUI(context.Background())
 			sg := ui.StepGroup()
 			defer sg.Wait()
 
@@ -85,10 +83,10 @@ func NewCmdTunnel() *cobra.Command {
 	}
 
 	cmd.AddCommand(
-		NewCmdSSHKey(),
-		NewCmdTunnelUp(),
-		NewCmdTunnelDown(),
-		NewCmdTunnelStatus(),
+		NewCmdSSHKey(ui),
+		NewCmdTunnelUp(ui),
+		NewCmdTunnelDown(ui),
+		NewCmdTunnelStatus(ui),
 	)
 
 	cmd.Flags().StringVar(&o.PrivateKeyFile, "ssh-private-key", "", "set ssh key private path")

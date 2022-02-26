@@ -1,7 +1,6 @@
 package tunnel
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/hazelops/ize/internal/config"
@@ -17,7 +16,7 @@ func NewTunnelStatusOptions() *TunnelStatusOptions {
 	return &TunnelStatusOptions{}
 }
 
-func NewCmdTunnelStatus() *cobra.Command {
+func NewCmdTunnelStatus(ui terminal.UI) *cobra.Command {
 	o := NewTunnelStatusOptions()
 
 	cmd := &cobra.Command{
@@ -36,7 +35,7 @@ func NewCmdTunnelStatus() *cobra.Command {
 				return err
 			}
 
-			err = o.Run(cmd)
+			err = o.Run(ui, cmd)
 			if err != nil {
 				return err
 			}
@@ -67,8 +66,7 @@ func (o *TunnelStatusOptions) Validate() error {
 	return nil
 }
 
-func (o *TunnelStatusOptions) Run(cmd *cobra.Command) error {
-	ui := terminal.ConsoleUI(context.Background())
+func (o *TunnelStatusOptions) Run(ui terminal.UI, cmd *cobra.Command) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
@@ -78,7 +76,7 @@ func (o *TunnelStatusOptions) Run(cmd *cobra.Command) error {
 	}
 
 	if !isUp {
-		ui.Output("tunnel is down\n", terminal.WithWarningStyle())
+		return fmt.Errorf("can't get tunnel status: tunnel is down\n")
 	}
 
 	return nil

@@ -14,7 +14,7 @@ import (
 
 var IsNotActive = "tunnel is not active\n"
 
-func NewCmdTunnelDown() *cobra.Command {
+func NewCmdTunnelDown(ui terminal.UI) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "down",
 		Short: "close tunnel",

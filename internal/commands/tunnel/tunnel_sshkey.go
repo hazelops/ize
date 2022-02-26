@@ -20,7 +20,7 @@ func NewSSHKeyFlags() *TunnelSSHKeyOptions {
 	return &TunnelSSHKeyOptions{}
 }
 
-func NewCmdSSHKey() *cobra.Command {
+func NewCmdSSHKey(ui terminal.UI) *cobra.Command {
 	o := NewSSHKeyFlags()
 
 	cmd := &cobra.Command{

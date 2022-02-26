@@ -78,7 +78,7 @@ func newApp(ui terminal.UI) (*cobra.Command, error) {
 		terraform.NewCmdTerraform(),
 		secrets.NewCmdSecrets(ui),
 		initialize.NewCmdInit(),
-		tunnel.NewCmdTunnel(),
+		tunnel.NewCmdTunnel(ui),
 		exec.NewCmdExec(),
 		config.NewCmdConfig(),
 		logs.NewCmdLogs(),

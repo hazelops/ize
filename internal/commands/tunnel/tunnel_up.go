@@ -24,7 +24,7 @@ func NewTunnelUpFlags() *TunnelUpOptions {
 	return &TunnelUpOptions{}
 }
 
-func NewCmdTunnelUp() *cobra.Command {
+func NewCmdTunnelUp(ui terminal.UI) *cobra.Command {
 	o := NewTunnelUpFlags()
 
 	cmd := &cobra.Command{
