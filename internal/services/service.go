@@ -30,3 +30,4 @@ func (svs *Service) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 	}
 
 	return nil
+}
