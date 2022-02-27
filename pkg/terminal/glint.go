@@ -59,21 +59,12 @@ func (ui *glintUI) Output(msg string, raw ...interface{}) {
 			cs = append(cs, glint.Bold())
 		}
 
-		lines := strings.Split(msg, "\n")
-		if len(lines) > 0 {
-			ui.d.Append(glint.Finalize(
-				glint.Style(
-					glint.Text("! "+lines[0]),
-					cs...,
-				),
-			))
-
-			for _, line := range lines[1:] {
-				ui.d.Append(glint.Finalize(
-					glint.Text("  " + line),
-				))
-			}
-		}
+		ui.d.Append(glint.Finalize(
+			glint.Style(
+				glint.Text("✗ "+msg),
+				cs...,
+			),
+		))
 
 		return
 
@@ -216,5 +207,5 @@ func (ui *glintUI) Table(tbl *Table, opts ...Option) {
 }
 
 func (ui *glintUI) minimumLag() time.Duration {
-	return time.Millisecond * 50
+	return time.Millisecond * 100
 }
