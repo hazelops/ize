@@ -9,6 +9,7 @@ import (
 	"github.com/hazelops/ize/internal/commands/config"
 	"github.com/hazelops/ize/internal/commands/console"
 	"github.com/hazelops/ize/internal/commands/deploy"
+	"github.com/hazelops/ize/internal/commands/destroy"
 	"github.com/hazelops/ize/internal/commands/env"
 	"github.com/hazelops/ize/internal/commands/exec"
 	"github.com/hazelops/ize/internal/commands/initialize"
@@ -72,7 +73,8 @@ func newApp(ui terminal.UI) (*cobra.Command, error) {
 
 	rootCmd.AddCommand(
 		deploy.NewCmdDeploy(ui),
-		console.NewCmdConsole(),
+		destroy.NewCmdDestroy(ui),
+		console.NewCmdConsole(ui),
 		env.NewCmdEnv(),
 		mfa.NewCmdMfa(),
 		terraform.NewCmdTerraform(),
