@@ -133,7 +133,7 @@ func (b *Builder) buildWithDocker(
 		termFd = f.Fd()
 	}
 
-	err = jsonmessage.DisplayJSONMessagesStream(resp.Body, os.Stdout, termFd, true, nil)
+	err = jsonmessage.DisplayJSONMessagesStream(resp.Body, s.TermOutput(), termFd, true, nil)
 	if err != nil {
 		return fmt.Errorf("unable to stream build logs to the terminal: %s", err)
 	}

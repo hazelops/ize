@@ -13,13 +13,13 @@ require (
 	github.com/docker/docker v20.10.12+incompatible
 	github.com/gookit/color v1.5.0 // indirect
 	github.com/hashicorp/hcl/v2 v2.11.1
-	github.com/kr/pretty v0.3.0 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
-	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
+	github.com/mitchellh/mapstructure v1.4.3
 	github.com/moby/buildkit v0.9.3 // indirect
 	github.com/moby/sys/mount v0.3.0 // indirect
 	github.com/moby/sys/symlink v0.2.0 // indirect
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
+	github.com/oklog/ulid v1.3.1
 	github.com/opencontainers/runc v1.1.0 // indirect
 	github.com/pterm/pterm v0.12.37
 	github.com/sirupsen/logrus v1.8.1
@@ -43,6 +43,7 @@ require (
 	github.com/briandowns/spinner v1.18.1
 	github.com/containerd/console v1.0.3
 	github.com/containerd/containerd v1.5.9 // indirect
+	github.com/docker/distribution v2.7.1+incompatible
 	github.com/fatih/color v1.13.0
 	github.com/google/go-cmp v0.5.7 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
@@ -51,7 +52,7 @@ require (
 	github.com/mitchellh/go-glint v0.0.0-20210722152315-6515ceb4a127
 	github.com/moby/sys/mountinfo v0.6.0 // indirect
 	github.com/morikuni/aec v1.0.0
-	github.com/olekukonko/tablewriter v0.0.5 // indirect
+	github.com/olekukonko/tablewriter v0.0.5
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect

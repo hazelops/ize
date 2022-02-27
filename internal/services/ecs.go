@@ -53,8 +53,6 @@ func NewECSDeployment(service Service) *ecs {
 		ecsConfig.Cluster = fmt.Sprintf("%s-%s", viper.GetString("env"), viper.GetString("namespace"))
 	}
 
-	fmt.Println(ecsConfig)
-
 	return &ecsConfig
 }
 
@@ -70,7 +68,6 @@ func (e *ecs) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		logrus.Error("docker client initialization")
 		return err
 	}
 

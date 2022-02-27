@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/docker/terraform"
-	"github.com/pterm/pterm"
+	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -28,7 +28,7 @@ func NewDeployInfraFlags() *DeployInfraOptions {
 	return &DeployInfraOptions{}
 }
 
-func NewCmdDeployInfra() *cobra.Command {
+func NewCmdDeployInfra(ui terminal.UI) *cobra.Command {
 	o := NewDeployInfraFlags()
 
 	cmd := &cobra.Command{
@@ -46,7 +46,7 @@ func NewCmdDeployInfra() *cobra.Command {
 				return err
 			}
 
-			err = o.Run()
+			err = o.Run(ui)
 			if err != nil {
 				return err
 			}
@@ -121,10 +121,10 @@ func (o *DeployInfraOptions) Validate() error {
 	return nil
 }
 
-func (o *DeployInfraOptions) Run() error {
-	logrus.Infof("infra: %s", o.Terraform)
+func (o *DeployInfraOptions) Run(ui terminal.UI) error {
+	ui.Output("Running deploy infra...", terminal.WithHeaderStyle())
 
-	spinner := &pterm.SpinnerPrinter{}
+	logrus.Infof("infra: %s", o.Terraform)
 
 	v, err := o.Config.Session.Config.Credentials.Get()
 	if err != nil {
@@ -149,58 +149,31 @@ func (o *DeployInfraOptions) Run() error {
 		TerraformVersion: o.Terraform.Version,
 	}
 
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start("execution terraform init")
-	}
+	ui.Output("Execution terraform init...", terminal.WithHeaderStyle())
 
-	err = terraform.Run(opts)
+	err = terraform.RunUI(ui, opts)
 	if err != nil {
-		logrus.Errorf("terraform %s not completed", "init")
 		return fmt.Errorf("can't deploy all: %w", err)
 	}
 
-	if logrus.GetLevel() < 4 {
-		spinner.Success("terraform init completed")
-	} else {
-		pterm.Success.Println("terraform init completed")
-	}
+	ui.Output("Execution terraform plan...", terminal.WithHeaderStyle())
 
 	//terraform plan run options
 	opts.Cmd = []string{"plan"}
 
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start("execution terraform plan")
-	}
-
-	err = terraform.Run(opts)
+	err = terraform.RunUI(ui, opts)
 	if err != nil {
-		logrus.Errorf("terraform %s not completed", "plan")
 		return err
-	}
-
-	if logrus.GetLevel() < 4 {
-		spinner.Success("terraform plan completed")
-	} else {
-		pterm.Success.Println("terraform plan completed")
 	}
 
 	//terraform apply run options
 	opts.Cmd = []string{"apply", "-auto-approve"}
 
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start("execution terraform apply")
-	}
+	ui.Output("Execution terraform apply...", terminal.WithHeaderStyle())
 
-	err = terraform.Run(opts)
+	err = terraform.RunUI(ui, opts)
 	if err != nil {
-		logrus.Errorf("terraform %s not completed", "apply")
 		return err
-	}
-
-	if logrus.GetLevel() < 4 {
-		spinner.Success("terraform apply completed")
-	} else {
-		pterm.Success.Println("terraform apply completed")
 	}
 
 	//terraform output run options
@@ -209,20 +182,11 @@ func (o *DeployInfraOptions) Run() error {
 	opts.Cmd = []string{"output", "-json"}
 	opts.OutputPath = outputPath
 
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start("execution terraform output")
-	}
+	ui.Output("Execution terraform output...", terminal.WithHeaderStyle())
 
-	err = terraform.Run(opts)
+	err = terraform.RunUI(ui, opts)
 	if err != nil {
-		logrus.Errorf("terraform %s not completed", "output")
 		return err
-	}
-
-	if logrus.GetLevel() < 4 {
-		spinner.Success("terraform output completed")
-	} else {
-		pterm.Success.Println("terraform output completed")
 	}
 
 	name := fmt.Sprintf("/%s/terraform-output", o.Config.Env)
@@ -248,6 +212,8 @@ func (o *DeployInfraOptions) Run() error {
 		Tier:      aws.String("Intelligent-Tiering"),
 		DataType:  aws.String("text"),
 	})
+
+	ui.Output("deploy infra completed!\n", terminal.WithSuccessStyle())
 
 	return nil
 }
