@@ -55,6 +55,27 @@ brew tap hazelops/ize
 brew install ize
 ```
 
+### To install the latest version via public apt repository URL (Ubuntu):
+##### 1. Add public apt repository run:
+ ```shell
+echo "deb [trusted=yes] https://apt.fury.io/hazelops/ /" | sudo tee /etc/apt/sources.list.d/fury.list
+```
+
+##### 2. After this, you should update information about repos. Run:
+```shell
+sudo apt-get update
+```
+
+##### 3. To install the latest version of `ize` app, you should run:
+```shell
+sudo apt-get install ize 
+```
+
+##### 4. If you wish to install certain version of the `ize` you should add version like this:
+ ```shell
+sudo apt-get install ize=<version>
+ ```
+
 More information on [other platforms](DOCS.md#installation)
 
 ### Autocomplete:

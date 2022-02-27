@@ -8,13 +8,25 @@ import (
 	"syscall"
 
 	"github.com/hazelops/ize/pkg/terminal"
+	"github.com/hazelops/ize/internal/config"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
-var IsNotActive = "tunnel is not active\n"
+
+
+type TunnelDownOptions struct {
+	Config *config.Config
+}
+
+func NewTunnelDownOptions() *TunnelDownOptions {
+	return &TunnelDownOptions{}
+}
 
 func NewCmdTunnelDown(ui terminal.UI) *cobra.Command {
+	o := NewTunnelDownOptions()
+
 	cmd := &cobra.Command{
 		Use:   "down",
 		Short: "close tunnel",
@@ -22,31 +34,70 @@ func NewCmdTunnelDown(ui terminal.UI) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
-			ui := terminal.ConsoleUI(context.Background())
-
-			c := exec.Command(
-				"ssh", "-S", "bastion.sock", "-O", "exit", "",
-			)
-			out := &bytes.Buffer{}
-			c.Stdout = out
-			c.Stderr = out
-
-			err := c.Run()
+			err := o.Complete(cmd, args)
 			if err != nil {
-				exiterr := err.(*exec.ExitError)
-				status := exiterr.Sys().(syscall.WaitStatus)
-				if status.ExitStatus() != 255 {
-					logrus.Debug(out.String())
-					return fmt.Errorf("unable to bring the tunnel down: %w", err)
-				}
-				return fmt.Errorf("unable to bring the tunnel down: tunnel is not active\n")
+				return err
 			}
 
-			ui.Output("tunnel is down!\n", terminal.WithSuccessStyle())
+			err = o.Validate()
+			if err != nil {
+				return err
+			}
+
+			err = o.Run(cmd)
+			if err != nil {
+				return err
+			}
 
 			return nil
 		},
 	}
 
 	return cmd
+}
+
+func (o *TunnelDownOptions) Complete(cmd *cobra.Command, args []string) error {
+	cfg, err := config.InitializeConfig()
+	if err != nil {
+		return fmt.Errorf("can't complete options: %w", err)
+	}
+
+	o.Config = cfg
+
+	return nil
+}
+
+func (o *TunnelDownOptions) Validate() error {
+	if len(o.Config.Env) == 0 {
+		return fmt.Errorf("env must be specified")
+	}
+
+	return nil
+}
+
+func (o *TunnelDownOptions) Run(cmd *cobra.Command) error {
+  ui := terminal.ConsoleUI(context.Background())
+  
+	c := exec.Command(
+		"ssh", "-S", "bastion.sock", "-O", "exit", "",
+	)
+	out := &bytes.Buffer{}
+	c.Stdout = out
+	c.Stderr = out
+	c.Dir = viper.GetString("ENV_DIR")
+
+	err := c.Run()
+	if err != nil {
+		exiterr := err.(*exec.ExitError)
+		status := exiterr.Sys().(syscall.WaitStatus)
+		if status.ExitStatus() != 255 {
+			logrus.Debug(out.String())
+			return fmt.Errorf("unable to bring the tunnel down: %w", err)
+		}
+		return fmt.Errorf("unable to bring the tunnel down: tunnel is not active\n")
+	}
+
+	ui.Output("tunnel is down!\n", terminal.WithSuccessStyle())
+
+	return nil
 }

@@ -141,6 +141,7 @@ func (o *TunnelUpOptions) Run(ui terminal.UI, sg terminal.StepGroup, cmd *cobra.
 	)
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
+	c.Dir = viper.GetString("ENV_DIR")
 	if err := c.Run(); err != nil {
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
