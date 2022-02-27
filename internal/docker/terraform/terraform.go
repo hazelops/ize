@@ -1,22 +1,24 @@
 package terraform
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/signal"
-	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
+	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -51,55 +53,222 @@ func cleanupOldContainers(cli *client.Client, opts Options) error {
 	return nil
 }
 
-func Run(opts Options) error {
-	logrus.Debugf("terraform run options: %s", opts)
+func RunUI(ui terminal.UI, opts Options) error {
+	sg := ui.StepGroup()
+	defer sg.Wait()
+
+	s := sg.Add("initializing Docker client...")
+	defer func() { s.Abort(); time.Sleep(time.Millisecond * 50) }()
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		logrus.Error("docker client initialization")
 		return err
 	}
 
-	logrus.Debug("docker client initialization")
+	s.Done()
+	s = sg.Add("cleanuping old containers...")
 
 	err = cleanupOldContainers(cli, opts)
 	if err != nil {
 		return err
 	}
 
-	logrus.Debug("cleanup old containers successfully")
+	imageName := "hashicorp/terraform"
+	imageTag := opts.TerraformVersion
+
+	imageRef, err := reference.ParseNormalizedNamed(fmt.Sprintf("%s:%s", imageName, imageTag))
+	if err != nil {
+		return fmt.Errorf("error parsing Docker image: %s", err)
+	}
+
+	imageList, err := cli.ImageList(context.Background(), types.ImageListOptions{
+		Filters: filters.NewArgs(filters.KeyValuePair{
+			Key:   "reference",
+			Value: reference.FamiliarString(imageRef),
+		}),
+	})
+	if err != nil {
+		return err
+	}
+
+	stdout, _, err := ui.OutputWriters()
+	if err != nil {
+		return err
+	}
+
+	var termFd uintptr
+	if f, ok := stdout.(*os.File); ok {
+		termFd = f.Fd()
+	}
+
+	if len(imageList) == 0 {
+		s.Update("pulling terraform image %v:%v...", imageName, imageTag)
+		out, err := cli.ImagePull(context.Background(), reference.FamiliarString(imageRef), types.ImagePullOptions{})
+		if err != nil {
+			return err
+		}
+		defer out.Close()
+
+		if err != nil {
+			return err
+		}
+
+		err = jsonmessage.DisplayJSONMessagesStream(out, s.TermOutput(), termFd, true, nil)
+		if err != nil {
+			return fmt.Errorf("unable to stream pull logs to the terminal: %s", err)
+		}
+
+		s.Done()
+		s = sg.Add("")
+	}
+
+	logrus.Infof("image name: %s, image tag: %s", imageName, imageTag)
+
+	contConfig := &container.Config{
+		User:         fmt.Sprintf("%v:%v", os.Getuid(), os.Getgid()),
+		Image:        fmt.Sprintf("%v:%v", imageName, imageTag),
+		Tty:          true,
+		Cmd:          opts.Cmd,
+		AttachStdin:  true,
+		AttachStdout: true,
+		AttachStderr: true,
+		OpenStdin:    true,
+		WorkingDir:   fmt.Sprintf("%v", viper.Get("ENV_DIR")),
+		Env:          opts.Env,
+	}
+
+	contHostConfig := &container.HostConfig{
+		AutoRemove: true,
+		Mounts: []mount.Mount{
+			{
+				Type:   mount.TypeBind,
+				Source: fmt.Sprintf("%v", viper.Get("ENV_DIR")),
+				Target: fmt.Sprintf("%v", viper.Get("ENV_DIR")),
+			},
+			{
+				Type:   mount.TypeBind,
+				Source: fmt.Sprintf("%v", viper.Get("INFRA_DIR")),
+				Target: fmt.Sprintf("%v", viper.Get("INFRA_DIR")),
+			},
+			{
+				Type:   mount.TypeBind,
+				Source: fmt.Sprintf("%v/.aws", viper.Get("HOME")),
+				Target: "/.aws",
+			},
+		},
+	}
+
+	s.Update("running terraform image %v:%v...", imageName, imageTag)
+
+	cont, err := cli.ContainerCreate(
+		context.Background(),
+		contConfig,
+		contHostConfig,
+		nil,
+		nil,
+		opts.ContainerName,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	if err := cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{}); err != nil {
+		return err
+	}
+
+	setupSignalHandlers(cli, cont.ID)
+
+	reader, err := cli.ContainerLogs(context.Background(), cont.ID, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+		Timestamps: false,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	defer reader.Close()
+
+	var f *os.File
+
+	if opts.OutputPath != "" {
+		f, err = os.Create(opts.OutputPath)
+		if err != nil {
+			return err
+		}
+
+		defer f.Close()
+	}
+
+	if f != nil {
+		io.Copy(f, reader)
+	} else {
+		io.Copy(s.TermOutput(), reader)
+	}
+
+	wait, errC := cli.ContainerWait(context.Background(), cont.ID, container.WaitConditionRemoved)
+
+	select {
+	case status := <-wait:
+		if status.StatusCode != 0 {
+			return fmt.Errorf("container exit status code %d\n", status.StatusCode)
+		}
+		s.Done()
+		return nil
+	case err := <-errC:
+		return err
+	}
+}
+
+func Run(opts Options) error {
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		return err
+	}
+
+	err = cleanupOldContainers(cli, opts)
+	if err != nil {
+		return err
+	}
 
 	imageName := "hashicorp/terraform"
 	imageTag := opts.TerraformVersion
 
+	imageRef, err := reference.ParseNormalizedNamed(fmt.Sprintf("%s:%s", imageName, imageTag))
+	if err != nil {
+		return fmt.Errorf("error parsing Docker image: %s", err)
+	}
+
+	imageList, err := cli.ImageList(context.Background(), types.ImageListOptions{
+		Filters: filters.NewArgs(filters.KeyValuePair{
+			Key:   "reference",
+			Value: reference.FamiliarString(imageRef),
+		}),
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(imageList) == 0 {
+		out, err := cli.ImagePull(context.Background(), reference.FamiliarString(imageRef), types.ImagePullOptions{})
+		if err != nil {
+			return err
+		}
+		defer out.Close()
+
+		if err != nil {
+			return err
+		}
+
+		err = jsonmessage.DisplayJSONMessagesStream(out, os.Stderr, os.Stderr.Fd(), true, nil)
+		if err != nil {
+			return fmt.Errorf("unable to stream pull logs to the terminal: %s", err)
+		}
+	}
+
 	logrus.Infof("image name: %s, image tag: %s", imageName, imageTag)
-
-	out, err := cli.ImagePull(context.Background(), fmt.Sprintf("%v:%v", imageName, imageTag), types.ImagePullOptions{})
-	if err != nil {
-		logrus.Errorf("pulling terraform image %v:%v", imageName, imageTag)
-		return err
-	}
-
-	wr := ioutil.Discard
-	if logrus.GetLevel() >= 4 {
-		wr = os.Stderr
-	}
-
-	var termFd uintptr
-
-	err = jsonmessage.DisplayJSONMessagesStream(
-		out,
-		wr,
-		termFd,
-		true,
-		nil,
-	)
-	if err != nil {
-		logrus.Errorf("pulling terraform image %v:%v", imageName, imageTag)
-		return err
-	}
-
-	logrus.Debugf("pulling terraform image %v:%v", imageName, imageTag)
 
 	contConfig := &container.Config{
 		User:         fmt.Sprintf("%v:%v", os.Getuid(), os.Getgid()),
@@ -145,14 +314,10 @@ func Run(opts Options) error {
 	)
 
 	if err != nil {
-		logrus.Errorf("creating terraform container from image %v:%v", imageName, imageTag)
 		return err
 	}
 
-	logrus.Debugf("creating terraform container from image %v:%v", imageName, imageTag)
-
 	if err := cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{}); err != nil {
-		logrus.Errorf("terraform container started: %s", cont.ID)
 		return err
 	}
 
@@ -168,11 +333,7 @@ func Run(opts Options) error {
 		panic(err)
 	}
 
-	logrus.Debugf("terraform container started: %s", cont.ID)
-
 	defer reader.Close()
-
-	scanner := bufio.NewScanner(reader)
 
 	var f *os.File
 
@@ -185,31 +346,19 @@ func Run(opts Options) error {
 		defer f.Close()
 	}
 
-	for scanner.Scan() {
-		if strings.Contains(scanner.Text(), "Error: ") {
-			r := regexp.MustCompile(ansi)
-			strErr := r.ReplaceAllString(scanner.Text(), "")
-			strErr = strErr[strings.LastIndex(strErr, "Error: "):]
-			strErr = strings.TrimPrefix(strErr, "Error: ")
-			strErr = strings.ToLower(string(strErr[0])) + strErr[1:]
-			err = fmt.Errorf(strErr)
-		}
-		if f != nil {
-			f.WriteString(scanner.Text())
-		} else {
-			fmt.Println(scanner.Text())
-		}
-	}
-
-	if err != nil {
-		return err
+	if f != nil {
+		io.Copy(f, reader)
+	} else {
+		io.Copy(os.Stdout, reader)
 	}
 
 	wait, errC := cli.ContainerWait(context.Background(), cont.ID, container.WaitConditionRemoved)
 
 	select {
 	case status := <-wait:
-		logrus.Debugf("container exit status code %d", status.StatusCode)
+		if status.StatusCode != 0 {
+			return fmt.Errorf("container exit status code %d\n", status.StatusCode)
+		}
 		return nil
 	case err := <-errC:
 		return err
