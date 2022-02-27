@@ -79,7 +79,7 @@ func newApp(ui terminal.UI) (*cobra.Command, error) {
 		secrets.NewCmdSecrets(ui),
 		initialize.NewCmdInit(),
 		tunnel.NewCmdTunnel(ui),
-		exec.NewCmdExec(),
+		exec.NewCmdExec(ui),
 		config.NewCmdConfig(),
 		logs.NewCmdLogs(),
 		NewGendocCmd(),

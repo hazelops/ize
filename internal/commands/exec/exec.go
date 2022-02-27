@@ -3,12 +3,13 @@ package exec
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/ssmsession"
-	"github.com/pterm/pterm"
+	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -24,7 +25,7 @@ func NewExecFlags() *ExecOptions {
 	return &ExecOptions{}
 }
 
-func NewCmdExec() *cobra.Command {
+func NewCmdExec(ui terminal.UI) *cobra.Command {
 	o := NewExecFlags()
 
 	cmd := &cobra.Command{
@@ -45,7 +46,7 @@ func NewCmdExec() *cobra.Command {
 				return err
 			}
 
-			err = o.Run(cmd)
+			err = o.Run(ui, cmd)
 			if err != nil {
 				return err
 			}
@@ -93,11 +94,17 @@ func (o *ExecOptions) Validate() error {
 	return nil
 }
 
-func (o *ExecOptions) Run(cmd *cobra.Command) error {
+func (o *ExecOptions) Run(ui terminal.UI, cmd *cobra.Command) error {
+	sg := ui.StepGroup()
+	defer sg.Wait()
+
 	serviceName := fmt.Sprintf("%s-%s", o.Config.Env, o.ServiceName)
 
 	logrus.Infof("service name: %s, cluster name: %s", serviceName, o.EcsCluster)
 	logrus.Infof("region: %s, profile: %s", o.Config.AwsProfile, o.Config.AwsRegion)
+
+	s := sg.Add("accessing container...")
+	defer func() { s.Abort(); time.Sleep(time.Millisecond * 50) }()
 
 	ecsSvc := ecs.New(o.Config.Session)
 
@@ -107,17 +114,15 @@ func (o *ExecOptions) Run(cmd *cobra.Command) error {
 		ServiceName:   &serviceName,
 	})
 	if err != nil {
-		pterm.Error.Printfln("Getting running task")
 		return err
 	}
-
-	logrus.Debugf("list task output: %s", lto)
 
 	if len(lto.TaskArns) == 0 {
 		return fmt.Errorf("running task not found\n")
 	}
 
-	pterm.Success.Printfln("Getting running task")
+	s.Done()
+	s = sg.Add("executing command...")
 
 	out, err := ecsSvc.ExecuteCommand(&ecs.ExecuteCommandInput{
 		Container:   &o.ServiceName,
@@ -127,11 +132,10 @@ func (o *ExecOptions) Run(cmd *cobra.Command) error {
 		Command:     aws.String(o.Command),
 	})
 	if err != nil {
-		pterm.Error.Printfln("Executing command")
 		return err
 	}
 
-	pterm.Success.Printfln("Executing command")
+	s.Done()
 
 	ssmCmd := ssmsession.NewSSMPluginCommand(o.Config.AwsRegion)
 	ssmCmd.Start((out.Session))
