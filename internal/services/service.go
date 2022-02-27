@@ -20,6 +20,8 @@ func (svs *Service) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 	switch svs.Type {
 	case "ecs":
 		deployment = NewECSDeployment(*svs)
+	case "serverless":
+		deployment = NewServerlessDeployment(*svs)
 	default:
 		return fmt.Errorf("services type of %s not supported", svs.Type)
 	}
