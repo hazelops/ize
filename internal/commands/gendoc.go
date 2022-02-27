@@ -1,6 +1,9 @@
 package commands
 
 import (
+	"context"
+
+	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
@@ -14,7 +17,7 @@ func NewGendocCmd() *cobra.Command {
 		Long:                  "Create docs.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			root, err := newApp()
+			root, err := newApp(terminal.ConsoleUI(context.Background()))
 			if err != nil {
 				return err
 			}
