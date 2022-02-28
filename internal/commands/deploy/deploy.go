@@ -45,10 +45,10 @@ var deployLongDesc = templates.LongDesc(`
 `)
 
 var deployExample = templates.Examples(`
-	# Deploy all (required config file)
+	# Deploy all (config file required)
 	ize deploy
 
-	# Deploy service (required config file)
+	# Deploy service (config file required)
 	ize deploy <service name>
 
 	# Deploy service via config file
