@@ -40,7 +40,7 @@ type Infra struct {
 
 var deployLongDesc = templates.LongDesc(`
 	Deploy infraftructure or sevice.
-	For deploy service the service name must be specified. 
+           Service name must be specified for a service deploy. 
 	The infrastructure for the service must be prepared in advance.
 `)
 
