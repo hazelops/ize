@@ -26,7 +26,7 @@ type DeployInfraOptions struct {
 }
 
 var deployInfraLongDesc = templates.LongDesc(`
-	Deploy only infraftructure.
+	Only deploy infrastructure.
 `)
 
 var deployInfraExample = templates.Examples(`
