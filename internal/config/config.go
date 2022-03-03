@@ -126,9 +126,8 @@ func InitializeConfig(options ...Option) (*Config, error) {
 	viper.SetDefault("NAMESPACE", os.Getenv("NAMESPACE"))
 	// Default paths
 	viper.SetDefault("ROOT_DIR", cwd)
-	viper.SetDefault("INFRA_DIR", fmt.Sprintf("%v/.infra", cwd))
-	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, viper.GetString("ENV")))
 	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
+	setDefaultDirectories(cwd)
 
 	// TODO: those static defaults should probably go to a separate package and/or function. Also would include image names and such.
 	viper.SetDefault("TERRAFORM_VERSION", "1.1.3")
@@ -192,10 +191,11 @@ func InitializeConfig(options ...Option) (*Config, error) {
 
 	viper.SetDefault("DOCKER_REGISTRY", fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, viper.GetString("aws_region")))
 	viper.SetDefault("TF_LOG", fmt.Sprintf(""))
-	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
 	viper.SetDefault("TAG", string(tag))
 	// Reset env directory to default because env may change
-	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, viper.GetString("ENV")))
+	setDefaultDirectories(cwd)
+	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
+
 	if cfg.IsGlobal {
 		viper.SetDefault("ENV_DIR", fmt.Sprintf("%s/.ize/%s/%s", home, viper.GetString("NAMESPACE"), viper.GetString("ENV")))
 		_, err := os.Stat(viper.GetString("ENV_DIR"))
@@ -205,6 +205,16 @@ func InitializeConfig(options ...Option) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func setDefaultDirectories(cwd string) {
+	viper.SetDefault("INFRA_DIR", fmt.Sprintf("%v/.ize", cwd))
+	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.ize/env/%v", cwd, viper.GetString("ENV")))
+	_, err := os.Stat(viper.GetString("INFRA_DIR"))
+	if err != nil {
+		viper.SetDefault("INFRA_DIR", fmt.Sprintf("%v/.infra", cwd))
+		viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, viper.GetString("ENV")))
+	}
 }
 
 func checkDocker() error {
