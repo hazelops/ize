@@ -12,7 +12,7 @@ import (
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/docker/terraform"
 	"github.com/hazelops/ize/pkg/templates"
-	"github.com/pterm/pterm"
+	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -45,7 +45,7 @@ func NewDeployInfraFlags() *DeployInfraOptions {
 	return &DeployInfraOptions{}
 }
 
-func NewCmdDeployInfra() *cobra.Command {
+func NewCmdDeployInfra(ui terminal.UI) *cobra.Command {
 	o := NewDeployInfraFlags()
 
 	cmd := &cobra.Command{
@@ -65,7 +65,7 @@ func NewCmdDeployInfra() *cobra.Command {
 				return err
 			}
 
-			err = o.Run()
+			err = o.Run(ui)
 			if err != nil {
 				return err
 			}
@@ -130,138 +130,82 @@ func (o *DeployInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 
 func (o *DeployInfraOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified")
+		return fmt.Errorf("env must be specified\n")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("namespace must be specified")
+		return fmt.Errorf("namespace must be specified\n")
 	}
 
 	return nil
 }
 
-func (o *DeployInfraOptions) Run() error {
+func (o *DeployInfraOptions) Run(ui terminal.UI) error {
+	ui.Output("Running deploy infra...", terminal.WithHeaderStyle())
+
 	logrus.Infof("infra: %s", o.Terraform)
 
-	//terraform init
+	v, err := o.Config.Session.Config.Credentials.Get()
+	if err != nil {
+		return fmt.Errorf("can't set AWS credentials: %w", err)
+	}
+
+	env := []string{
+		fmt.Sprintf("ENV=%v", o.Config.Env),
+		fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
+		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
+		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
+		fmt.Sprintf("AWS_ACCESS_KEY_ID=%v", v.AccessKeyID),
+		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%v", v.SecretAccessKey),
+		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
+	}
+
+	//terraform init run options
 	opts := terraform.Options{
-		ContainerName: "terraform",
-		Cmd:           []string{"init", "-input=true"},
-		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Config.Env),
-			fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
-			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		},
+		ContainerName:    "terraform",
+		Cmd:              []string{"init", "-input=true"},
+		Env:              env,
 		TerraformVersion: o.Terraform.Version,
 	}
 
-	spinner := &pterm.SpinnerPrinter{}
+	ui.Output("Execution terraform init...", terminal.WithHeaderStyle())
 
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start("execution terraform init")
+	err = terraform.RunUI(ui, opts)
+	if err != nil {
+		return fmt.Errorf("can't deploy all: %w", err)
 	}
 
-	err := terraform.Run(opts)
+	ui.Output("Execution terraform plan...", terminal.WithHeaderStyle())
+
+	//terraform plan run options
+	opts.Cmd = []string{"plan"}
+
+	err = terraform.RunUI(ui, opts)
 	if err != nil {
-		logrus.Errorf("terraform %s not completed", "init")
 		return err
 	}
 
-	if logrus.GetLevel() < 4 {
-		spinner.Success("terraform init completed")
-	} else {
-		pterm.Success.Println("terraform init completed")
-	}
+	//terraform apply run options
+	opts.Cmd = []string{"apply", "-auto-approve"}
 
-	//terraform plan
-	opts = terraform.Options{
-		ContainerName: "terraform",
-		Cmd:           []string{"plan"},
-		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Config.Env),
-			fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
-			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		},
-		TerraformVersion: o.Terraform.Version,
-	}
+	ui.Output("Execution terraform apply...", terminal.WithHeaderStyle())
 
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start("execution terraform plan")
-	}
-
-	err = terraform.Run(opts)
+	err = terraform.RunUI(ui, opts)
 	if err != nil {
-		logrus.Errorf("terraform %s not completed", "plan")
 		return err
 	}
 
-	if logrus.GetLevel() < 4 {
-		spinner.Success("terraform plan completed")
-	} else {
-		pterm.Success.Println("terraform plan completed")
-	}
-
-	//terraform apply
-	opts = terraform.Options{
-		ContainerName: "terraform",
-		Cmd:           []string{"apply", "-auto-approve"},
-		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Config.Env),
-			fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
-			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		},
-		TerraformVersion: o.Terraform.Version,
-	}
-
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start("execution terraform apply")
-	}
-
-	err = terraform.Run(opts)
-	if err != nil {
-		logrus.Errorf("terraform %s not completed", "apply")
-		return err
-	}
-
-	if logrus.GetLevel() < 4 {
-		spinner.Success("terraform apply completed")
-	} else {
-		pterm.Success.Println("terraform apply completed")
-	}
-
-	// terraform output
+	//terraform output run options
 	outputPath := fmt.Sprintf("%s/.terraform/output.json", viper.Get("ENV_DIR"))
 
-	opts = terraform.Options{
-		ContainerName: "terraform",
-		Cmd:           []string{"output", "-json"},
-		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Config.Env),
-			fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
-			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		},
-		TerraformVersion: o.Terraform.Version,
-		OutputPath:       outputPath,
-	}
+	opts.Cmd = []string{"output", "-json"}
+	opts.OutputPath = outputPath
 
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start("execution terraform output")
-	}
+	ui.Output("Execution terraform output...", terminal.WithHeaderStyle())
 
-	err = terraform.Run(opts)
+	err = terraform.RunUI(ui, opts)
 	if err != nil {
-		logrus.Errorf("terraform %s not completed", "output")
 		return err
-	}
-
-	if logrus.GetLevel() < 4 {
-		spinner.Success("terraform output completed")
-	} else {
-		pterm.Success.Println("terraform output completed")
 	}
 
 	name := fmt.Sprintf("/%s/terraform-output", o.Config.Env)
@@ -287,6 +231,8 @@ func (o *DeployInfraOptions) Run() error {
 		Tier:      aws.String("Intelligent-Tiering"),
 		DataType:  aws.String("text"),
 	})
+
+	ui.Output("deploy infra completed!\n", terminal.WithSuccessStyle())
 
 	return nil
 }

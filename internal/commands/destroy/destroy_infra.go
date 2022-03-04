@@ -6,7 +6,7 @@ import (
 
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/docker/terraform"
-	"github.com/pterm/pterm"
+	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -22,12 +22,12 @@ func NewDestroyInfraFlags() *DestroyInfraOptions {
 	return &DestroyInfraOptions{}
 }
 
-func NewCmdDestroyInfra() *cobra.Command {
+func NewCmdDestroyInfra(ui terminal.UI) *cobra.Command {
 	o := NewDestroyInfraFlags()
 
 	cmd := &cobra.Command{
-		Use:   "destroy",
-		Short: "destroy anything",
+		Use:   "infra",
+		Short: "destroy infra",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)
@@ -40,7 +40,7 @@ func NewCmdDestroyInfra() *cobra.Command {
 				return err
 			}
 
-			err = o.Run()
+			err = o.Run(ui)
 			if err != nil {
 				return err
 			}
@@ -91,20 +91,20 @@ func (o *DestroyInfraOptions) Complete(cmd *cobra.Command, args []string) error 
 		o.Terraform.Version = viper.GetString("terraform_version")
 	}
 
-	fmt.Println(o.Terraform)
-
 	return nil
 }
 
 func (o *DestroyInfraOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified")
+		return fmt.Errorf("env must be specified\n")
 	}
 
 	return nil
 }
 
-func (o *DestroyInfraOptions) Run() error {
+func (o *DestroyInfraOptions) Run(ui terminal.UI) error {
+	ui.Output("Running terraform destoy...", terminal.WithHeaderStyle())
+
 	logrus.Infof("infra: %s", o.Terraform)
 
 	opts := terraform.Options{
@@ -119,23 +119,12 @@ func (o *DestroyInfraOptions) Run() error {
 		TerraformVersion: o.Terraform.Version,
 	}
 
-	spinner := &pterm.SpinnerPrinter{}
-
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start("execution terraform destroy")
-	}
-
-	err := terraform.Run(opts)
+	err := terraform.RunUI(ui, opts)
 	if err != nil {
-		logrus.Errorf("terraform %s not completed", "destroy")
 		return err
 	}
 
-	if logrus.GetLevel() < 4 {
-		spinner.Success("terraform destroy completed")
-	} else {
-		pterm.Success.Println("terraform destroy completed")
-	}
+	ui.Output("terraform destoy completed!\n", terminal.WithSuccessStyle())
 
 	return nil
 }

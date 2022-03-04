@@ -1,10 +1,11 @@
 package secrets
 
 import (
+	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
 )
 
-func NewCmdSecrets() *cobra.Command {
+func NewCmdSecrets(ui terminal.UI) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "secrets",
 		Short:            "manage secrets",
@@ -12,8 +13,8 @@ func NewCmdSecrets() *cobra.Command {
 	}
 
 	cmd.AddCommand(
-		NewCmdSecretsRemove(),
-		NewCmdSecretsPush(),
+		NewCmdSecretsRemove(ui),
+		NewCmdSecretsPush(ui),
 		NewCmdSecretsEdit(),
 	)
 

@@ -1,11 +1,12 @@
 package tunnel
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/hazelops/ize/internal/config"
-	"github.com/pterm/pterm"
+	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -19,7 +20,7 @@ func NewSSHKeyFlags() *TunnelSSHKeyOptions {
 	return &TunnelSSHKeyOptions{}
 }
 
-func NewCmdSSHKey() *cobra.Command {
+func NewCmdSSHKey(ui terminal.UI) *cobra.Command {
 	o := NewSSHKeyFlags()
 
 	cmd := &cobra.Command{
@@ -70,30 +71,33 @@ func (o *TunnelSSHKeyOptions) Complete(cmd *cobra.Command, args []string) error 
 
 func (o *TunnelSSHKeyOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified")
+		return fmt.Errorf("env must be specified\n")
 	}
 
 	return nil
 }
 
 func (o *TunnelSSHKeyOptions) Run() error {
-	pterm.DefaultSection.Printfln("Running SSH Tunnel Up")
+	ui := terminal.ConsoleUI(context.Background())
+	sg := ui.StepGroup()
+	defer sg.Wait()
+
+	logrus.Debugf("public key path: %s", o.PublicKeyFile)
+
+	s := sg.Add("sending the SSH user's public key...")
 
 	to, err := getTerraformOutput(o.Config.Session, o.Config.Env)
 	if err != nil {
 		return fmt.Errorf("can't send ssh key: %w", err)
 	}
 
-	logrus.Debug("getting bastion instance ID")
-
-	logrus.Debugf("public key path: %s", o.PublicKeyFile)
-
 	err = sendSSHPublicKey(to.BastionInstanceID.Value, getPublicKey(o.PublicKeyFile), o.Config.Session)
 	if err != nil {
 		return fmt.Errorf("can't send ssh key: %w", err)
 	}
 
-	logrus.Debug("sending user SSH public key")
+	s.Done()
+	ui.Output("SSH user's public key has been sent!\n", terminal.WithSuccessStyle())
 
 	return nil
 }

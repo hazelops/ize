@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -29,7 +30,7 @@ func NewSecretsPushFlags() *SecretsPushOptions {
 	return &SecretsPushOptions{}
 }
 
-func NewCmdSecretsPush() *cobra.Command {
+func NewCmdSecretsPush(ui terminal.UI) *cobra.Command {
 	o := NewSecretsPushFlags()
 
 	cmd := &cobra.Command{
@@ -50,7 +51,7 @@ func NewCmdSecretsPush() *cobra.Command {
 				return err
 			}
 
-			err = o.Run()
+			err = o.Run(ui)
 			if err != nil {
 				return err
 			}
@@ -89,46 +90,41 @@ func (o *SecretsPushOptions) Complete(cmd *cobra.Command, args []string) error {
 
 func (o *SecretsPushOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified")
+		return fmt.Errorf("env must be specified\n")
 	}
 
 	return nil
 }
 
-func (o *SecretsPushOptions) Run() error {
-	pterm.DefaultSection.Printfln("Pushing secrets for %s", o.AppName)
+func (o *SecretsPushOptions) Run(ui terminal.UI) error {
+	sg := ui.StepGroup()
+	defer sg.Wait()
 
+	s := sg.Add("pushing secrets for %s...", o.AppName)
+	defer func() { s.Abort() }()
 	if o.Backend == "ssm" {
-
-		err := push(o)
+		err := o.push(s)
 		if err != nil {
-			pterm.Error.Println("Error pushing secrets")
-			return err
+			return fmt.Errorf("can't push secrets: %w", err)
 		}
 	} else {
-		pterm.Error.Println("Error pushing secrets")
 		return fmt.Errorf("backend with type %s not found or not supported", o.Backend)
 	}
 
-	//pterm.Success.Printfln("Pushing Secrets complete")
+	s.Done()
+	ui.Output("pushing secrets complete!\n", terminal.WithSuccessStyle())
 
 	return nil
 }
 
-func push(o *SecretsPushOptions) error {
-	//basename := filepath.Base(o.FilePath)
-
-	//svc := strings.TrimSuffix(basename, filepath.Ext(basename))
-	pterm.Info.Printfln("Pushing secrets to %s://%s", o.Backend, o.SecretsPath)
-
-	pterm.Success.Printfln("Establish AWS session")
-
+func (o *SecretsPushOptions) push(s terminal.Step) error {
+	fmt.Fprintf(s.TermOutput(), "reading secrets from file...\n")
 	values, err := getKeyValuePairs(o.FilePath)
 	if err != nil {
 		return err
 	}
 
-	pterm.Success.Printfln("Reading secrets from file")
+	fmt.Fprintf(s.TermOutput(), "pushing secrets to %s://%s...\n", o.Backend, o.SecretsPath)
 
 	ssmSvc := ssm.New(o.Config.Session)
 
@@ -170,8 +166,6 @@ func push(o *SecretsPushOptions) error {
 			return err
 		}
 	}
-
-	pterm.Success.Printfln("Push secrets")
 
 	return err
 }

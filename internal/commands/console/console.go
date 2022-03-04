@@ -2,12 +2,13 @@ package console
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/ssmsession"
-	"github.com/pterm/pterm"
+	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -22,7 +23,7 @@ func NewConsoleFlags() *ConsoleOptions {
 	return &ConsoleOptions{}
 }
 
-func NewCmdConsole() *cobra.Command {
+func NewCmdConsole(ui terminal.UI) *cobra.Command {
 	o := NewConsoleFlags()
 
 	cmd := &cobra.Command{
@@ -42,7 +43,7 @@ func NewCmdConsole() *cobra.Command {
 				return err
 			}
 
-			err = o.Run()
+			err = o.Run(ui)
 			if err != nil {
 				return err
 			}
@@ -75,24 +76,30 @@ func (o *ConsoleOptions) Complete(cmd *cobra.Command, args []string) error {
 
 func (o *ConsoleOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("can't validate: env must be specified")
+		return fmt.Errorf("can't validate: env must be specified\n")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("can't validate: namespace must be specified")
+		return fmt.Errorf("can't validate: namespace must be specified\n")
 	}
 
 	if len(o.ServiceName) == 0 {
-		return fmt.Errorf("can't validate: service name must be specified")
+		return fmt.Errorf("can't validate: service name must be specified\n")
 	}
 	return nil
 }
 
-func (o *ConsoleOptions) Run() error {
+func (o *ConsoleOptions) Run(ui terminal.UI) error {
+	sg := ui.StepGroup()
+	defer sg.Wait()
+
 	serviceName := fmt.Sprintf("%s-%s", o.Config.Env, o.ServiceName)
 
 	logrus.Infof("service name: %s, cluster name: %s", serviceName, o.EcsCluster)
 	logrus.Infof("region: %s, profile: %s", o.Config.AwsProfile, o.Config.AwsRegion)
+
+	s := sg.Add("accessing container...")
+	defer func() { s.Abort(); time.Sleep(time.Millisecond * 50) }()
 
 	ecsSvc := ecs.New(o.Config.Session)
 
@@ -102,17 +109,17 @@ func (o *ConsoleOptions) Run() error {
 		ServiceName:   &serviceName,
 	})
 	if err != nil {
-		pterm.Error.Printfln("Getting running task")
 		return err
 	}
 
 	logrus.Debugf("list task output: %s", lto)
 
 	if len(lto.TaskArns) == 0 {
-		return fmt.Errorf("running task not found")
+		return fmt.Errorf("running task not found\n")
 	}
 
-	pterm.Success.Printfln("Getting running task")
+	s.Done()
+	s = sg.Add("executing command...")
 
 	out, err := ecsSvc.ExecuteCommand(&ecs.ExecuteCommandInput{
 		Container:   &o.ServiceName,
@@ -122,11 +129,10 @@ func (o *ConsoleOptions) Run() error {
 		Command:     aws.String("/bin/sh"),
 	})
 	if err != nil {
-		pterm.Error.Printfln("Executing command")
 		return err
 	}
 
-	pterm.Success.Printfln("Executing command")
+	s.Done()
 
 	ssmCmd := ssmsession.NewSSMPluginCommand(o.Config.AwsRegion)
 	ssmCmd.Start((out.Session))

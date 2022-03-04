@@ -10,9 +10,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/internal/docker/ecsdeploy"
 	"github.com/hazelops/ize/internal/docker/terraform"
+	"github.com/hazelops/ize/internal/services"
 	"github.com/hazelops/ize/pkg/templates"
+	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -26,11 +27,11 @@ type DeployOptions struct {
 	SkipBuildAndPush bool
 	Services         Services
 	Infra            Infra
-	Service          ecsdeploy.Service
+	Service          services.Service
 	AutoApprove      bool
 }
 
-type Services map[string]*ecsdeploy.Service
+type Services map[string]*services.Service
 
 type Infra struct {
 	Version string `mapstructure:"terraform_version"`
@@ -63,7 +64,7 @@ func NewDeployFlags() *DeployOptions {
 	return &DeployOptions{}
 }
 
-func NewCmdDeploy() *cobra.Command {
+func NewCmdDeploy(ui terminal.UI) *cobra.Command {
 	o := NewDeployFlags()
 
 	cmd := &cobra.Command{
@@ -89,7 +90,7 @@ func NewCmdDeploy() *cobra.Command {
 				return err
 			}
 
-			err = o.Run()
+			err = o.Run(ui)
 			if err != nil {
 				return err
 			}
@@ -98,14 +99,10 @@ func NewCmdDeploy() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&o.Service.Image, "image", "", "set image name")
-	cmd.Flags().StringVar(&o.Service.EcsCluster, "ecs-cluster", "", "set ECS cluster name")
-	cmd.Flags().StringVar(&o.Service.Path, "path", "", "specify the path to the service")
-	cmd.Flags().StringVar(&o.Service.TaskDefinitionArn, "task-definition-arn", "", "set task definition arn")
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "approve deploy all")
 
 	cmd.AddCommand(
-		NewCmdDeployInfra(),
+		NewCmdDeployInfra(ui),
 	)
 
 	return cmd
@@ -124,10 +121,8 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 		viper.UnmarshalKey("service", &o.Services)
 		viper.UnmarshalKey("infra.terraform", &o.Infra)
 
-		for i := range o.Services {
-			if len(o.Services[i].EcsCluster) == 0 {
-				o.Services[i].EcsCluster = fmt.Sprintf("%s-%s", o.Config.Env, o.Config.Namespace)
-			}
+		for _, v := range o.Services {
+			fmt.Println(*v)
 		}
 
 		if len(o.Infra.Profile) == 0 {
@@ -142,19 +137,13 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 			o.Infra.Version = viper.GetString("terraform_version")
 		}
 	} else {
-		o.Config, err = config.InitializeConfig(config.WithDocker())
+		o.Config, err = config.InitializeConfig(config.WithDocker(), config.WithConfigFile())
 		viper.BindPFlags(cmd.Flags())
 		if err != nil {
 			return fmt.Errorf("can`t complete options: %w", err)
 		}
-		o.Service.TaskDefinitionArn = viper.GetString("task-definition-arn")
-		o.Service.EcsCluster = viper.GetString("ecs-cluster")
-		o.Service.Path = viper.GetString("path")
 		o.ServiceName = cmd.Flags().Args()[0]
 		viper.UnmarshalKey(fmt.Sprintf("service.%s", o.ServiceName), &o.Service)
-		if o.Service.EcsCluster == "" {
-			o.Service.EcsCluster = fmt.Sprintf("%s-%s", o.Config.Env, o.Config.Namespace)
-		}
 	}
 
 	o.Tag = viper.GetString("tag")
@@ -178,14 +167,14 @@ func (o *DeployOptions) Validate() error {
 	return nil
 }
 
-func (o *DeployOptions) Run() error {
+func (o *DeployOptions) Run(ui terminal.UI) error {
 	if o.ServiceName == "" {
-		err := deployAll(o)
+		err := deployAll(ui, o)
 		if err != nil {
 			return err
 		}
 	} else {
-		err := deployService(o)
+		err := deployService(ui, o)
 		if err != nil {
 			return err
 		}
@@ -195,32 +184,20 @@ func (o *DeployOptions) Run() error {
 }
 
 func validate(o *DeployOptions) error {
-	if o.Service.Image == "" {
-		if o.Service.Path == "" {
-			return fmt.Errorf("can't validate options: image or path must be specified")
-		}
-	} else {
-		o.SkipBuildAndPush = true
-	}
-
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("can't validate options: env must be specified")
+		return fmt.Errorf("can't validate options: env must be specified\n")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("can't validate options: namespace must be specified")
-	}
-
-	if len(o.Service.EcsCluster) == 0 {
-		return fmt.Errorf("can't validate options: ECS cluster must be specified")
+		return fmt.Errorf("can't validate options: namespace must be specified\n")
 	}
 
 	if len(o.Tag) == 0 {
-		return fmt.Errorf("can't validate options: tag must be specified")
+		return fmt.Errorf("can't validate options: tag must be specified\n")
 	}
 
 	if len(o.ServiceName) == 0 {
-		return fmt.Errorf("can't validate options: service name be specified")
+		return fmt.Errorf("can't validate options: service name be specified\n")
 	}
 
 	return nil
@@ -228,101 +205,79 @@ func validate(o *DeployOptions) error {
 
 func validateAll(o *DeployOptions) error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("can't validate options: env must be specified")
+		return fmt.Errorf("can't validate options: env must be specified\n")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("can't validate options: namespace must be specified")
+		return fmt.Errorf("can't validate options: namespace must be specified\n")
 	}
 
 	if len(o.Tag) == 0 {
-		return fmt.Errorf("can't validate options: tag must be specified")
+		return fmt.Errorf("can't validate options: tag must be specified\n")
 	}
 
 	for sname, svc := range o.Services {
 		if len(svc.Type) == 0 {
-			return fmt.Errorf("can't validate options: type for service %s must be specified", sname)
-		}
-
-		if len(svc.Image) == 0 {
-			if len(svc.Path) == 0 {
-				return fmt.Errorf("can't validate options: image or path for service %s must be specified", sname)
-			}
+			return fmt.Errorf("can't validate options: type for service %s must be specified\n", sname)
 		}
 	}
 
 	return nil
 }
 
-func deployAll(o *DeployOptions) error {
+func deployAll(ui terminal.UI, o *DeployOptions) error {
+	ui.Output("Running deploy infra...", terminal.WithHeaderStyle())
+
 	logrus.Infof("infra: %s", o.Infra)
-	spinner := &pterm.SpinnerPrinter{}
+
+	v, err := o.Config.Session.Config.Credentials.Get()
+	if err != nil {
+		return fmt.Errorf("can't set AWS credentials: %w", err)
+	}
+
+	env := []string{
+		fmt.Sprintf("ENV=%v", o.Config.Env),
+		fmt.Sprintf("AWS_PROFILE=%v", o.Infra.Profile),
+		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
+		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
+		fmt.Sprintf("AWS_ACCESS_KEY_ID=%v", v.AccessKeyID),
+		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%v", v.SecretAccessKey),
+		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
+	}
 
 	//terraform init run options
 	opts := terraform.Options{
-		ContainerName: "terraform",
-		Cmd:           []string{"init", "-input=true"},
-		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Config.Env),
-			fmt.Sprintf("AWS_PROFILE=%v", o.Infra.Profile),
-			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		},
+		ContainerName:    "terraform",
+		Cmd:              []string{"init", "-input=true"},
+		Env:              env,
 		TerraformVersion: o.Infra.Version,
 	}
 
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start("execution terraform init")
-	}
+	ui.Output("Execution terraform init...", terminal.WithHeaderStyle())
 
-	err := terraform.Run(opts)
+	err = terraform.RunUI(ui, opts)
 	if err != nil {
-		logrus.Errorf("terraform %s not completed", "init")
 		return fmt.Errorf("can't deploy all: %w", err)
 	}
 
-	if logrus.GetLevel() < 4 {
-		spinner.Success("terraform init completed")
-	} else {
-		pterm.Success.Println("terraform init completed")
-	}
+	ui.Output("Execution terraform plan...", terminal.WithHeaderStyle())
 
 	//terraform plan run options
 	opts.Cmd = []string{"plan"}
 
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start("execution terraform plan")
-	}
-
-	err = terraform.Run(opts)
+	err = terraform.RunUI(ui, opts)
 	if err != nil {
-		logrus.Errorf("terraform %s not completed", "plan")
-		return fmt.Errorf("can't deploy all: %w", err)
-	}
-
-	if logrus.GetLevel() < 4 {
-		spinner.Success("terraform plan completed")
-	} else {
-		pterm.Success.Println("terraform plan completed")
+		return err
 	}
 
 	//terraform apply run options
 	opts.Cmd = []string{"apply", "-auto-approve"}
 
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start("execution terraform apply")
-	}
+	ui.Output("Execution terraform apply...", terminal.WithHeaderStyle())
 
-	err = terraform.Run(opts)
+	err = terraform.RunUI(ui, opts)
 	if err != nil {
-		logrus.Errorf("terraform %s not completed", "apply")
-		return fmt.Errorf("can't deploy all: %w", err)
-	}
-
-	if logrus.GetLevel() < 4 {
-		spinner.Success("terraform apply completed")
-	} else {
-		pterm.Success.Println("terraform apply completed")
+		return err
 	}
 
 	//terraform output run options
@@ -331,27 +286,18 @@ func deployAll(o *DeployOptions) error {
 	opts.Cmd = []string{"output", "-json"}
 	opts.OutputPath = outputPath
 
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start("execution terraform output")
-	}
+	ui.Output("Execution terraform output...", terminal.WithHeaderStyle())
 
-	err = terraform.Run(opts)
+	err = terraform.RunUI(ui, opts)
 	if err != nil {
-		logrus.Errorf("terraform %s not completed", "output")
-		return fmt.Errorf("can't deploy all: %w", err)
-	}
-
-	if logrus.GetLevel() < 4 {
-		spinner.Success("terraform output completed")
-	} else {
-		pterm.Success.Println("terraform output completed")
+		return err
 	}
 
 	name := fmt.Sprintf("/%s/terraform-output", o.Config.Env)
 
 	outputFile, err := os.Open(outputPath)
 	if err != nil {
-		return fmt.Errorf("can't deploy all: %w", err)
+		return err
 	}
 
 	defer outputFile.Close()
@@ -359,10 +305,10 @@ func deployAll(o *DeployOptions) error {
 	byteValue, _ := ioutil.ReadAll(outputFile)
 	sDec := base64.StdEncoding.EncodeToString(byteValue)
 	if err != nil {
-		return fmt.Errorf("can't deploy all: %w", err)
+		return err
 	}
 
-	_, err = ssm.New(o.Config.Session).PutParameter(&ssm.PutParameterInput{
+	ssm.New(o.Config.Session).PutParameter(&ssm.PutParameterInput{
 		Name:      &name,
 		Value:     aws.String(string(sDec)),
 		Type:      aws.String(ssm.ParameterTypeSecureString),
@@ -370,34 +316,20 @@ func deployAll(o *DeployOptions) error {
 		Tier:      aws.String("Intelligent-Tiering"),
 		DataType:  aws.String("text"),
 	})
-	if err != nil {
-		return fmt.Errorf("can't deploy all: %w", err)
-	}
 
 	logrus.Debug(o.Services)
 
-	err = InDependencyOrder(aws.BackgroundContext(), &o.Services, func(c context.Context, name string) error {
-		if logrus.GetLevel() < 4 {
-			spinner, _ = pterm.DefaultSpinner.Start(fmt.Sprintf("deploy service %s", name))
-		}
+	ui.Output("Deploying apps...", terminal.WithHeaderStyle())
+	sg := ui.StepGroup()
+	defer sg.Wait()
 
+	err = InDependencyOrder(aws.BackgroundContext(), &o.Services, func(c context.Context, name string) error {
 		o.Config.AwsProfile = o.Infra.Profile
 
-		err = ecsdeploy.DeployService(
-			o.Services[name],
-			name,
-			o.Tag,
-			o.Config,
-		)
+		o.Services[name].Name = name
+		err := o.Services[name].Deploy(sg, ui)
 		if err != nil {
-			spinner.Stop()
 			return fmt.Errorf("can't deploy all: %w", err)
-		}
-
-		if logrus.GetLevel() < 4 {
-			spinner.Success(fmt.Sprintf("deploy service %s completed", name))
-		} else {
-			pterm.Success.Printfln("deploy service %s completed", name)
 		}
 
 		return nil
@@ -406,31 +338,24 @@ func deployAll(o *DeployOptions) error {
 		return err
 	}
 
+	s := sg.Add("Deploy all completed!")
+	s.Done()
+
 	return nil
 }
 
-func deployService(o *DeployOptions) error {
-	spinner := &pterm.SpinnerPrinter{}
+func deployService(ui terminal.UI, o *DeployOptions) error {
+	ui.Output("Deploying %s app...", o.ServiceName, terminal.WithHeaderStyle())
+	sg := ui.StepGroup()
+	defer sg.Wait()
 
-	if logrus.GetLevel() < 4 {
-		spinner, _ = pterm.DefaultSpinner.Start(fmt.Sprintf("deploy service %s", o.ServiceName))
-	}
-
-	err := ecsdeploy.DeployService(
-		&o.Service,
-		o.ServiceName,
-		o.Tag,
-		o.Config,
-	)
+	o.Service.Name = o.ServiceName
+	err := o.Service.Deploy(sg, ui)
 	if err != nil {
 		return fmt.Errorf("can't deploy: %w", err)
 	}
 
-	if logrus.GetLevel() < 4 {
-		spinner.Success(fmt.Sprintf("deploy service %s completed", o.ServiceName))
-	} else {
-		pterm.Success.Printfln("deploy service %s completed", o.ServiceName)
-	}
+	ui.Output("deploy service %s completed\n", o.ServiceName, terminal.WithSuccessStyle())
 
 	return nil
 }

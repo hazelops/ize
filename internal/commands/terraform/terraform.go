@@ -86,7 +86,7 @@ func (o *TerraformOptions) Complete(cmd *cobra.Command, args []string) error {
 
 func (o *TerraformOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified")
+		return fmt.Errorf("env must be specified\n")
 	}
 	return nil
 }

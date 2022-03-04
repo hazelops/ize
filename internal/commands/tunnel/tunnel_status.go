@@ -1,16 +1,11 @@
 package tunnel
 
 import (
-	"bytes"
 	"fmt"
-	"os/exec"
-	"syscall"
 
 	"github.com/hazelops/ize/internal/config"
-	"github.com/pterm/pterm"
-	"github.com/sirupsen/logrus"
+	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type TunnelStatusOptions struct {
@@ -21,7 +16,7 @@ func NewTunnelStatusOptions() *TunnelStatusOptions {
 	return &TunnelStatusOptions{}
 }
 
-func NewCmdTunnelStatus() *cobra.Command {
+func NewCmdTunnelStatus(ui terminal.UI) *cobra.Command {
 	o := NewTunnelStatusOptions()
 
 	cmd := &cobra.Command{
@@ -40,7 +35,7 @@ func NewCmdTunnelStatus() *cobra.Command {
 				return err
 			}
 
-			err = o.Run(cmd)
+			err = o.Run(ui, cmd)
 			if err != nil {
 				return err
 			}
@@ -65,43 +60,23 @@ func (o *TunnelStatusOptions) Complete(cmd *cobra.Command, args []string) error 
 
 func (o *TunnelStatusOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified")
+		return fmt.Errorf("env must be specified\n")
 	}
 
 	return nil
 }
 
-func (o *TunnelStatusOptions) Run(cmd *cobra.Command) error {
-	c := exec.Command(
-		"ssh", "-S", "bastion.sock", "-O", "check", "",
-	)
-	out := &bytes.Buffer{}
-	c.Stdout = out
-	c.Stderr = out
+func (o *TunnelStatusOptions) Run(ui terminal.UI, cmd *cobra.Command) error {
+	sg := ui.StepGroup()
+	defer sg.Wait()
 
-	err := c.Run()
-	if err != nil {
-		exiterr := err.(*exec.ExitError)
-		status := exiterr.Sys().(syscall.WaitStatus)
-		if status.ExitStatus() != 255 {
-			logrus.Debug(out.String())
-			return fmt.Errorf("can't get tunnel status: %w", err)
-		}
-		logrus.Debug(out.String())
-		pterm.Info.Printfln("tunnel is down")
-		return nil
-	}
-
-	sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
-	sshConfig, err := getSSHConfig(sshConfigPath)
+	isUp, err := checkTunnel(ui, sg)
 	if err != nil {
 		return fmt.Errorf("can't get tunnel status: %w", err)
 	}
-	hosts := getHosts(sshConfig)
 
-	pterm.Info.Printfln("tunnel is up. Forwarded ports:")
-	for _, h := range hosts {
-		pterm.Info.Printfln("%s:%s ➡ localhost:%s", h[2], h[3], h[1])
+	if !isUp {
+		return fmt.Errorf("can't get tunnel status: tunnel is down\n")
 	}
 
 	return nil

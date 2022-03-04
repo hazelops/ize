@@ -55,7 +55,7 @@ func NewGraph(services Services, initialStatus ServiceStatus) *Graph {
 		Vertices: map[string]*Vertex{},
 	}
 
-	for n, _ := range services {
+	for n := range services {
 		graph.AddVertex(n, n, initialStatus)
 	}
 
