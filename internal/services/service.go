@@ -35,3 +35,23 @@ func (a *App) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 
 	return nil
 }
+
+func (svs *App) Destroy(sg terminal.StepGroup, ui terminal.UI) error {
+	var deployment Deployment
+
+	switch svs.Type {
+	case "ecs":
+		deployment = NewECSDeployment(*svs)
+	case "serverless":
+		deployment = NewServerlessDeployment(*svs)
+	default:
+		return fmt.Errorf("services type of %s not supported", svs.Type)
+	}
+
+	err := deployment.Destroy(sg, ui)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

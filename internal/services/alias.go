@@ -23,3 +23,10 @@ func (a *alias) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 
 	return nil
 }
+
+func (a *alias) Destroy(sg terminal.StepGroup, ui terminal.UI) error {
+	s := sg.Add("%s destroy completed!", a.Name)
+	s.Done()
+
+	return nil
+}
