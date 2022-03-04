@@ -1,12 +1,15 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hazelops/ize/internal/commands/config"
 	"github.com/hazelops/ize/internal/commands/console"
 	"github.com/hazelops/ize/internal/commands/deploy"
+	"github.com/hazelops/ize/internal/commands/destroy"
 	"github.com/hazelops/ize/internal/commands/env"
 	"github.com/hazelops/ize/internal/commands/exec"
 	"github.com/hazelops/ize/internal/commands/initialize"
@@ -16,6 +19,7 @@ import (
 	"github.com/hazelops/ize/internal/commands/terraform"
 	"github.com/hazelops/ize/internal/commands/tunnel"
 	"github.com/hazelops/ize/pkg/templates"
+	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -34,23 +38,23 @@ and is too simple to be considered sophisticated.
 So let's not do it but rather embrace the simplicity and minimalism.
 `)
 
-type Response struct {
-	Err error
-
-	Cmd *cobra.Command
-}
-
-func Execute(args []string) error {
+func Execute(args []string) {
 	go CheckLatestRealese()
 
-	app, err := newApp()
+	ui := terminal.ConsoleUI(context.Background())
+
+	app, err := newApp(ui)
 	if err != nil {
-		return err
+		ui.Output(err.Error())
 	}
-	return app.Execute()
+
+	if err := app.Execute(); err != nil {
+		ui.Output(err.Error(), terminal.WithErrorStyle())
+		time.Sleep(time.Millisecond * 50)
+	}
 }
 
-func newApp() (*cobra.Command, error) {
+func newApp(ui terminal.UI) (*cobra.Command, error) {
 	rootCmd := &cobra.Command{
 		Use:              "ize",
 		TraverseChildren: true,
@@ -68,15 +72,16 @@ func newApp() (*cobra.Command, error) {
 	}
 
 	rootCmd.AddCommand(
-		deploy.NewCmdDeploy(),
-		console.NewCmdConsole(),
+		deploy.NewCmdDeploy(ui),
+		destroy.NewCmdDestroy(ui),
+		console.NewCmdConsole(ui),
 		env.NewCmdEnv(),
 		mfa.NewCmdMfa(),
 		terraform.NewCmdTerraform(),
-		secrets.NewCmdSecrets(),
+		secrets.NewCmdSecrets(ui),
 		initialize.NewCmdInit(),
-		tunnel.NewCmdTunnel(),
-		exec.NewCmdExec(),
+		tunnel.NewCmdTunnel(ui),
+		exec.NewCmdExec(ui),
 		config.NewCmdConfig(),
 		logs.NewCmdLogs(),
 		NewGendocCmd(),

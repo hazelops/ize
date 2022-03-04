@@ -46,9 +46,5 @@ func main() {
 		Style: pterm.NewStyle(pterm.FgYellow),
 	}
 
-	err := commands.Execute(os.Args[1:])
-	if err != nil {
-		pterm.Error.Print(err)
-	}
-
+	commands.Execute(os.Args[1:])
 }
