@@ -7,6 +7,7 @@ import (
 
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/template"
+	"github.com/hazelops/ize/pkg/templates"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -18,6 +19,22 @@ type EnvOptions struct {
 	TerraformStateBucketName string
 }
 
+var envLongDesc = templates.LongDesc(`
+	Env generates backend.tf and variable.tfvars files.
+`)
+
+var envExample = templates.Examples(`
+	# Generate files
+	ize env
+
+	# Generate files via config file
+	ize --config-file /path/to/config env
+
+	# Generate files via config file installed from env
+	export IZE_CONFIG_FILE=/path/to/config
+	ize env
+`)
+
 func NewEnvFlags() *EnvOptions {
 	return &EnvOptions{}
 }
@@ -26,8 +43,10 @@ func NewCmdEnv() *cobra.Command {
 	o := NewEnvFlags()
 
 	cmd := &cobra.Command{
-		Use:   "env",
-		Short: "generate terraform files",
+		Use:     "env",
+		Short:   "generate terraform files",
+		Long:    envLongDesc,
+		Example: envExample,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)

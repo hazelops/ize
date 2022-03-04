@@ -41,16 +41,16 @@ type Infra struct {
 
 var deployLongDesc = templates.LongDesc(`
 	Deploy infraftructure or sevice.
-	For deploy service the service name must be specimfied. 
+           Service name must be specified for a service deploy. 
 	The infrastructure for the service must be prepared in advance.
 `)
 
 var deployExample = templates.Examples(`
-	# Deploy service form image
-	ize deploy --image foo/bar:latest <service name>
+	# Deploy all (config file required)
+	ize deploy
 
-	# Deploy service form path
-	ize deploy --path /path/to/service <service name>
+	# Deploy service (config file required)
+	ize deploy <service name>
 
 	# Deploy service via config file
 	ize --config-file (or -c) /path/to/config deploy <service name>

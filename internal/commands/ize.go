@@ -90,9 +90,9 @@ func newApp(ui terminal.UI) (*cobra.Command, error) {
 
 	rootCmd.PersistentFlags().StringP("log-level", "l", "", "enable debug messages")
 	rootCmd.PersistentFlags().StringP("config-file", "c", "", "set config file name")
-	rootCmd.PersistentFlags().StringP("env", "e", "", "set enviroment name")
-	rootCmd.PersistentFlags().StringP("aws-profile", "p", "", "set AWS profile")
-	rootCmd.PersistentFlags().StringP("aws-region", "r", "", "set AWS region")
+	rootCmd.PersistentFlags().StringP("env", "e", "", "(required) set environment name (overrides value set in ENV / IZE_ENV if any of them are set)")
+	rootCmd.PersistentFlags().StringP("aws-profile", "p", "", "(required) set AWS profile (overrides value in ize.toml and IZE_AWS_PROFILE / AWS_PROFILE if any of them are set)")
+	rootCmd.PersistentFlags().StringP("aws-region", "r", "", "(required) set AWS region (overrides value in ize.toml and IZE_AWS_REGION / AWS_REGION if any of them are set)")
 	rootCmd.PersistentFlags().StringP("namespace", "n", "", "set namespace")
 	rootCmd.PersistentFlags().String("terraform-version", "", "set terraform-version")
 

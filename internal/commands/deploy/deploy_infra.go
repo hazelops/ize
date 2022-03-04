@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/docker/terraform"
+	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -24,6 +25,22 @@ type DeployInfraOptions struct {
 	Terraform terraformInfraConfig
 }
 
+var deployInfraLongDesc = templates.LongDesc(`
+	Only deploy infrastructure.
+`)
+
+var deployInfraExample = templates.Examples(`
+	# Deploy infra via flags
+	ize deploy infra --infra.terraform.version <version> --infra.terraform.aws-region <region> --infra.terraform.aws-profile <profile>
+
+	# Deploy infra via config file
+	ize --config-file /path/to/config deploy infra
+
+	# Deploy infra via config file installed from env
+	export IZE_CONFIG_FILE=/path/to/config
+	ize deploy infra
+`)
+
 func NewDeployInfraFlags() *DeployInfraOptions {
 	return &DeployInfraOptions{}
 }
@@ -32,8 +49,10 @@ func NewCmdDeployInfra(ui terminal.UI) *cobra.Command {
 	o := NewDeployInfraFlags()
 
 	cmd := &cobra.Command{
-		Use:   "infra",
-		Short: "manage infra deployments",
+		Use:     "infra",
+		Short:   "manage infra deployments",
+		Long:    deployInfraLongDesc,
+		Example: deployInfraExample,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)
