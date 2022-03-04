@@ -42,7 +42,7 @@ type ecs struct {
 	AwsRegion         string
 }
 
-func NewECSDeployment(service Service) *ecs {
+func NewECSDeployment(service App) *ecs {
 	var ecsConfig ecs
 
 	mapstructure.Decode(service, &ecsConfig)

@@ -27,11 +27,11 @@ type DeployOptions struct {
 	SkipBuildAndPush bool
 	Services         Services
 	Infra            Infra
-	Service          services.Service
+	App              services.App
 	AutoApprove      bool
 }
 
-type Services map[string]*services.Service
+type Services map[string]*services.App
 
 type Infra struct {
 	Version string `mapstructure:"terraform_version"`
@@ -143,7 +143,7 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("can`t complete options: %w", err)
 		}
 		o.ServiceName = cmd.Flags().Args()[0]
-		viper.UnmarshalKey(fmt.Sprintf("service.%s", o.ServiceName), &o.Service)
+		viper.UnmarshalKey(fmt.Sprintf("service.%s", o.ServiceName), &o.App)
 	}
 
 	o.Tag = viper.GetString("tag")
@@ -349,8 +349,8 @@ func deployService(ui terminal.UI, o *DeployOptions) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	o.Service.Name = o.ServiceName
-	err := o.Service.Deploy(sg, ui)
+	o.App.Name = o.ServiceName
+	err := o.App.Deploy(sg, ui)
 	if err != nil {
 		return fmt.Errorf("can't deploy: %w", err)
 	}
