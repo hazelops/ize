@@ -22,6 +22,8 @@ func (a *App) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 		deployment = NewECSDeployment(*a)
 	case "serverless":
 		deployment = NewServerlessDeployment(*a)
+	case "alias":
+		deployment = NewAliasDeployment(*a)
 	default:
 		return fmt.Errorf("services type of %s not supported", a.Type)
 	}
