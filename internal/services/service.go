@@ -6,7 +6,7 @@ import (
 	"github.com/hazelops/ize/pkg/terminal"
 )
 
-type Service struct {
+type App struct {
 	Name      string
 	Type      string
 	Path      string
@@ -14,16 +14,16 @@ type Service struct {
 	Body      map[string]interface{} `mapstructure:",remain"`
 }
 
-func (svs *Service) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
+func (a *App) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 	var deployment Deployment
 
-	switch svs.Type {
+	switch a.Type {
 	case "ecs":
-		deployment = NewECSDeployment(*svs)
+		deployment = NewECSDeployment(*a)
 	case "serverless":
-		deployment = NewServerlessDeployment(*svs)
+		deployment = NewServerlessDeployment(*a)
 	default:
-		return fmt.Errorf("services type of %s not supported", svs.Type)
+		return fmt.Errorf("services type of %s not supported", a.Type)
 	}
 
 	err := deployment.Deploy(sg, ui)
