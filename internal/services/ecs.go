@@ -10,6 +10,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecr"
@@ -246,6 +247,17 @@ func (e *ecs) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 	case err := <-errC:
 		return err
 	}
+}
+
+func (e *ecs) Destroy(sg terminal.StepGroup, ui terminal.UI) error {
+	ui.Output("Destroying ECS applications requires destroying the infrastructure.", terminal.WithWarningStyle())
+	time.Sleep(time.Millisecond * 100)
+
+	s := sg.Add("%s destroying completed!", e.Name)
+	defer func() { s.Abort() }()
+	s.Done()
+
+	return nil
 }
 
 // TODO: refactor

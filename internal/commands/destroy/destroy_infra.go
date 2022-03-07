@@ -107,19 +107,29 @@ func (o *DestroyInfraOptions) Run(ui terminal.UI) error {
 
 	logrus.Infof("infra: %s", o.Terraform)
 
+	v, err := o.Config.Session.Config.Credentials.Get()
+	if err != nil {
+		return fmt.Errorf("can't set AWS credentials: %w", err)
+	}
+
+	env := []string{
+		fmt.Sprintf("ENV=%v", o.Config.Env),
+		fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
+		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
+		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
+		fmt.Sprintf("AWS_ACCESS_KEY_ID=%v", v.AccessKeyID),
+		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%v", v.SecretAccessKey),
+		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
+	}
+
 	opts := terraform.Options{
-		ContainerName: "terraform",
-		Cmd:           []string{"destroy", "-auto-approve"},
-		Env: []string{
-			fmt.Sprintf("ENV=%v", o.Config.Env),
-			fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
-			fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-			fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		},
+		ContainerName:    "terraform",
+		Cmd:              []string{"destroy", "-auto-approve"},
+		Env:              env,
 		TerraformVersion: o.Terraform.Version,
 	}
 
-	err := terraform.RunUI(ui, opts)
+	err = terraform.RunUI(ui, opts)
 	if err != nil {
 		return err
 	}

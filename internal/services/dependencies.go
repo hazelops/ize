@@ -1,4 +1,4 @@
-package deploy
+package services
 
 import (
 	"context"
@@ -41,15 +41,27 @@ var (
 		adjacentServiceStatusToSkip: ServiceStopped,
 		targetServiceStatus:         ServiceStarted,
 	}
+	downDirectionTraversalConfig = graphTraversalConfig{
+		extremityNodesFn:            roots,
+		adjacentNodesFn:             getChildren,
+		filterAdjacentByStatusFn:    filterParents,
+		adjacentServiceStatusToSkip: ServiceStarted,
+		targetServiceStatus:         ServiceStopped,
+	}
 )
 
 // InDependencyOrder applies the function to the services of the project taking in account the dependency order
-func InDependencyOrder(ctx context.Context, services *Services, fn func(context.Context, string) error) error {
+func InDependencyOrder(ctx context.Context, services map[string]*App, fn func(context.Context, string) error) error {
 	return visit(ctx, services, upDirectionTraversalConfig, fn, ServiceStopped)
 }
 
+// InReverseDependencyOrder applies the function to the services of the project in reverse order of dependencies
+func InReversDependencyOrder(ctx context.Context, services map[string]*App, fn func(context.Context, string) error) error {
+	return visit(ctx, services, downDirectionTraversalConfig, fn, ServiceStarted)
+}
+
 // NewGraph returns the dependency graph of the services
-func NewGraph(services Services, initialStatus ServiceStatus) *Graph {
+func NewGraph(services map[string]*App, initialStatus ServiceStatus) *Graph {
 	graph := &Graph{
 		lock:     sync.RWMutex{},
 		Vertices: map[string]*Vertex{},
@@ -164,8 +176,8 @@ func remove(slice []string, item string) []string {
 	return s
 }
 
-func visit(ctx context.Context, services *Services, traversalConfig graphTraversalConfig, fn func(context.Context, string) error, initialStatus ServiceStatus) error {
-	g := NewGraph(*services, initialStatus)
+func visit(ctx context.Context, services map[string]*App, traversalConfig graphTraversalConfig, fn func(context.Context, string) error, initialStatus ServiceStatus) error {
+	g := NewGraph(services, initialStatus)
 	if b, err := g.HasCycles(); b {
 		return err
 	}
@@ -275,6 +287,58 @@ func (g *Graph) FilterChildren(key string, status ServiceStatus) []*Vertex {
 	for _, child := range vertex.Children {
 		if child.Status == status {
 			res = append(res, child)
+		}
+	}
+
+	return res
+}
+
+func roots(g *Graph) []*Vertex {
+	return g.Roots()
+}
+
+// Roots returns the slice of "Roots" of the graph
+func (g *Graph) Roots() []*Vertex {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	var res []*Vertex
+	for _, v := range g.Vertices {
+		if len(v.Parents) == 0 {
+			res = append(res, v)
+		}
+	}
+	return res
+}
+
+func getChildren(v *Vertex) []*Vertex {
+	return v.GetChildren()
+}
+
+// GetChildren returns a slice with the child vertexes of the a Vertex
+func (v *Vertex) GetChildren() []*Vertex {
+	var res []*Vertex
+	for _, p := range v.Children {
+		res = append(res, p)
+	}
+	return res
+}
+
+func filterParents(g *Graph, k string, s ServiceStatus) []*Vertex {
+	return g.FilterParents(k, s)
+}
+
+// FilterParents returns the parents of a certain vertex that are in a certain status
+func (g *Graph) FilterParents(key string, status ServiceStatus) []*Vertex {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	var res []*Vertex
+	vertex := g.Vertices[key]
+
+	for _, parent := range vertex.Parents {
+		if parent.Status == status {
+			res = append(res, parent)
 		}
 	}
 

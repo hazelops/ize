@@ -150,6 +150,86 @@ func (sls *serverless) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 	return nil
 }
 
+func (sls *serverless) Destroy(sg terminal.StepGroup, ui terminal.UI) error {
+	s := sg.Add("%s: initializing Docker client...", sls.Name)
+	defer func() { s.Abort() }()
+
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		return err
+	}
+
+	image := "node:" + sls.NodeVersion
+
+	s.Update("%s: checking for Docker image: %s", sls.Name, image)
+
+	imageRef, err := reference.ParseNormalizedNamed(image)
+	if err != nil {
+		return fmt.Errorf("error parsing Docker image: %s", err)
+	}
+
+	imageList, err := cli.ImageList(context.Background(), types.ImageListOptions{
+		Filters: filters.NewArgs(filters.KeyValuePair{
+			Key:   "reference",
+			Value: reference.FamiliarString(imageRef),
+		}),
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(imageList) == 0 {
+		s.Update("%s: pulling image: %s", sls.Name, image)
+
+		resp, err := cli.ImagePull(context.Background(), reference.FamiliarString(imageRef), types.ImagePullOptions{})
+		if err != nil {
+			return err
+		}
+		defer resp.Close()
+
+		stdout, _, err := ui.OutputWriters()
+		if err != nil {
+			return err
+		}
+
+		var termFd uintptr
+		if f, ok := stdout.(*os.File); ok {
+			termFd = f.Fd()
+		}
+
+		err = jsonmessage.DisplayJSONMessagesStream(resp, s.TermOutput(), termFd, true, nil)
+		if err != nil {
+			return fmt.Errorf("unable to stream pull logs to the terminal: %s", err)
+		}
+
+		s.Done()
+		s = sg.Add("")
+	}
+
+	s.Done()
+	s = sg.Add("%s: destroying app...", sls.Name)
+
+	err = sls.serverless(cli, []string{
+		"remove",
+		"--config", sls.File,
+		"--service", sls.Name,
+		"--verbose",
+		"--region", viper.GetString("aws_region"),
+		"--env", viper.GetString("env"),
+		"--profile", viper.GetString("aws_profile"),
+	}, s)
+	if err != nil {
+		s.Abort()
+		return err
+	}
+
+	s.Done()
+	s = sg.Add("%s deployment completed!", sls.Name)
+	s.Done()
+
+	return nil
+}
+
 func (sls *serverless) serverless(cli *client.Client, cmd []string, step terminal.Step) error {
 	command := []string{"serverless"}
 	command = append(command, cmd...)

@@ -25,7 +25,7 @@ type DeployOptions struct {
 	ServiceName      string
 	Tag              string
 	SkipBuildAndPush bool
-	Services         Services
+	Services         map[string]*services.App
 	Infra            Infra
 	App              services.App
 	AutoApprove      bool
@@ -323,7 +323,7 @@ func deployAll(ui terminal.UI, o *DeployOptions) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	err = InDependencyOrder(aws.BackgroundContext(), &o.Services, func(c context.Context, name string) error {
+	err = services.InDependencyOrder(aws.BackgroundContext(), o.Services, func(c context.Context, name string) error {
 		o.Config.AwsProfile = o.Infra.Profile
 
 		o.Services[name].Name = name
