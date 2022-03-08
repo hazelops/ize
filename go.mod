@@ -7,7 +7,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/Microsoft/go-winio v0.5.1 // indirect
 	github.com/Microsoft/hcsshim v0.9.2 // indirect
-	github.com/aws/aws-sdk-go v1.43.11
+	github.com/aws/aws-sdk-go v1.43.12
 	github.com/containerd/cgroups v1.0.3 // indirect
 	github.com/docker/cli v20.10.12+incompatible
 	github.com/docker/docker v20.10.12+incompatible
