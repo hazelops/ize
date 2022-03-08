@@ -2,22 +2,23 @@ package console
 
 import (
 	"bytes"
-	"strings"
+	"context"
 	"testing"
 
+	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRunConsole(t *testing.T) {
 	tests := []struct {
-		name, expectedErr, expectedOut string
-		args                           []string
-		flags                          map[string]string
+		name, expectedErr string
+		args              []string
+		flags             map[string]string
 	}{
 		{
-			name:        "successful run",
-			expectedOut: "",
-			args:        []string{"squibby"},
+			name: "successful run",
+			args: []string{"squibby"},
 			flags: map[string]string{
 				"aws_profile": "default",
 				"aws_region":  "us-east-1",
@@ -27,7 +28,7 @@ func TestRunConsole(t *testing.T) {
 		},
 		{
 			name:        "service not found",
-			expectedOut: "Error: ServiceNotFoundException: Service not found.",
+			expectedErr: "ServiceNotFoundException: Service not found.",
 			args:        []string{"unknow_service"},
 			flags: map[string]string{
 				"aws_profile": "default",
@@ -38,7 +39,7 @@ func TestRunConsole(t *testing.T) {
 		},
 		{
 			name:        "env not set",
-			expectedOut: "Error: can't validate: env must be specified",
+			expectedErr: "can't validate: env must be specified\n",
 			args:        []string{"squibby"},
 			flags: map[string]string{
 				"aws_profile": "default",
@@ -48,7 +49,7 @@ func TestRunConsole(t *testing.T) {
 		},
 		{
 			name:        "namespace not set",
-			expectedOut: "Error: can't validate: namespace must be specified",
+			expectedErr: "can't validate: namespace must be specified\n",
 			args:        []string{"squibby"},
 			flags: map[string]string{
 				"aws_profile": "default",
@@ -57,19 +58,8 @@ func TestRunConsole(t *testing.T) {
 			},
 		},
 		{
-			name:        "service not set",
-			expectedOut: "Error: can't validate: service name must be specified",
-			args:        []string{""},
-			flags: map[string]string{
-				"aws_profile": "default",
-				"aws_region":  "us-east-1",
-				"env":         "dev",
-				"namespace":   "nutcorp",
-			},
-		},
-		{
-			name:        "profile not set",
-			expectedOut: "Error: AWS profile must be specified using flags or config file",
+			name:        "service name not set",
+			expectedErr: "can't validate: service name must be specified\n",
 			args:        []string{""},
 			flags: map[string]string{
 				"aws_region": "us-east-1",
@@ -78,21 +68,20 @@ func TestRunConsole(t *testing.T) {
 			},
 		},
 		{
-			name:        "invalid creds",
-			expectedOut: `Error: can't run console: failed to create aws session`,
-			args:        []string{"squibby"},
+			name:        "service name not set",
+			expectedErr: "can't validate: service name must be specified\n",
+			args:        []string{""},
 			flags: map[string]string{
-				"aws_profile": "defaultt",
-				"aws_region":  "us-east-1",
-				"env":         "dev",
-				"namespace":   "nutcorp",
+				"aws_region": "us-east-1",
+				"env":        "dev",
+				"namespace":  "nutcorp",
 			},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			cmd := NewCmdConsole()
+			cmd := NewCmdConsole(terminal.ConsoleUI(context.Background()))
 			cmd.SilenceUsage = true
 			out := &bytes.Buffer{}
 			cmd.SetOut(out)
@@ -101,10 +90,10 @@ func TestRunConsole(t *testing.T) {
 			setGlobalFlags(test.flags)
 
 			cmd.SetArgs(test.args)
-			cmd.Execute()
+			err := cmd.Execute()
 
-			if strings.TrimSpace(out.String()) != test.expectedOut {
-				t.Fatalf("%s: unexpected output: %s\nexpected: %s", test.name, out.String(), test.expectedOut)
+			if test.expectedErr != "" {
+				require.EqualError(t, err, test.expectedErr)
 			}
 		})
 	}
