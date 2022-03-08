@@ -323,7 +323,7 @@ func readGlobalConfigFile() (*Config, error) {
 			logrus.Warn("  global config file not found")
 			return nil, nil
 		} else {
-			return nil, err
+			return nil, fmt.Errorf("can't read config file %s: %w\n", viper.ConfigFileUsed(), err)
 		}
 	}
 
@@ -357,7 +357,7 @@ func readConfigFile(path string) (*Config, error) {
 			logrus.Warn("  config file not found")
 			return nil, nil
 		} else {
-			return nil, err
+			return nil, fmt.Errorf("can't read config file %s: %w\n", viper.ConfigFileUsed(), err)
 		}
 	}
 
