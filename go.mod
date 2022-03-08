@@ -42,7 +42,7 @@ require (
 	github.com/bgentry/speakeasy v0.1.0
 	github.com/briandowns/spinner v1.18.1
 	github.com/containerd/console v1.0.3
-	github.com/containerd/containerd v1.5.9 // indirect
+	github.com/containerd/containerd v1.5.10 // indirect
 	github.com/docker/distribution v2.8.0+incompatible
 	github.com/fatih/color v1.13.0
 	github.com/google/go-cmp v0.5.7 // indirect
