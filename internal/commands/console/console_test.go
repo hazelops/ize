@@ -27,9 +27,9 @@ func TestRunConsole(t *testing.T) {
 			},
 		},
 		{
-			name:        "service not found",
+			name:        "app not found",
 			expectedErr: "ServiceNotFoundException: Service not found.",
-			args:        []string{"unknow_service"},
+			args:        []string{"unknow_app"},
 			flags: map[string]string{
 				"aws_profile": "default",
 				"aws_region":  "us-east-1",
@@ -58,18 +58,8 @@ func TestRunConsole(t *testing.T) {
 			},
 		},
 		{
-			name:        "service name not set",
-			expectedErr: "can't validate: service name must be specified\n",
-			args:        []string{""},
-			flags: map[string]string{
-				"aws_region": "us-east-1",
-				"env":        "dev",
-				"namespace":  "nutcorp",
-			},
-		},
-		{
-			name:        "service name not set",
-			expectedErr: "can't validate: service name must be specified\n",
+			name:        "app name not set",
+			expectedErr: "can't validate: app name must be specified\n",
 			args:        []string{""},
 			flags: map[string]string{
 				"aws_region": "us-east-1",
