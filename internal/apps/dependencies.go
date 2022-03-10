@@ -1,4 +1,4 @@
-package services
+package apps
 
 import (
 	"context"
@@ -9,69 +9,69 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Graph represents project as service dependencies
+// Graph represents project as app dependencies
 type Graph struct {
 	Vertices map[string]*Vertex
 	lock     sync.RWMutex
 }
 
-// Vertex represents a service in the dependencies structure
+// Vertex represents a app in the dependencies structure
 type Vertex struct {
 	Key      string
-	Service  string
-	Status   ServiceStatus
+	App      string
+	Status   AppStatus
 	Children map[string]*Vertex
 	Parents  map[string]*Vertex
 }
 
-// ServiceStatus indicates the status of a service
-type ServiceStatus int
+// AppStatus indicates the status of a app
+type AppStatus int
 
-// Services status flags
+// Apps status flags
 const (
-	ServiceStopped ServiceStatus = iota
-	ServiceStarted
+	AppStopped AppStatus = iota
+	AppStarted
 )
 
 var (
 	upDirectionTraversalConfig = graphTraversalConfig{
-		extremityNodesFn:            leaves,
-		adjacentNodesFn:             getParents,
-		filterAdjacentByStatusFn:    filterChildren,
-		adjacentServiceStatusToSkip: ServiceStopped,
-		targetServiceStatus:         ServiceStarted,
+		extremityNodesFn:         leaves,
+		adjacentNodesFn:          getParents,
+		filterAdjacentByStatusFn: filterChildren,
+		adjacentAppStatusToSkip:  AppStopped,
+		targetAppStatus:          AppStarted,
 	}
 	downDirectionTraversalConfig = graphTraversalConfig{
-		extremityNodesFn:            roots,
-		adjacentNodesFn:             getChildren,
-		filterAdjacentByStatusFn:    filterParents,
-		adjacentServiceStatusToSkip: ServiceStarted,
-		targetServiceStatus:         ServiceStopped,
+		extremityNodesFn:         roots,
+		adjacentNodesFn:          getChildren,
+		filterAdjacentByStatusFn: filterParents,
+		adjacentAppStatusToSkip:  AppStarted,
+		targetAppStatus:          AppStopped,
 	}
 )
 
-// InDependencyOrder applies the function to the services of the project taking in account the dependency order
-func InDependencyOrder(ctx context.Context, services map[string]*App, fn func(context.Context, string) error) error {
-	return visit(ctx, services, upDirectionTraversalConfig, fn, ServiceStopped)
+// InDependencyOrder applies the function to the apps of the project taking in account the dependency order
+func InDependencyOrder(ctx context.Context, apps map[string]*App, fn func(context.Context, string) error) error {
+	return visit(ctx, apps, upDirectionTraversalConfig, fn, AppStopped)
 }
 
-// InReverseDependencyOrder applies the function to the services of the project in reverse order of dependencies
-func InReversDependencyOrder(ctx context.Context, services map[string]*App, fn func(context.Context, string) error) error {
-	return visit(ctx, services, downDirectionTraversalConfig, fn, ServiceStarted)
+// InReverseDependencyOrder applies the function to the apps of the project in reverse order of dependencies
+func InReversDependencyOrder(ctx context.Context, apps map[string]*App, fn func(context.Context, string) error) error {
+	return visit(ctx, apps, downDirectionTraversalConfig, fn, AppStarted)
 }
 
-// NewGraph returns the dependency graph of the services
-func NewGraph(services map[string]*App, initialStatus ServiceStatus) *Graph {
+// NewGraph returns the dependency graph of the apps
+func NewGraph(apps map[string]*App, initialStatus AppStatus) *Graph {
 	graph := &Graph{
 		lock:     sync.RWMutex{},
 		Vertices: map[string]*Vertex{},
 	}
 
-	for n := range services {
+	for n := range apps {
 		graph.AddVertex(n, n, initialStatus)
 	}
 
-	for n, s := range services {
+	for n, s := range apps {
 		for _, name := range s.DependsOn {
 			_ = graph.AddEdge(n, name)
 		}
@@ -80,11 +80,11 @@ func NewGraph(services map[string]*App, initialStatus ServiceStatus) *Graph {
 	return graph
 }
 
-func (g *Graph) AddVertex(key string, service string, initialStatus ServiceStatus) {
+func (g *Graph) AddVertex(key string, app string, initialStatus AppStatus) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	v := NewVertex(key, service, initialStatus)
+	v := NewVertex(key, app, initialStatus)
 	g.Vertices[key] = v
 }
 
@@ -113,10 +113,10 @@ func (g *Graph) AddEdge(source string, destination string) error {
 	return nil
 }
 
-func NewVertex(key string, service string, initialStatus ServiceStatus) *Vertex {
+func NewVertex(key string, app string, initialStatus AppStatus) *Vertex {
 	return &Vertex{
 		Key:      key,
-		Service:  service,
+		App:      app,
 		Status:   initialStatus,
 		Parents:  map[string]*Vertex{},
 		Children: map[string]*Vertex{},
@@ -176,8 +176,8 @@ func remove(slice []string, item string) []string {
 	return s
 }
 
-func visit(ctx context.Context, services map[string]*App, traversalConfig graphTraversalConfig, fn func(context.Context, string) error, initialStatus ServiceStatus) error {
-	g := NewGraph(services, initialStatus)
+func visit(ctx context.Context, apps map[string]*App, traversalConfig graphTraversalConfig, fn func(context.Context, string) error, initialStatus AppStatus) error {
+	g := NewGraph(apps, initialStatus)
 	if b, err := g.HasCycles(); b {
 		return err
 	}
@@ -194,20 +194,20 @@ func visit(ctx context.Context, services map[string]*App, traversalConfig graphT
 
 func run(ctx context.Context, graph *Graph, eg *errgroup.Group, nodes []*Vertex, traversalConfig graphTraversalConfig, fn func(context.Context, string) error) error {
 	for _, node := range nodes {
-		// Don't start this service yet if all of its children have
+		// Don't start this app yet if all of its children have
 		// not been started yet.
-		if len(traversalConfig.filterAdjacentByStatusFn(graph, node.Key, traversalConfig.adjacentServiceStatusToSkip)) != 0 {
+		if len(traversalConfig.filterAdjacentByStatusFn(graph, node.Key, traversalConfig.adjacentAppStatusToSkip)) != 0 {
 			continue
 		}
 
 		node := node
 		eg.Go(func() error {
-			err := fn(ctx, node.Service)
+			err := fn(ctx, node.App)
 			if err != nil {
 				return err
 			}
 
-			graph.UpdateStatus(node.Key, traversalConfig.targetServiceStatus)
+			graph.UpdateStatus(node.Key, traversalConfig.targetAppStatus)
 
 			return run(ctx, graph, eg, traversalConfig.adjacentNodesFn(node), traversalConfig, fn)
 		})
@@ -217,15 +217,15 @@ func run(ctx context.Context, graph *Graph, eg *errgroup.Group, nodes []*Vertex,
 }
 
 type graphTraversalConfig struct {
-	extremityNodesFn            func(*Graph) []*Vertex                        // leaves or roots
-	adjacentNodesFn             func(*Vertex) []*Vertex                       // getParents or getChildren
-	filterAdjacentByStatusFn    func(*Graph, string, ServiceStatus) []*Vertex // filterChildren or filterParents
-	targetServiceStatus         ServiceStatus
-	adjacentServiceStatusToSkip ServiceStatus
+	extremityNodesFn         func(*Graph) []*Vertex                    // leaves or roots
+	adjacentNodesFn          func(*Vertex) []*Vertex                   // getParents or getChildren
+	filterAdjacentByStatusFn func(*Graph, string, AppStatus) []*Vertex // filterChildren or filterParents
+	targetAppStatus          AppStatus
+	adjacentAppStatusToSkip  AppStatus
 }
 
 // UpdateStatus updates the status of a certain vertex
-func (g *Graph) UpdateStatus(key string, status ServiceStatus) {
+func (g *Graph) UpdateStatus(key string, status AppStatus) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 	g.Vertices[key].Status = status
@@ -272,12 +272,12 @@ func (v *Vertex) GetParents() []*Vertex {
 	return res
 }
 
-func filterChildren(g *Graph, k string, s ServiceStatus) []*Vertex {
-	return g.FilterChildren(k, s)
+func filterChildren(g *Graph, k string, a AppStatus) []*Vertex {
+	return g.FilterChildren(k, a)
 }
 
 // FilterChildren returns children of a certain vertex that are in a certain status
-func (g *Graph) FilterChildren(key string, status ServiceStatus) []*Vertex {
+func (g *Graph) FilterChildren(key string, status AppStatus) []*Vertex {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
@@ -324,12 +324,12 @@ func (v *Vertex) GetChildren() []*Vertex {
 	return res
 }
 
-func filterParents(g *Graph, k string, s ServiceStatus) []*Vertex {
+func filterParents(g *Graph, k string, s AppStatus) []*Vertex {
 	return g.FilterParents(k, s)
 }
 
 // FilterParents returns the parents of a certain vertex that are in a certain status
-func (g *Graph) FilterParents(key string, status ServiceStatus) []*Vertex {
+func (g *Graph) FilterParents(key string, status AppStatus) []*Vertex {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 

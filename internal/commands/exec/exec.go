@@ -15,10 +15,10 @@ import (
 )
 
 type ExecOptions struct {
-	Config      *config.Config
-	ServiceName string
-	EcsCluster  string
-	Command     string
+	Config     *config.Config
+	AppName    string
+	EcsCluster string
+	Command    string
 }
 
 func NewExecFlags() *ExecOptions {
@@ -29,9 +29,9 @@ func NewCmdExec(ui terminal.UI) *cobra.Command {
 	o := NewExecFlags()
 
 	cmd := &cobra.Command{
-		Use:   "exec [service-name] -- [commands]",
+		Use:   "exec [app-name] -- [commands]",
 		Short: "exec command in ECS container",
-		Long:  "Connect to a container in the ECS service via AWS SSM and run command.\nTakes ECS service name as an argument.",
+		Long:  "Connect to a container in the ECS app via AWS SSM and run command.\nTakes ECS app name as an argument.",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
@@ -72,7 +72,7 @@ func (o *ExecOptions) Complete(cmd *cobra.Command, args []string, argsLenAtDash 
 		o.EcsCluster = fmt.Sprintf("%s-%s", o.Config.Env, o.Config.Namespace)
 	}
 
-	o.ServiceName = cmd.Flags().Args()[0]
+	o.AppName = cmd.Flags().Args()[0]
 
 	o.Command = strings.Join(args[argsLenAtDash:], " ")
 
@@ -88,8 +88,8 @@ func (o *ExecOptions) Validate() error {
 		return fmt.Errorf("can't validate: namespace must be specified\n")
 	}
 
-	if len(o.ServiceName) == 0 {
-		return fmt.Errorf("can't validate: service name must be specified\n")
+	if len(o.AppName) == 0 {
+		return fmt.Errorf("can't validate: app name must be specified\n")
 	}
 	return nil
 }
@@ -98,9 +98,9 @@ func (o *ExecOptions) Run(ui terminal.UI, cmd *cobra.Command) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	serviceName := fmt.Sprintf("%s-%s", o.Config.Env, o.ServiceName)
+	appName := fmt.Sprintf("%s-%s", o.Config.Env, o.AppName)
 
-	logrus.Infof("service name: %s, cluster name: %s", serviceName, o.EcsCluster)
+	logrus.Infof("app name: %s, cluster name: %s", appName, o.EcsCluster)
 	logrus.Infof("region: %s, profile: %s", o.Config.AwsProfile, o.Config.AwsRegion)
 
 	s := sg.Add("accessing container...")
@@ -111,7 +111,7 @@ func (o *ExecOptions) Run(ui terminal.UI, cmd *cobra.Command) error {
 	lto, err := ecsSvc.ListTasks(&ecs.ListTasksInput{
 		Cluster:       &o.EcsCluster,
 		DesiredStatus: aws.String(ecs.DesiredStatusRunning),
-		ServiceName:   &serviceName,
+		ServiceName:   &appName,
 	})
 	if err != nil {
 		return err
@@ -125,7 +125,7 @@ func (o *ExecOptions) Run(ui terminal.UI, cmd *cobra.Command) error {
 	s = sg.Add("executing command...")
 
 	out, err := ecsSvc.ExecuteCommand(&ecs.ExecuteCommandInput{
-		Container:   &o.ServiceName,
+		Container:   &o.AppName,
 		Interactive: aws.Bool(true),
 		Cluster:     &o.EcsCluster,
 		Task:        lto.TaskArns[0],

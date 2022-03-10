@@ -15,9 +15,9 @@ import (
 )
 
 type LogsOptions struct {
-	Config      *config.Config
-	ServiceName string
-	EcsCluster  string
+	Config     *config.Config
+	AppName    string
+	EcsCluster string
 }
 
 func NewLogsFlags() *LogsOptions {
@@ -28,7 +28,7 @@ func NewCmdLogs() *cobra.Command {
 	o := NewLogsFlags()
 
 	cmd := &cobra.Command{
-		Use:   "logs [service-name]",
+		Use:   "logs [app-name]",
 		Short: "stream logs of container in the ECS",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -69,7 +69,7 @@ func (o *LogsOptions) Complete(cmd *cobra.Command, args []string) error {
 		o.EcsCluster = fmt.Sprintf("%s-%s", o.Config.Env, o.Config.Namespace)
 	}
 
-	o.ServiceName = cmd.Flags().Args()[0]
+	o.AppName = cmd.Flags().Args()[0]
 
 	return nil
 }
@@ -83,14 +83,14 @@ func (o *LogsOptions) Validate() error {
 		return fmt.Errorf("can't validate: namespace must be specified\n")
 	}
 
-	if len(o.ServiceName) == 0 {
-		return fmt.Errorf("can't validate: service name must be specified\n")
+	if len(o.AppName) == 0 {
+		return fmt.Errorf("can't validate: app name must be specified\n")
 	}
 	return nil
 }
 
 func (o *LogsOptions) Run() error {
-	logGroup := fmt.Sprintf("%s-%s", o.Config.Env, o.ServiceName)
+	logGroup := fmt.Sprintf("%s-%s", o.Config.Env, o.AppName)
 
 	lto, err := ecs.New(o.Config.Session).ListTasks(&ecs.ListTasksInput{
 		Cluster:       &o.EcsCluster,
@@ -111,7 +111,7 @@ func (o *LogsOptions) Run() error {
 	taskID = taskID[strings.LastIndex(taskID, "/")+1:]
 
 	var token *string
-	logStreamName := fmt.Sprintf("main/%s/%s", o.ServiceName, taskID)
+	logStreamName := fmt.Sprintf("main/%s/%s", o.AppName, taskID)
 
 	for {
 		logEvents, err := svc.GetLogEvents(&cloudwatchlogs.GetLogEventsInput{

@@ -1,4 +1,4 @@
-package services
+package apps
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ func (a *App) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 	case "alias":
 		deployment = NewAliasDeployment(*a)
 	default:
-		return fmt.Errorf("services type of %s not supported", a.Type)
+		return fmt.Errorf("apps type of %s not supported", a.Type)
 	}
 
 	err := deployment.Deploy(sg, ui)
@@ -45,7 +45,7 @@ func (svs *App) Destroy(sg terminal.StepGroup, ui terminal.UI) error {
 	case "serverless":
 		deployment = NewServerlessDeployment(*svs)
 	default:
-		return fmt.Errorf("services type of %s not supported", svs.Type)
+		return fmt.Errorf("apps type of %s not supported", svs.Type)
 	}
 
 	err := deployment.Destroy(sg, ui)
