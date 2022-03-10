@@ -93,6 +93,11 @@ func (o *TunnelUpOptions) Complete(ui terminal.UI, sg terminal.StepGroup, cmd *c
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) == 0 {
+		viper.UnmarshalKey("infra.tunnel.bastion_instance_id", &o.BastionHostID)
+		viper.UnmarshalKey("infra.tunnel.forward_host", &o.ForwardHost)
+	}
+
+	if len(o.BastionHostID) == 0 && len(o.ForwardHost) == 0 {
 		s := sg.Add("writing SSH config from SSM...")
 		bastionHostID, forwardHost, err := writeSSHConfigFromSSM(o.Config.Session, o.Config.Env)
 		if err != nil {
@@ -105,7 +110,7 @@ func (o *TunnelUpOptions) Complete(ui terminal.UI, sg terminal.StepGroup, cmd *c
 		s.Done()
 	} else {
 		s := sg.Add("writing SSH config from flags...")
-		err := writeSSHConfigFromFlags(o.ForwardHost)
+		err := writeSSHConfigFromConfig(o.ForwardHost)
 		if err != nil {
 			return err
 		}

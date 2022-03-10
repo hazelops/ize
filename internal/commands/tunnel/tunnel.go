@@ -132,6 +132,11 @@ func (o *TunnelOptions) Complete(ui terminal.UI, sg terminal.StepGroup, cmd *cob
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) == 0 {
+		viper.UnmarshalKey("infra.tunnel.bastion_instance_id", &o.BastionHostID)
+		viper.UnmarshalKey("infra.tunnel.forward_host", &o.ForwardHost)
+	}
+
+	if len(o.BastionHostID) == 0 && len(o.ForwardHost) == 0 {
 		s := sg.Add("writing SSH config from SSM...")
 		bastionHostID, forwardHost, err := writeSSHConfigFromSSM(o.Config.Session, o.Config.Env)
 		if err != nil {
@@ -142,8 +147,8 @@ func (o *TunnelOptions) Complete(ui terminal.UI, sg terminal.StepGroup, cmd *cob
 		o.ForwardHost = forwardHost
 		s.Done()
 	} else {
-		s := sg.Add("writing SSH config from flags...", terminal.WithInfoStyle())
-		err := writeSSHConfigFromFlags(o.ForwardHost)
+		s := sg.Add("writing SSH config from config...", terminal.WithInfoStyle())
+		err := writeSSHConfigFromConfig(o.ForwardHost)
 		if err != nil {
 			return err
 		}
@@ -398,7 +403,7 @@ func writeSSHConfigFromSSM(sess *session.Session, env string) (string, []string,
 	return bastionHostID, forwardHost, nil
 }
 
-func writeSSHConfigFromFlags(forwardHost []string) error {
+func writeSSHConfigFromConfig(forwardHost []string) error {
 	sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
 	f, err := os.Create(sshConfigPath)
 	if err != nil {
