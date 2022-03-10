@@ -21,7 +21,7 @@ require (
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
 	github.com/oklog/ulid v1.3.1
 	github.com/opencontainers/runc v1.1.0 // indirect
-	github.com/pterm/pterm v0.12.37
+	github.com/pterm/pterm v0.12.38
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/afero v1.8.1 // indirect
 	github.com/spf13/cobra v1.3.0
