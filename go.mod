@@ -53,6 +53,6 @@ require (
 	github.com/moby/sys/mountinfo v0.6.0 // indirect
 	github.com/morikuni/aec v1.0.0
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.1
 	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa
 )
