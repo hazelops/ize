@@ -9,6 +9,6 @@ aws_profile = "default"
 aws_region = "us-east-1"
 terraform_version = "1.0.10"
 
-[service.goblin]
+[app.goblin]
 type = "ecs"
 path = "./projects/goblin"

@@ -9,8 +9,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/hazelops/ize/internal/apps"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/internal/services"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/hazelops/ize/pkg/terraform"
@@ -22,17 +22,17 @@ import (
 
 type DeployOptions struct {
 	Config           *config.Config
-	ServiceName      string
+	AppName          string
 	Tag              string
 	SkipBuildAndPush bool
-	Services         map[string]*services.App
+	Apps             map[string]*apps.App
 	Infra            Infra
-	App              services.App
+	App              apps.App
 	AutoApprove      bool
 	Local            bool
 }
 
-type Services map[string]*services.App
+type Apps map[string]*apps.App
 
 type Infra struct {
 	Version string `mapstructure:"terraform_version"`
@@ -42,23 +42,23 @@ type Infra struct {
 
 var deployLongDesc = templates.LongDesc(`
 	Deploy infraftructure or sevice.
-           Service name must be specified for a service deploy. 
-	The infrastructure for the service must be prepared in advance.
+    App name must be specified for a app deploy. 
+	The infrastructure for the app must be prepared in advance.
 `)
 
 var deployExample = templates.Examples(`
 	# Deploy all (config file required)
 	ize deploy
 
-	# Deploy service (config file required)
-	ize deploy <service name>
+	# Deploy app (config file required)
+	ize deploy <app name>
 
-	# Deploy service via config file
-	ize --config-file (or -c) /path/to/config deploy <service name>
+	# Deploy app via config file
+	ize --config-file (or -c) /path/to/config deploy <app name>
 
-	# Deploy service via config file installed from env
+	# Deploy app via config file installed from env
 	export IZE_CONFIG_FILE=/path/to/config
-	ize deploy <service name>
+	ize deploy <app name>
 `)
 
 func NewDeployFlags() *DeployOptions {
@@ -69,7 +69,7 @@ func NewCmdDeploy(ui terminal.UI) *cobra.Command {
 	o := NewDeployFlags()
 
 	cmd := &cobra.Command{
-		Use:     "deploy [flags] <service name>",
+		Use:     "deploy [flags] <app name>",
 		Example: deployExample,
 		Short:   "manage deployments",
 		Long:    deployLongDesc,
@@ -119,10 +119,10 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("can`t complete options: %w", err)
 		}
 
-		viper.UnmarshalKey("service", &o.Services)
+		viper.UnmarshalKey("app", &o.Apps)
 		viper.UnmarshalKey("infra.terraform", &o.Infra)
 
-		for _, v := range o.Services {
+		for _, v := range o.Apps {
 			fmt.Println(*v)
 		}
 
@@ -153,8 +153,8 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 		}
 
 		viper.BindPFlags(cmd.Flags())
-		o.ServiceName = cmd.Flags().Args()[0]
-		viper.UnmarshalKey(fmt.Sprintf("service.%s", o.ServiceName), &o.App)
+		o.AppName = cmd.Flags().Args()[0]
+		viper.UnmarshalKey(fmt.Sprintf("app.%s", o.AppName), &o.App)
 	}
 
 	o.Tag = viper.GetString("tag")
@@ -163,7 +163,7 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 }
 
 func (o *DeployOptions) Validate() error {
-	if o.ServiceName == "" {
+	if o.AppName == "" {
 		err := validateAll(o)
 		if err != nil {
 			return err
@@ -179,13 +179,13 @@ func (o *DeployOptions) Validate() error {
 }
 
 func (o *DeployOptions) Run(ui terminal.UI) error {
-	if o.ServiceName == "" {
+	if o.AppName == "" {
 		err := deployAll(ui, o)
 		if err != nil {
 			return err
 		}
 	} else {
-		err := deployService(ui, o)
+		err := deployApp(ui, o)
 		if err != nil {
 			return err
 		}
@@ -207,8 +207,8 @@ func validate(o *DeployOptions) error {
 		return fmt.Errorf("can't validate options: tag must be specified\n")
 	}
 
-	if len(o.ServiceName) == 0 {
-		return fmt.Errorf("can't validate options: service name be specified\n")
+	if len(o.AppName) == 0 {
+		return fmt.Errorf("can't validate options: app name be specified\n")
 	}
 
 	return nil
@@ -227,9 +227,9 @@ func validateAll(o *DeployOptions) error {
 		return fmt.Errorf("can't validate options: tag must be specified\n")
 	}
 
-	for sname, svc := range o.Services {
+	for sname, svc := range o.Apps {
 		if len(svc.Type) == 0 {
-			return fmt.Errorf("can't validate options: type for service %s must be specified\n", sname)
+			return fmt.Errorf("can't validate options: type for app %s must be specified\n", sname)
 		}
 	}
 
@@ -328,17 +328,17 @@ func deployAll(ui terminal.UI, o *DeployOptions) error {
 		DataType:  aws.String("text"),
 	})
 
-	logrus.Debug(o.Services)
+	logrus.Debug(o.Apps)
 
 	ui.Output("Deploying apps...", terminal.WithHeaderStyle())
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	err = services.InDependencyOrder(aws.BackgroundContext(), o.Services, func(c context.Context, name string) error {
+	err = apps.InDependencyOrder(aws.BackgroundContext(), o.Apps, func(c context.Context, name string) error {
 		o.Config.AwsProfile = o.Infra.Profile
 
-		o.Services[name].Name = name
-		err := o.Services[name].Deploy(sg, ui)
+		o.Apps[name].Name = name
+		err := o.Apps[name].Deploy(sg, ui)
 		if err != nil {
 			return fmt.Errorf("can't deploy all: %w", err)
 		}
@@ -355,18 +355,18 @@ func deployAll(ui terminal.UI, o *DeployOptions) error {
 	return nil
 }
 
-func deployService(ui terminal.UI, o *DeployOptions) error {
-	ui.Output("Deploying %s app...", o.ServiceName, terminal.WithHeaderStyle())
+func deployApp(ui terminal.UI, o *DeployOptions) error {
+	ui.Output("Deploying %s app...", o.AppName, terminal.WithHeaderStyle())
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	o.App.Name = o.ServiceName
+	o.App.Name = o.AppName
 	err := o.App.Deploy(sg, ui)
 	if err != nil {
 		return fmt.Errorf("can't deploy: %w", err)
 	}
 
-	ui.Output("deploy service %s completed\n", o.ServiceName, terminal.WithSuccessStyle())
+	ui.Output("deploy app %s completed\n", o.AppName, terminal.WithSuccessStyle())
 
 	return nil
 }

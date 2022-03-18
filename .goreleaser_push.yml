@@ -34,6 +34,8 @@ brews:
     description: "IZE is an opinionated infrastructure wrapper that allows to use multiple tools in one infra"
     license: "Apache 2.0"
     skip_upload: false
+    conflicts:
+      - ize
     test: |
       system "#{bin}/ize"
     # Custom install script for brew.

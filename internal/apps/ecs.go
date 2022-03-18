@@ -1,4 +1,4 @@
-package services
+package apps
 
 import (
 	"context"
@@ -43,11 +43,11 @@ type ecs struct {
 	AwsRegion         string
 }
 
-func NewECSDeployment(service App) *ecs {
+func NewECSDeployment(app App) *ecs {
 	var ecsConfig ecs
 
-	mapstructure.Decode(service, &ecsConfig)
-	mapstructure.Decode(service.Body, &ecsConfig)
+	mapstructure.Decode(app, &ecsConfig)
+	mapstructure.Decode(app.Body, &ecsConfig)
 	ecsConfig.AwsProfile = viper.GetString("aws_profile")
 	ecsConfig.AwsRegion = viper.GetString("aws_region")
 	if len(ecsConfig.Cluster) == 0 {
@@ -102,7 +102,7 @@ func (e *ecs) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 
 		err = b.Build(ui, s)
 		if err != nil {
-			return fmt.Errorf("can't deploy service %s: %w", e.Name, err)
+			return fmt.Errorf("can't deploy app %s: %w", e.Name, err)
 		}
 
 		s.Done()
@@ -127,7 +127,7 @@ func (e *ecs) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 			repo,
 		)
 		if err != nil {
-			return fmt.Errorf("can't deploy service %s: %w", e.Name, err)
+			return fmt.Errorf("can't deploy app %s: %w", e.Name, err)
 		}
 	} else {
 		tag = strings.Split(e.Image, ":")[1]

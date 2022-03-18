@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/hazelops/ize/internal/apps"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/internal/services"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/hazelops/ize/pkg/terraform"
@@ -18,17 +18,17 @@ import (
 
 type DestroyOptions struct {
 	Config           *config.Config
-	ServiceName      string
+	AppName          string
 	Tag              string
 	SkipBuildAndPush bool
-	Services         Services
+	Apps             Apps
 	Infra            Infra
-	Service          services.App
+	App              apps.App
 	AutoApprove      bool
 	Local            bool
 }
 
-type Services map[string]*services.App
+type Apps map[string]*apps.App
 
 type Infra struct {
 	Version string `mapstructure:"terraform_version"`
@@ -45,15 +45,15 @@ var destoyExample = templates.Examples(`
 	# Destroy all (config file required)
 	ize destroy
 
-	# Destroy service (config file required)
-	ize destroy <service name>
+	# Destroy app (config file required)
+	ize destroy <app name>
 
-	# Destroy service via config file
-	ize --config-file (or -c) /path/to/config destroy <service name>
+	# Destroy app via config file
+	ize --config-file (or -c) /path/to/config destroy <app name>
 
-	# Destroy service via config file installed from env
+	# Destroy app via config file installed from env
 	export IZE_CONFIG_FILE=/path/to/config
-	ize destroy <service name>
+	ize destroy <app name>
 `)
 
 func NewDestroyFlags() *DestroyOptions {
@@ -64,7 +64,7 @@ func NewCmdDestroy(ui terminal.UI) *cobra.Command {
 	o := NewDestroyFlags()
 
 	cmd := &cobra.Command{
-		Use:     "destroy [flags] [service name]",
+		Use:     "destroy [flags] [app name]",
 		Example: destoyExample,
 		Short:   "destoy anything",
 		Long:    destoyLongDesc,
@@ -114,10 +114,10 @@ func (o *DestroyOptions) Complete(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("can`t complete options: %w", err)
 		}
 
-		viper.UnmarshalKey("service", &o.Services)
+		viper.UnmarshalKey("app", &o.Apps)
 		viper.UnmarshalKey("infra.terraform", &o.Infra)
 
-		for _, v := range o.Services {
+		for _, v := range o.Apps {
 			fmt.Println(*v)
 		}
 
@@ -148,9 +148,8 @@ func (o *DestroyOptions) Complete(cmd *cobra.Command, args []string) error {
 		}
 
 		viper.BindPFlags(cmd.Flags())
-
-		o.ServiceName = cmd.Flags().Args()[0]
-		viper.UnmarshalKey(fmt.Sprintf("service.%s", o.ServiceName), &o.Service)
+		o.AppName = cmd.Flags().Args()[0]
+		viper.UnmarshalKey(fmt.Sprintf("app.%s", o.AppName), &o.App)
 	}
 
 	o.Tag = viper.GetString("tag")
@@ -159,7 +158,7 @@ func (o *DestroyOptions) Complete(cmd *cobra.Command, args []string) error {
 }
 
 func (o *DestroyOptions) Validate() error {
-	if o.ServiceName == "" {
+	if o.AppName == "" {
 		err := validateAll(o)
 		if err != nil {
 			return err
@@ -175,7 +174,7 @@ func (o *DestroyOptions) Validate() error {
 }
 
 func (o *DestroyOptions) Run(ui terminal.UI) error {
-	if o.ServiceName == "" {
+	if o.AppName == "" {
 		err := destroyAll(ui, o)
 		if err != nil {
 			return err
@@ -203,8 +202,8 @@ func validate(o *DestroyOptions) error {
 		return fmt.Errorf("can't validate options: tag must be specified\n")
 	}
 
-	if len(o.ServiceName) == 0 {
-		return fmt.Errorf("can't validate options: service name be specified\n")
+	if len(o.AppName) == 0 {
+		return fmt.Errorf("can't validate options: app name be specified\n")
 	}
 
 	return nil
@@ -223,9 +222,9 @@ func validateAll(o *DestroyOptions) error {
 		return fmt.Errorf("can't validate options: tag must be specified\n")
 	}
 
-	for sname, svc := range o.Services {
+	for sname, svc := range o.Apps {
 		if len(svc.Type) == 0 {
-			return fmt.Errorf("can't validate options: type for service %s must be specified\n", sname)
+			return fmt.Errorf("can't validate options: type for app %s must be specified\n", sname)
 		}
 	}
 
@@ -234,17 +233,17 @@ func validateAll(o *DestroyOptions) error {
 
 func destroyAll(ui terminal.UI, o *DestroyOptions) error {
 
-	logrus.Debug(o.Services)
+	logrus.Debug(o.Apps)
 
 	ui.Output("Destroying apps...", terminal.WithHeaderStyle())
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	err := services.InReversDependencyOrder(aws.BackgroundContext(), o.Services, func(c context.Context, name string) error {
+	err := apps.InReversDependencyOrder(aws.BackgroundContext(), o.Apps, func(c context.Context, name string) error {
 		o.Config.AwsProfile = o.Infra.Profile
 
-		o.Services[name].Name = name
-		err := o.Services[name].Destroy(sg, ui)
+		o.Apps[name].Name = name
+		err := o.Apps[name].Destroy(sg, ui)
 		if err != nil {
 			return fmt.Errorf("can't destroy all: %w", err)
 		}
@@ -298,17 +297,17 @@ func destroyAll(ui terminal.UI, o *DestroyOptions) error {
 }
 
 func destroyApp(ui terminal.UI, o *DestroyOptions) error {
-	ui.Output("Destroying %s app...", o.ServiceName, terminal.WithHeaderStyle())
+	ui.Output("Destroying %s app...", o.AppName, terminal.WithHeaderStyle())
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	o.Service.Name = o.ServiceName
-	err := o.Service.Destroy(sg, ui)
+	o.App.Name = o.AppName
+	err := o.App.Destroy(sg, ui)
 	if err != nil {
 		return fmt.Errorf("can't destroy: %w", err)
 	}
 
-	ui.Output("destroy service %s completed\n", o.ServiceName, terminal.WithSuccessStyle())
+	ui.Output("destroy app %s completed\n", o.AppName, terminal.WithSuccessStyle())
 
 	return nil
 }

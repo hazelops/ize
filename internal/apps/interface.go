@@ -1,4 +1,4 @@
-package services
+package apps
 
 import "github.com/hazelops/ize/pkg/terminal"
 

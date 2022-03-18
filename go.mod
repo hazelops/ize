@@ -7,10 +7,10 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/Microsoft/go-winio v0.5.1 // indirect
 	github.com/Microsoft/hcsshim v0.9.2 // indirect
-	github.com/aws/aws-sdk-go v1.43.12
+	github.com/aws/aws-sdk-go v1.43.19
 	github.com/containerd/cgroups v1.0.3 // indirect
-	github.com/docker/cli v20.10.12+incompatible
-	github.com/docker/docker v20.10.12+incompatible
+	github.com/docker/cli v20.10.13+incompatible
+	github.com/docker/docker v20.10.13+incompatible
 	github.com/gookit/color v1.5.0 // indirect
 	github.com/hashicorp/hcl/v2 v2.11.1
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
@@ -21,10 +21,10 @@ require (
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
 	github.com/oklog/ulid v1.3.1
 	github.com/opencontainers/runc v1.1.0 // indirect
-	github.com/pterm/pterm v0.12.37
+	github.com/pterm/pterm v0.12.38
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/afero v1.8.1 // indirect
-	github.com/spf13/cobra v1.3.0
+	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
 	github.com/zclconf/go-cty v1.10.0
@@ -43,7 +43,7 @@ require (
 	github.com/briandowns/spinner v1.18.1
 	github.com/containerd/console v1.0.3
 	github.com/containerd/containerd v1.5.10 // indirect
-	github.com/docker/distribution v2.8.0+incompatible
+	github.com/docker/distribution v2.8.1+incompatible
 	github.com/fatih/color v1.13.0
 	github.com/google/go-cmp v0.5.7 // indirect
 	github.com/hashicorp/go-version v1.4.0 // indirect
@@ -55,6 +55,6 @@ require (
 	github.com/moby/sys/mountinfo v0.6.0 // indirect
 	github.com/morikuni/aec v1.0.0
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.1
 	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa
 )
