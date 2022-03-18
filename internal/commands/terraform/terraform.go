@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/internal/docker/terraform"
 	"github.com/hazelops/ize/pkg/templates"
+	"github.com/hazelops/ize/pkg/terraform"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -15,6 +15,7 @@ type TerraformOptions struct {
 	Config  *config.Config
 	Version string
 	Command []string
+	Local   bool
 }
 
 var terraformLongDesc = templates.LongDesc(`
@@ -72,14 +73,26 @@ func NewCmdTerraform() *cobra.Command {
 }
 
 func (o *TerraformOptions) Complete(cmd *cobra.Command, args []string) error {
-	cfg, err := config.InitializeConfig(config.WithDocker())
-	if err != nil {
-		return err
+	var (
+		cfg *config.Config
+		err error
+	)
+
+	o.Local = viper.GetBool("local-terraform")
+
+	if o.Local {
+		cfg, err = config.InitializeConfig()
+		if err != nil {
+			return err
+		}
+	} else {
+		cfg, err = config.InitializeConfig(config.WithDocker())
+		if err != nil {
+			return err
+		}
 	}
 
 	o.Config = cfg
-	o.Version = viper.GetString("terraform_version")
-	o.Command = args
 
 	return nil
 }
@@ -92,6 +105,8 @@ func (o *TerraformOptions) Validate() error {
 }
 
 func (o *TerraformOptions) Run(args []string) error {
+	var tf terraform.Terraform
+
 	v, err := o.Config.Session.Config.Credentials.Get()
 	if err != nil {
 		return fmt.Errorf("can't set AWS credentials: %w", err)
@@ -107,16 +122,20 @@ func (o *TerraformOptions) Run(args []string) error {
 		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
 	}
 
-	opts := terraform.Options{
-		ContainerName:    "terraform",
-		Cmd:              o.Command,
-		Env:              env,
-		TerraformVersion: o.Version,
+	if o.Local {
+		tf = terraform.NewLocalTerraform(viper.GetString("terraform_version"), args, env, "")
+		err = tf.Prepare()
+		if err != nil {
+			fmt.Println("opss")
+			return err
+		}
+	} else {
+		tf = terraform.NewDockerTerraform(viper.GetString("terraform_version"), args, env, "")
 	}
 
 	logrus.Debug("starting terraform")
 
-	err = terraform.Run(opts)
+	err = tf.Run()
 	if err != nil {
 		logrus.Errorf("terraform %s not completed", args[0])
 		return err

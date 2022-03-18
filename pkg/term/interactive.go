@@ -14,8 +14,9 @@ func (r Runner) InteractiveRun(name string, args []string) error {
 	signal.Ignore(os.Interrupt)
 	defer signal.Reset(os.Interrupt)
 	cmd := exec.Command(name, args...)
-	cmd.Stdout = os.Stdout
+	cmd.Dir = r.dir
 	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = r.stdout
+	cmd.Stderr = r.stderr
 	return cmd.Run()
 }

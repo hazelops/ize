@@ -7,9 +7,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hazelops/ize/internal/apps"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/internal/docker/terraform"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
+	"github.com/hazelops/ize/pkg/terraform"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -25,6 +25,7 @@ type DestroyOptions struct {
 	Infra            Infra
 	App              apps.App
 	AutoApprove      bool
+	Local            bool
 }
 
 type Apps map[string]*apps.App
@@ -132,11 +133,21 @@ func (o *DestroyOptions) Complete(cmd *cobra.Command, args []string) error {
 			o.Infra.Version = viper.GetString("terraform_version")
 		}
 	} else {
-		o.Config, err = config.InitializeConfig(config.WithDocker(), config.WithConfigFile())
-		viper.BindPFlags(cmd.Flags())
-		if err != nil {
-			return fmt.Errorf("can`t complete options: %w", err)
+		o.Local = viper.GetBool("local-terraform")
+
+		if o.Local {
+			o.Config, err = config.InitializeConfig()
+			if err != nil {
+				return fmt.Errorf("can`t complete options: %w", err)
+			}
+		} else {
+			o.Config, err = config.InitializeConfig(config.WithDocker())
+			if err != nil {
+				return fmt.Errorf("can`t complete options: %w", err)
+			}
 		}
+
+		viper.BindPFlags(cmd.Flags())
 		o.AppName = cmd.Flags().Args()[0]
 		viper.UnmarshalKey(fmt.Sprintf("app.%s", o.AppName), &o.App)
 	}
@@ -243,7 +254,7 @@ func destroyAll(ui terminal.UI, o *DestroyOptions) error {
 		return err
 	}
 
-	ui.Output("Running destroy infra...", terminal.WithHeaderStyle())
+	var tf terraform.Terraform
 
 	logrus.Infof("infra: %s", o.Infra)
 
@@ -262,17 +273,20 @@ func destroyAll(ui terminal.UI, o *DestroyOptions) error {
 		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
 	}
 
-	//terraform destroy run options
-	opts := terraform.Options{
-		ContainerName:    "terraform",
-		Cmd:              []string{"destroy", "-auto-approve"},
-		Env:              env,
-		TerraformVersion: o.Infra.Version,
+	if o.Local {
+		tf = terraform.NewLocalTerraform(o.Infra.Version, []string{"destroy", "-auto-approve"}, env, "")
+		err = tf.Prepare()
+		if err != nil {
+			return fmt.Errorf("can't destroy all: %w", err)
+		}
+	} else {
+		tf = terraform.NewDockerTerraform(o.Infra.Version, []string{"destroy", "-auto-approve"}, env, "")
 	}
 
+	ui.Output("Running destroy infra...", terminal.WithHeaderStyle())
 	ui.Output("Execution terraform destroy...", terminal.WithHeaderStyle())
 
-	err = terraform.RunUI(ui, opts)
+	err = tf.RunUI(ui)
 	if err != nil {
 		return fmt.Errorf("can't destroy all: %w", err)
 	}

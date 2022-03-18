@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/internal/docker/terraform"
 	"github.com/hazelops/ize/pkg/terminal"
+	"github.com/hazelops/ize/pkg/terraform"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -16,6 +16,7 @@ import (
 type DestroyInfraOptions struct {
 	Config    *config.Config
 	Terraform terraformInfraConfig
+	Local     bool
 }
 
 func NewDestroyInfraFlags() *DestroyInfraOptions {
@@ -66,12 +67,20 @@ func BindFlags(flags *pflag.FlagSet) {
 }
 
 func (o *DestroyInfraOptions) Complete(cmd *cobra.Command, args []string) error {
-	cfg, err := config.InitializeConfig(config.WithDocker())
-	if err != nil {
-		return err
-	}
+	var err error
+	o.Local = viper.GetBool("local-terraform")
 
-	o.Config = cfg
+	if o.Local {
+		o.Config, err = config.InitializeConfig()
+		if err != nil {
+			return fmt.Errorf("can`t complete options: %w", err)
+		}
+	} else {
+		o.Config, err = config.InitializeConfig(config.WithDocker())
+		if err != nil {
+			return fmt.Errorf("can`t complete options: %w", err)
+		}
+	}
 
 	BindFlags(cmd.Flags())
 
@@ -103,7 +112,7 @@ func (o *DestroyInfraOptions) Validate() error {
 }
 
 func (o *DestroyInfraOptions) Run(ui terminal.UI) error {
-	ui.Output("Running terraform destoy...", terminal.WithHeaderStyle())
+	var tf terraform.Terraform
 
 	logrus.Infof("infra: %s", o.Terraform)
 
@@ -122,14 +131,16 @@ func (o *DestroyInfraOptions) Run(ui terminal.UI) error {
 		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
 	}
 
-	opts := terraform.Options{
-		ContainerName:    "terraform",
-		Cmd:              []string{"destroy", "-auto-approve"},
-		Env:              env,
-		TerraformVersion: o.Terraform.Version,
+	if o.Local {
+		tf = terraform.NewLocalTerraform(o.Terraform.Version, []string{"destroy", "-auto-approve"}, env, "")
+		tf.Prepare()
+	} else {
+		tf = terraform.NewDockerTerraform(o.Terraform.Version, []string{"destroy", "-auto-approve"}, env, "")
 	}
 
-	err = terraform.RunUI(ui, opts)
+	ui.Output("Running terraform destoy...", terminal.WithHeaderStyle())
+
+	err = tf.RunUI(ui)
 	if err != nil {
 		return err
 	}
