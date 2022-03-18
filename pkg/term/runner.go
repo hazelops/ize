@@ -1,14 +1,49 @@
 package term
 
 import (
+	"io"
 	"os"
 	"os/exec"
 )
 
-type Runner struct{}
+type Runner struct {
+	stdout io.Writer
+	stderr io.Writer
+	dir    string
+}
 
-func New() Runner {
-	return Runner{}
+type RunnerOption func(*Runner)
+
+func WithStdout(stdout io.Writer) RunnerOption {
+	return func(r *Runner) {
+		r.stdout = stdout
+	}
+}
+
+func WithStderr(stderr io.Writer) RunnerOption {
+	return func(r *Runner) {
+		r.stderr = stderr
+	}
+}
+
+func WithDir(path string) RunnerOption {
+	return func(r *Runner) {
+		r.dir = path
+	}
+}
+
+func New(opts ...RunnerOption) *Runner {
+	r := &Runner{
+		stderr: os.Stderr,
+		stdout: os.Stdout,
+		dir:    ".",
+	}
+
+	for _, opt := range opts {
+		opt(r)
+	}
+
+	return r
 }
 
 type Option func(cmd *exec.Cmd)
@@ -16,8 +51,10 @@ type Option func(cmd *exec.Cmd)
 func (r Runner) Run(name string, args []string, options ...Option) error {
 	cmd := exec.Command(name, args...)
 
-	cmd.Stdout = os.Stderr
-	cmd.Stderr = os.Stderr
+	cmd.Wait()
+	cmd.Stdout = r.stdout
+	cmd.Stderr = r.stderr
+	cmd.Dir = r.dir
 
 	for _, opt := range options {
 		opt(cmd)

@@ -10,10 +10,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/internal/docker/terraform"
 	"github.com/hazelops/ize/internal/services"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
+	"github.com/hazelops/ize/pkg/terraform"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -29,6 +29,7 @@ type DeployOptions struct {
 	Infra            Infra
 	App              services.App
 	AutoApprove      bool
+	Local            bool
 }
 
 type Services map[string]*services.App
@@ -137,11 +138,21 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 			o.Infra.Version = viper.GetString("terraform_version")
 		}
 	} else {
-		o.Config, err = config.InitializeConfig(config.WithDocker(), config.WithConfigFile())
-		viper.BindPFlags(cmd.Flags())
-		if err != nil {
-			return fmt.Errorf("can`t complete options: %w", err)
+		o.Local = viper.GetBool("local-terraform")
+
+		if o.Local {
+			o.Config, err = config.InitializeConfig(config.WithConfigFile())
+			if err != nil {
+				return fmt.Errorf("can`t complete options: %w", err)
+			}
+		} else {
+			o.Config, err = config.InitializeConfig(config.WithDocker(), config.WithConfigFile())
+			if err != nil {
+				return fmt.Errorf("can`t complete options: %w", err)
+			}
 		}
+
+		viper.BindPFlags(cmd.Flags())
 		o.ServiceName = cmd.Flags().Args()[0]
 		viper.UnmarshalKey(fmt.Sprintf("service.%s", o.ServiceName), &o.App)
 	}
@@ -226,7 +237,7 @@ func validateAll(o *DeployOptions) error {
 }
 
 func deployAll(ui terminal.UI, o *DeployOptions) error {
-	ui.Output("Running deploy infra...", terminal.WithHeaderStyle())
+	var tf terraform.Terraform
 
 	logrus.Infof("infra: %s", o.Infra)
 
@@ -245,17 +256,17 @@ func deployAll(ui terminal.UI, o *DeployOptions) error {
 		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
 	}
 
-	//terraform init run options
-	opts := terraform.Options{
-		ContainerName:    "terraform",
-		Cmd:              []string{"init", "-input=true"},
-		Env:              env,
-		TerraformVersion: o.Infra.Version,
+	if o.Local {
+		tf = terraform.NewLocalTerraform(o.Infra.Version, []string{"init", "-input=true"}, env, "")
+		tf.Prepare()
+	} else {
+		tf = terraform.NewDockerTerraform(o.Infra.Version, []string{"init", "-input=true"}, env, "")
 	}
 
+	ui.Output("Running deploy infra...", terminal.WithHeaderStyle())
 	ui.Output("Execution terraform init...", terminal.WithHeaderStyle())
 
-	err = terraform.RunUI(ui, opts)
+	err = tf.RunUI(ui)
 	if err != nil {
 		return fmt.Errorf("can't deploy all: %w", err)
 	}
@@ -263,19 +274,19 @@ func deployAll(ui terminal.UI, o *DeployOptions) error {
 	ui.Output("Execution terraform plan...", terminal.WithHeaderStyle())
 
 	//terraform plan run options
-	opts.Cmd = []string{"plan"}
+	tf.NewCmd([]string{"plan"})
 
-	err = terraform.RunUI(ui, opts)
+	err = tf.RunUI(ui)
 	if err != nil {
 		return err
 	}
 
 	//terraform apply run options
-	opts.Cmd = []string{"apply", "-auto-approve"}
+	tf.NewCmd([]string{"apply", "-auto-approve"})
 
 	ui.Output("Execution terraform apply...", terminal.WithHeaderStyle())
 
-	err = terraform.RunUI(ui, opts)
+	err = tf.RunUI(ui)
 	if err != nil {
 		return err
 	}
@@ -283,12 +294,12 @@ func deployAll(ui terminal.UI, o *DeployOptions) error {
 	//terraform output run options
 	outputPath := fmt.Sprintf("%s/.terraform/output.json", viper.Get("ENV_DIR"))
 
-	opts.Cmd = []string{"output", "-json"}
-	opts.OutputPath = outputPath
+	tf.NewCmd([]string{"output", "-json"})
+	tf.SetOutput(outputPath)
 
 	ui.Output("Execution terraform output...", terminal.WithHeaderStyle())
 
-	err = terraform.RunUI(ui, opts)
+	err = tf.RunUI(ui)
 	if err != nil {
 		return err
 	}

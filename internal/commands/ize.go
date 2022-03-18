@@ -95,6 +95,7 @@ func newApp(ui terminal.UI) (*cobra.Command, error) {
 	rootCmd.PersistentFlags().StringP("aws-region", "r", "", "(required) set AWS region (overrides value in ize.toml and IZE_AWS_REGION / AWS_REGION if any of them are set)")
 	rootCmd.PersistentFlags().StringP("namespace", "n", "", "set namespace")
 	rootCmd.PersistentFlags().String("terraform-version", "", "set terraform-version")
+	rootCmd.PersistentFlags().Bool("local-terraform", false, "enable using local terraform")
 
 	rootCmd.Flags().StringP("tag", "t", "", "set tag")
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))

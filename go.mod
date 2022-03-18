@@ -46,10 +46,12 @@ require (
 	github.com/docker/distribution v2.8.0+incompatible
 	github.com/fatih/color v1.13.0
 	github.com/google/go-cmp v0.5.7 // indirect
+	github.com/hashicorp/go-version v1.4.0 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/lab47/vterm v0.0.0-20211107042118-80c3d2849f9c
 	github.com/mattn/go-isatty v0.0.14
 	github.com/mitchellh/go-glint v0.0.0-20210722152315-6515ceb4a127
+	github.com/mitchellh/go-homedir v1.1.0
 	github.com/moby/sys/mountinfo v0.6.0 // indirect
 	github.com/morikuni/aec v1.0.0
 	github.com/olekukonko/tablewriter v0.0.5
