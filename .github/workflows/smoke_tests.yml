@@ -42,7 +42,7 @@ jobs:
       - name: Install docker # Taken from https://github.com/actions/virtual-environments/issues/1143#issuecomment-652264388
         run: |
           brew update
-          brew --verbose --debug install --cask docker 
+          brew install --verbose --debug --cask docker 
           docker_app_path=$(brew list --cask docker | grep '==> App' -A1 | tail -n 1 | awk '{ print $1 }') 
           docker_app_path="${docker_app_path/#\~/$HOME}"
           sudo "$docker_app_path"/Contents/MacOS/Docker --unattended --install-privileged-components
