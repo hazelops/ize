@@ -40,6 +40,8 @@ jobs:
 #        run: go build -o ./ize ./cmd
 
       - name: Install docker # Taken from https://github.com/actions/virtual-environments/issues/1143#issuecomment-652264388
+        env:
+          HOMEBREW_CASK_OPTS: "--appdir=~/Applications"
         run: |
           brew update
           brew install --verbose --debug --cask docker 
