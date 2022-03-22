@@ -4,7 +4,7 @@ env:
   AWS_REGION: us-east-1
   ENV: testnut
   NAMESPACE: nutcorp
-  AWS_PROFILE: nutcorp-testnut
+  AWS_PROFILE: default
 
 on:
   push:
