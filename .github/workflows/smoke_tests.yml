@@ -38,5 +38,6 @@ jobs:
 
       - name: Run builded ize
         run: | 
+          cp ./ize examples/simple-monorepo
           cd examples/simple-monorepo
           ize terraform init
