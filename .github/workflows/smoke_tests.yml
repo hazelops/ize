@@ -39,7 +39,7 @@ jobs:
 
       - name: Run builded ize
         run: |
-          mkdir -p ~/.aws && echo "[${AWS_PROFILE}]\naws_access_key_id = ${AWS_ACCESS_KEY_ID}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\nregion = ${AWS_REGION}" >> ~/.aws/credentials
+          mkdir -p ~/.aws && echo -e "[${AWS_PROFILE}]\naws_access_key_id = ${AWS_ACCESS_KEY_ID}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\nregion = ${AWS_REGION}" >> ~/.aws/credentials
           cat ~/.aws/credentials
           cd examples/simple-monorepo
           ${GITHUB_WORKSPACE}/ize --log-level=debug terraform init
