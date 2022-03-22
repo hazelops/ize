@@ -37,7 +37,6 @@ jobs:
         run: go build -o ./ize ./cmd
 
       - name: Run builded ize
-        run: | 
-          cp ./ize examples/simple-monorepo
+        run: |
           cd examples/simple-monorepo
-          ize terraform init
+          /home/runner/work/ize/ize/cmd/ize terraform init
