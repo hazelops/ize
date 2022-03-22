@@ -24,6 +24,7 @@ import (
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/docker"
+	dockerutils "github.com/hazelops/ize/internal/docker/utils"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
@@ -216,7 +217,7 @@ func (e *ecs) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 		return err
 	}
 
-	docker.SetupSignalHandlers(cli, cr.ID)
+	dockerutils.SetupSignalHandlers(cli, cr.ID)
 
 	out, err := cli.ContainerLogs(context.Background(), cr.ID, types.ContainerLogsOptions{
 		ShowStdout: true,

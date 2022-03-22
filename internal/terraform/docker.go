@@ -5,10 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/signal"
-	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/docker/distribution/reference"
@@ -18,22 +15,18 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/hazelops/ize/internal/docker/utils"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
-const ansi = `\x1B(?:[@-Z\\-_]|\[[0-?]*[-\]*[@-~])`
+const (
+	ansi        = `\x1B(?:[@-Z\\-_]|\[[0-?]*[-\]*[@-~])`
+	defaultName = "ize-terraform"
+)
 
-type Options struct {
-	Env              []string
-	TerraformVersion string
-	ContainerName    string
-	Cmd              []string
-	OutputPath       string
-}
-
-func cleanupOldContainers(cli *client.Client, opts Options) error {
+func cleanupOldContainers(cli *client.Client) error {
 	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{
 		All: true,
 	})
@@ -42,7 +35,7 @@ func cleanupOldContainers(cli *client.Client, opts Options) error {
 	}
 
 	for _, container := range containers {
-		if strings.Contains(container.Names[0], opts.ContainerName) {
+		if strings.Contains(container.Names[0], defaultName) {
 			err = cli.ContainerRemove(context.Background(), container.ID, types.ContainerRemoveOptions{})
 			if err != nil {
 				return err
@@ -53,7 +46,35 @@ func cleanupOldContainers(cli *client.Client, opts Options) error {
 	return nil
 }
 
-func RunUI(ui terminal.UI, opts Options) error {
+type docker struct {
+	version    string
+	command    []string
+	env        []string
+	outputPath string
+}
+
+func NewDockerTerraform(version string, command []string, env []string, out string) *docker {
+	return &docker{
+		version:    version,
+		command:    command,
+		env:        env,
+		outputPath: out,
+	}
+}
+
+func (d *docker) Prepare() error {
+	return nil
+}
+
+func (d *docker) NewCmd(cmd []string) {
+	d.command = cmd
+}
+
+func (d *docker) SetOutput(path string) {
+	d.outputPath = path
+}
+
+func (d *docker) RunUI(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
@@ -68,13 +89,13 @@ func RunUI(ui terminal.UI, opts Options) error {
 	s.Done()
 	s = sg.Add("cleanuping old containers...")
 
-	err = cleanupOldContainers(cli, opts)
+	err = cleanupOldContainers(cli)
 	if err != nil {
 		return err
 	}
 
 	imageName := "hashicorp/terraform"
-	imageTag := opts.TerraformVersion
+	imageTag := d.version
 
 	imageRef, err := reference.ParseNormalizedNamed(fmt.Sprintf("%s:%s", imageName, imageTag))
 	if err != nil {
@@ -128,13 +149,13 @@ func RunUI(ui terminal.UI, opts Options) error {
 		User:         fmt.Sprintf("%v:%v", os.Getuid(), os.Getgid()),
 		Image:        fmt.Sprintf("%v:%v", imageName, imageTag),
 		Tty:          true,
-		Cmd:          opts.Cmd,
+		Cmd:          d.command,
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
 		OpenStdin:    true,
 		WorkingDir:   fmt.Sprintf("%v", viper.Get("ENV_DIR")),
-		Env:          opts.Env,
+		Env:          d.env,
 	}
 
 	contHostConfig := &container.HostConfig{
@@ -166,7 +187,7 @@ func RunUI(ui terminal.UI, opts Options) error {
 		contHostConfig,
 		nil,
 		nil,
-		opts.ContainerName,
+		defaultName,
 	)
 
 	if err != nil {
@@ -177,7 +198,7 @@ func RunUI(ui terminal.UI, opts Options) error {
 		return err
 	}
 
-	setupSignalHandlers(cli, cont.ID)
+	utils.SetupSignalHandlers(cli, cont.ID)
 
 	reader, err := cli.ContainerLogs(context.Background(), cont.ID, types.ContainerLogsOptions{
 		ShowStdout: true,
@@ -193,8 +214,8 @@ func RunUI(ui terminal.UI, opts Options) error {
 
 	var f *os.File
 
-	if opts.OutputPath != "" {
-		f, err = os.Create(opts.OutputPath)
+	if d.outputPath != "" {
+		f, err = os.Create(d.outputPath)
 		if err != nil {
 			return err
 		}
@@ -222,19 +243,19 @@ func RunUI(ui terminal.UI, opts Options) error {
 	}
 }
 
-func Run(opts Options) error {
+func (d *docker) Run() error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return err
 	}
 
-	err = cleanupOldContainers(cli, opts)
+	err = cleanupOldContainers(cli)
 	if err != nil {
 		return err
 	}
 
 	imageName := "hashicorp/terraform"
-	imageTag := opts.TerraformVersion
+	imageTag := d.version
 
 	imageRef, err := reference.ParseNormalizedNamed(fmt.Sprintf("%s:%s", imageName, imageTag))
 	if err != nil {
@@ -274,13 +295,13 @@ func Run(opts Options) error {
 		User:         fmt.Sprintf("%v:%v", os.Getuid(), os.Getgid()),
 		Image:        fmt.Sprintf("%v:%v", imageName, imageTag),
 		Tty:          true,
-		Cmd:          opts.Cmd,
+		Cmd:          d.command,
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
 		OpenStdin:    true,
 		WorkingDir:   fmt.Sprintf("%v", viper.Get("ENV_DIR")),
-		Env:          opts.Env,
+		Env:          d.env,
 	}
 
 	contHostConfig := &container.HostConfig{
@@ -310,7 +331,7 @@ func Run(opts Options) error {
 		contHostConfig,
 		nil,
 		nil,
-		opts.ContainerName,
+		defaultName,
 	)
 
 	if err != nil {
@@ -321,7 +342,7 @@ func Run(opts Options) error {
 		return err
 	}
 
-	setupSignalHandlers(cli, cont.ID)
+	utils.SetupSignalHandlers(cli, cont.ID)
 
 	reader, err := cli.ContainerLogs(context.Background(), cont.ID, types.ContainerLogsOptions{
 		ShowStdout: true,
@@ -337,8 +358,8 @@ func Run(opts Options) error {
 
 	var f *os.File
 
-	if opts.OutputPath != "" {
-		f, err = os.Create(opts.OutputPath)
+	if d.outputPath != "" {
+		f, err = os.Create(d.outputPath)
 		if err != nil {
 			return err
 		}
@@ -363,20 +384,4 @@ func Run(opts Options) error {
 	case err := <-errC:
 		return err
 	}
-}
-
-func setupSignalHandlers(cli *client.Client, containerID string) {
-	signalChannel := make(chan os.Signal, 1)
-	signal.Notify(signalChannel)
-
-	go func() {
-		for {
-			select {
-			case s := <-signalChannel:
-				logrus.Debug("Received signal:", s)
-
-				cli.ContainerKill(context.Background(), containerID, strconv.Itoa(int(s.(syscall.Signal))))
-			}
-		}
-	}()
 }
