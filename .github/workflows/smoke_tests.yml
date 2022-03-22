@@ -1,0 +1,45 @@
+name: "Test IZE"
+
+env:
+  AWS_REGION: us-east-1
+  ENV: testnut
+  NAMESPACE: nutcorp
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  Build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Create AWS Profile
+        run: make aws.profile
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.x
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Ize build
+        run: go build -o ./ize ./cmd
+
+      - name: Run builded ize
+        run: | 
+          cd examples/simple-monorepo
+          ize terraform init
