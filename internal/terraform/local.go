@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/hazelops/ize/internal/terraform/tfswitcher"
 	"github.com/hazelops/ize/pkg/term"
 	"github.com/hazelops/ize/pkg/terminal"
-	"github.com/hazelops/ize/pkg/terraform/tfswitcher"
 	"github.com/spf13/viper"
 )
 
