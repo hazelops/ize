@@ -40,4 +40,4 @@ jobs:
       - name: Run builded ize
         run: |
           cd examples/simple-monorepo
-          ${GITHUB_WORKSPACE}/cmd/ize terraform init
+          ${GITHUB_WORKSPACE}/ize --log-level=debug terraform init
