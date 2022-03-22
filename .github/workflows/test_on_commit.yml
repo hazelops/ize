@@ -40,5 +40,5 @@ jobs:
 
       - name: Run builded ize
         run: | 
-        cd examples/simple-monorepo
-        ize terraform init
+          cd examples/simple-monorepo
+          ize terraform init
