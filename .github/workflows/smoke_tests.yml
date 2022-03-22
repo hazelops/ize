@@ -42,11 +42,12 @@ jobs:
       - name: Install docker # Taken from https://github.com/actions/virtual-environments/issues/1143#issuecomment-652264388
         run: |
           brew update
-          brew install --verbose --debug --cask docker docker_app_path=$(brew list --cask docker | grep '==> App' -A1 | tail -n 1 | awk '{ print $1 }') 
+          brew --verbose --debug install --cask docker 
+          docker_app_path=$(brew list --cask docker | grep '==> App' -A1 | tail -n 1 | awk '{ print $1 }') 
           docker_app_path="${docker_app_path/#\~/$HOME}"
-#          sudo "$docker_app_path"/Contents/MacOS/Docker --unattended --install-privileged-components
-#          open -a "$docker_app_path" --args --unattended --accept-license
-#          while ! "$docker_app_path"/Contents/Resources/bin/docker info &>/dev/null; do sleep 1; done
+          sudo "$docker_app_path"/Contents/MacOS/Docker --unattended --install-privileged-components
+          open -a "$docker_app_path" --args --unattended --accept-license
+          while ! "$docker_app_path"/Contents/Resources/bin/docker info &>/dev/null; do sleep 1; done
       - name: Run builded ize
         run: |
           mkdir -p ~/.aws && echo -e "[${AWS_PROFILE}]\naws_access_key_id = ${AWS_ACCESS_KEY_ID}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\nregion = ${AWS_REGION}" >> ~/.aws/credentials
