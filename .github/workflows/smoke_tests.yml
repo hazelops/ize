@@ -4,6 +4,7 @@ env:
   AWS_REGION: us-east-1
   ENV: testnut
   NAMESPACE: nutcorp
+  AWS_PROFILE: nutcorp-testnut
 
 on:
   push:
@@ -39,4 +40,4 @@ jobs:
       - name: Run builded ize
         run: |
           cd examples/simple-monorepo
-          /home/runner/work/ize/ize/cmd/ize terraform init
+          ${GITHUB_WORKSPACE}/cmd/ize terraform init
