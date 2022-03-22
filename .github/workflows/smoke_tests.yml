@@ -1,5 +1,7 @@
 name: "Test IZE"
-
+defaults:
+  run:
+    shell: bash
 env:
   AWS_REGION: us-east-1
   ENV: testnut
