@@ -20,7 +20,7 @@ type TerraformOptions struct {
 
 var terraformLongDesc = templates.LongDesc(`
 	Run terraform command via terraform docker container.
-	By default terraform run in docker container.
+	By default terraform runs in a docker container.
 
 	At the same time, terraform will be downloaded and launched from ~/.ize/.terraform.versions
 `)
