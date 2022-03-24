@@ -22,7 +22,8 @@ var terraformLongDesc = templates.LongDesc(`
 	Run terraform command via terraform docker container.
 	By default terraform runs in a docker container.
 
-	At the same time, terraform will be downloaded and launched from ~/.ize/.terraform.versions
+	To use a local terraform, add the --local-terraform global flag.
+	At the same time, terraform will be downloaded and launched from ~/.ize/versions/terraform/
 `)
 
 var terraformExample = templates.Examples(`
