@@ -118,7 +118,7 @@ func installVersion(version string, custBinPath *string, mirrorURL *string) (str
 
 	} else {
 		tfswitcher.PrintInvalidTFVersion()
-		return "", fmt.Errorf("args must be a valid terraform version")
+		return "", fmt.Errorf("argument must be a valid terraform version")
 	}
 
 	return installFileVersionPath, nil
