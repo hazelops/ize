@@ -15,7 +15,7 @@ import (
 const (
 	installFile               = "terraform"
 	versionPrefix             = "terraform_"
-	installPath               = ".ize/.terraform.versions/"
+	installPath               = ".ize/versions/terraform/"
 	recentFile                = "RECENT"
 	defaultBin                = "/usr/local/bin/terraform" //default bin installation dir
 	tfDarwinArm64StartVersion = "1.0.2"
