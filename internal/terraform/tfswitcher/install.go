@@ -25,35 +25,6 @@ var (
 	installLocation = "/tmp"
 )
 
-// initialize : removes existing symlink to terraform binary// I Don't think this is needed
-func initialize() {
-
-	/* Step 1 */
-	/* initilize default binary path for terraform */
-	/* assumes that terraform is installed here */
-	/* we will find the terraform path instalation later and replace this variable with the correct installed bin path */
-	installedBinPath := "/usr/local/bin/terraform"
-
-	/* find terraform binary location if terraform is already installed*/
-	cmd := NewCommand("terraform")
-	next := cmd.Find()
-
-	/* overrride installation default binary path if terraform is already installed */
-	/* find the last bin path */
-	for path := next(); len(path) > 0; path = next() {
-		installedBinPath = path
-	}
-
-	/* check if current symlink to terraform binary exist */
-	symlinkExist := CheckSymlink(installedBinPath)
-
-	/* remove current symlink if exist*/
-	if symlinkExist {
-		RemoveSymlink(installedBinPath)
-	}
-
-}
-
 // GetInstallLocation : get location where the terraform binary will be installed,
 // will create a directory in the home location if it does not exist
 func GetInstallLocation() string {
@@ -75,8 +46,7 @@ func GetInstallLocation() string {
 
 }
 
-//Install : Install the provided version in the argument
-func Install(tfversion string, binPath string, mirrorURL string) error {
+func Install(tfversion string, binPath string, mirrorURL string) (string, error) {
 
 	// if !ValidVersionFormat(tfversion) {
 	// 	fmt.Printf("The provided terraform version format does not exist - %s. Try `tfswitch -l` to see all available versions.\n", tfversion)
@@ -90,7 +60,6 @@ func Install(tfversion string, binPath string, mirrorURL string) error {
 	 */
 	binPath = InstallableBinLocation(binPath)
 
-	initialize()                           //initialize path
 	installLocation = GetInstallLocation() //get installation location -  this is where we will put our terraform binary file
 
 	goarch := runtime.GOARCH
@@ -109,19 +78,7 @@ func Install(tfversion string, binPath string, mirrorURL string) error {
 
 	/* if selected version already exist, */
 	if fileExist {
-
-		/* remove current symlink if exist*/
-		symlinkExist := CheckSymlink(binPath)
-
-		if symlinkExist {
-			RemoveSymlink(binPath)
-		}
-
-		/* set symlink to desired version */
-		CreateSymlink(installFileVersionPath, binPath)
-		fmt.Printf("Switched terraform to version %q \n", tfversion)
-		AddRecent(tfversion) //add to recent file for faster lookup
-		return nil
+		return installFileVersionPath, nil
 	}
 
 	//if does not have slash - append slash
@@ -137,14 +94,14 @@ func Install(tfversion string, binPath string, mirrorURL string) error {
 
 	/* If unable to download file from url, exit(1) immediately */
 	if errDownload != nil {
-		return errDownload
+		return "", errDownload
 	}
 
 	/* unzip the downloaded zipfile */
 	_, errUnzip := Unzip(zipFile, installLocation)
 	if errUnzip != nil {
 		fmt.Println("[Error] : Unable to unzip downloaded zip file")
-		return errUnzip
+		return "", errUnzip
 	}
 
 	/* rename unzipped file to terraform version name - terraform_x.x.x */
@@ -154,18 +111,7 @@ func Install(tfversion string, binPath string, mirrorURL string) error {
 	/* remove zipped file to clear clutter */
 	RemoveFiles(zipFile)
 
-	/* remove current symlink if exist*/
-	symlinkExist := CheckSymlink(binPath)
-
-	if symlinkExist {
-		RemoveSymlink(binPath)
-	}
-
-	/* set symlink to desired version */
-	CreateSymlink(installFileVersionPath, binPath)
-	fmt.Printf("Switched terraform to version %q \n", tfversion)
-	AddRecent(tfversion) //add to recent file for faster lookup
-	return nil
+	return installFileVersionPath, nil
 }
 
 // AddRecent : add to recent file
