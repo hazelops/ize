@@ -113,7 +113,7 @@ func installVersion(version string, custBinPath *string, mirrorURL *string) (str
 				return "", err
 			}
 		} else {
-			return "", fmt.Errorf("the provided terraform version does not exist")
+			return "", fmt.Errorf("provided terraform version does not exist")
 		}
 
 	} else {
