@@ -20,6 +20,7 @@ type local struct {
 	command    []string
 	env        []string
 	outputPath string
+	tfpath     string
 }
 
 func NewLocalTerraform(version string, command []string, env []string, out string) *local {
@@ -32,7 +33,7 @@ func NewLocalTerraform(version string, command []string, env []string, out strin
 }
 
 func (l *local) Run() error {
-	err := term.New().InteractiveRun("terraform", l.command)
+	err := term.New().InteractiveRun(l.tfpath, l.command)
 	if err != nil {
 		return err
 	}
@@ -44,12 +45,15 @@ func (l *local) Prepare() error {
 	var (
 		tfpath        = "/usr/local/bin/terraform"
 		defaultMirror = "https://releases.hashicorp.com/terraform"
+		path          = ""
 	)
 
-	err := installVersion(l.version, &tfpath, &defaultMirror)
+	path, err := installVersion(l.version, &tfpath, &defaultMirror)
 	if err != nil {
 		return err
 	}
+
+	l.tfpath = path
 
 	return nil
 }
@@ -71,7 +75,7 @@ func (l *local) RunUI(ui terminal.UI) error {
 
 	t := term.New(term.WithStderr(s.TermOutput()), term.WithStdout(s.TermOutput()), term.WithDir(viper.GetString("ENV_DIR")))
 
-	err := t.InteractiveRun("terraform", l.command)
+	err := t.InteractiveRun(l.tfpath, l.command)
 	if err != nil {
 		return err
 	}
@@ -81,19 +85,21 @@ func (l *local) RunUI(ui terminal.UI) error {
 	return nil
 }
 
-func installVersion(version string, custBinPath *string, mirrorURL *string) error {
+func installVersion(version string, custBinPath *string, mirrorURL *string) (string, error) {
+	var (
+		installFileVersionPath string
+		err                    error
+	)
+
 	if tfswitcher.ValidVersionFormat(version) {
 		requestedVersion := version
 
 		//check to see if the requested version has been downloaded before
 		installLocation := tfswitcher.GetInstallLocation()
-		installFileVersionPath := tfswitcher.ConvertExecutableExt(filepath.Join(installLocation, versionPrefix+requestedVersion))
+		installFileVersionPath = tfswitcher.ConvertExecutableExt(filepath.Join(installLocation, versionPrefix+requestedVersion))
 		recentDownloadFile := tfswitcher.CheckFileExist(installFileVersionPath)
 		if recentDownloadFile {
-			tfswitcher.ChangeSymlink(installFileVersionPath, *custBinPath)
-			fmt.Printf("Switched terraform to version %q \n", requestedVersion)
-			tfswitcher.AddRecent(requestedVersion) //add to recent file for faster lookup
-			return nil
+			return installFileVersionPath, nil
 		}
 
 		//if the requested version had not been downloaded before
@@ -102,15 +108,18 @@ func installVersion(version string, custBinPath *string, mirrorURL *string) erro
 		exist := tfswitcher.VersionExist(requestedVersion, tflist) //check if version exist before downloading it
 
 		if exist {
-			tfswitcher.Install(requestedVersion, *custBinPath, *mirrorURL)
+			installFileVersionPath, err = tfswitcher.Install(requestedVersion, *custBinPath, *mirrorURL)
+			if err != nil {
+				return "", err
+			}
 		} else {
-			return fmt.Errorf("the provided terraform version does not exist")
+			return "", fmt.Errorf("provided terraform version does not exist")
 		}
 
 	} else {
 		tfswitcher.PrintInvalidTFVersion()
-		return fmt.Errorf("args must be a valid terraform version")
+		return "", fmt.Errorf("argument must be a valid terraform version")
 	}
 
-	return nil
+	return installFileVersionPath, nil
 }

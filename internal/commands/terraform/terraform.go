@@ -20,6 +20,10 @@ type TerraformOptions struct {
 
 var terraformLongDesc = templates.LongDesc(`
 	Run terraform command via terraform docker container.
+	By default terraform runs in a docker container.
+
+	To use a local terraform, add the --local-terraform global flag.
+	At the same time, terraform will be downloaded and launched from ~/.ize/versions/terraform/
 `)
 
 var terraformExample = templates.Examples(`
@@ -122,11 +126,12 @@ func (o *TerraformOptions) Run(args []string) error {
 		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
 	}
 
+	logrus.Debug("terraform env: %s", env)
+
 	if o.Local {
 		tf = terraform.NewLocalTerraform(viper.GetString("terraform_version"), args, env, "")
 		err = tf.Prepare()
 		if err != nil {
-			fmt.Println("opss")
 			return err
 		}
 	} else {
@@ -137,11 +142,8 @@ func (o *TerraformOptions) Run(args []string) error {
 
 	err = tf.Run()
 	if err != nil {
-		logrus.Errorf("terraform %s not completed", args[0])
 		return err
 	}
-
-	logrus.Infof("terraform %s completed", args[0])
 
 	return nil
 }
