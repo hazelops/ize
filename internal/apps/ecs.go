@@ -14,6 +14,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	ecssvc "github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -42,6 +43,7 @@ type ecs struct {
 	Timeout           int
 	AwsProfile        string
 	AwsRegion         string
+	Tag               string
 }
 
 func NewECSDeployment(app App) *ecs {
@@ -51,6 +53,7 @@ func NewECSDeployment(app App) *ecs {
 	mapstructure.Decode(app.Body, &ecsConfig)
 	ecsConfig.AwsProfile = viper.GetString("aws_profile")
 	ecsConfig.AwsRegion = viper.GetString("aws_region")
+	ecsConfig.Tag = viper.GetString("tag")
 	if len(ecsConfig.Cluster) == 0 {
 		ecsConfig.Cluster = fmt.Sprintf("%s-%s", viper.GetString("env"), viper.GetString("namespace"))
 	}
@@ -64,7 +67,6 @@ func (e *ecs) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 	defer func() { s.Abort() }()
 
 	skipBuildAndPush := true
-	tag := viper.GetString("tag")
 	env := viper.GetString("env")
 	tagLatest := fmt.Sprintf("%s-latest", env)
 
@@ -82,7 +84,7 @@ func (e *ecs) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 		dockerImageName := fmt.Sprintf("%s-%s", env, e.Name)
 		dockerRegistry := viper.GetString("DOCKER_REGISTRY")
 
-		e.Image = fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, strings.Trim(tag, "\n"))
+		e.Image = fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, strings.Trim(e.Tag, "\n"))
 		b := docker.NewBuilder(
 			map[string]*string{
 				"DOCKER_REGISTRY":   &dockerRegistry,
@@ -131,7 +133,7 @@ func (e *ecs) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 			return fmt.Errorf("can't deploy app %s: %w", e.Name, err)
 		}
 	} else {
-		tag = strings.Split(e.Image, ":")[1]
+		e.Tag = strings.Split(e.Image, ":")[1]
 	}
 
 	imageRef, err := reference.ParseNormalizedNamed(ecsDeployImage)
@@ -169,85 +171,96 @@ func (e *ecs) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 	s.Done()
 	s = sg.Add("%s: deploying app container...", e.Name)
 
-	cmd := []string{"ecs", "deploy",
-		"--profile", e.AwsProfile,
-		e.Cluster,
-		fmt.Sprintf("%s-%s", env, e.Name),
-		"--task", e.TaskDefinitionArn,
-		"--image", e.Name,
-		e.Image,
-		"--diff",
-		"--timeout", strconv.Itoa(e.Timeout),
-		"--rollback",
-		"-e", e.Name,
-		"DD_VERSION", tag,
-	}
-
-	cfg := container.Config{
-		AttachStdout: true,
-		AttachStderr: true,
-		AttachStdin:  true,
-		OpenStdin:    true,
-		StdinOnce:    true,
-		Tty:          true,
-		Image:        ecsDeployImage,
-		User:         fmt.Sprintf("%v:%v", os.Getuid(), os.Getgid()),
-		WorkingDir:   fmt.Sprintf("%v", viper.Get("ENV_DIR")),
-		Cmd:          cmd,
-	}
-
-	hostconfig := container.HostConfig{
-		AutoRemove: true,
-		Mounts: []mount.Mount{
-			{
-				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%v/.aws", viper.Get("HOME")),
-				Target: "/.aws",
-			},
-		},
-	}
-
-	cr, err := cli.ContainerCreate(context.Background(), &cfg, &hostconfig, &network.NetworkingConfig{}, nil, e.Name)
-	if err != nil {
-		return err
-	}
-
-	err = cli.ContainerStart(context.Background(), cr.ID, types.ContainerStartOptions{})
-	if err != nil {
-		return err
-	}
-
-	dockerutils.SetupSignalHandlers(cli, cr.ID)
-
-	out, err := cli.ContainerLogs(context.Background(), cr.ID, types.ContainerLogsOptions{
-		ShowStdout: true,
-		ShowStderr: true,
-		Follow:     true,
-		Timestamps: false,
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	defer out.Close()
-
-	io.Copy(s.TermOutput(), out)
-
-	wait, errC := cli.ContainerWait(context.Background(), cr.ID, container.WaitConditionRemoved)
-
-	select {
-	case status := <-wait:
-		if status.StatusCode == 0 {
-			s.Done()
-			s = sg.Add("%s deployment completed!", e.Name)
-			s.Done()
-			return nil
+	if viper.GetBool("local-terraform") {
+		err := e.DeployLocal()
+		if err != nil {
+			return err
 		}
-		s.Status(terminal.ErrorStyle)
-		return fmt.Errorf("container exit status code %d", status.StatusCode)
-	case err := <-errC:
-		return err
+
+		s.Done()
+	} else {
+		cmd := []string{"ecs", "deploy",
+			"--profile", e.AwsProfile,
+			e.Cluster,
+			fmt.Sprintf("%s-%s", env, e.Name),
+			"--task", e.TaskDefinitionArn,
+			"--image", e.Name,
+			e.Image,
+			"--diff",
+			"--timeout", strconv.Itoa(e.Timeout),
+			"--rollback",
+			"-e", e.Name,
+			"DD_VERSION", e.Tag,
+		}
+
+		cfg := container.Config{
+			AttachStdout: true,
+			AttachStderr: true,
+			AttachStdin:  true,
+			OpenStdin:    true,
+			StdinOnce:    true,
+			Tty:          true,
+			Image:        ecsDeployImage,
+			User:         fmt.Sprintf("%v:%v", os.Getuid(), os.Getgid()),
+			WorkingDir:   fmt.Sprintf("%v", viper.Get("ENV_DIR")),
+			Cmd:          cmd,
+		}
+
+		hostconfig := container.HostConfig{
+			AutoRemove: true,
+			Mounts: []mount.Mount{
+				{
+					Type:   mount.TypeBind,
+					Source: fmt.Sprintf("%v/.aws", viper.Get("HOME")),
+					Target: "/.aws",
+				},
+			},
+		}
+
+		cr, err := cli.ContainerCreate(context.Background(), &cfg, &hostconfig, &network.NetworkingConfig{}, nil, e.Name)
+		if err != nil {
+			return err
+		}
+
+		err = cli.ContainerStart(context.Background(), cr.ID, types.ContainerStartOptions{})
+		if err != nil {
+			return err
+		}
+
+		dockerutils.SetupSignalHandlers(cli, cr.ID)
+
+		out, err := cli.ContainerLogs(context.Background(), cr.ID, types.ContainerLogsOptions{
+			ShowStdout: true,
+			ShowStderr: true,
+			Follow:     true,
+			Timestamps: false,
+		})
+		if err != nil {
+			panic(err)
+		}
+
+		defer out.Close()
+
+		io.Copy(s.TermOutput(), out)
+
+		wait, errC := cli.ContainerWait(context.Background(), cr.ID, container.WaitConditionRemoved)
+
+		select {
+		case status := <-wait:
+			if status.StatusCode == 0 {
+				s.Done()
+				s = sg.Add("%s deployment completed!", e.Name)
+				s.Done()
+				return nil
+			}
+			s.Status(terminal.ErrorStyle)
+			return fmt.Errorf("container exit status code %d", status.StatusCode)
+		case err := <-errC:
+			return err
+		}
 	}
+
+	return nil
 }
 
 func (e *ecs) Destroy(sg terminal.StepGroup, ui terminal.UI) error {
@@ -362,4 +375,74 @@ func setupRepo(repoName string, region string, profile string) (string, string, 
 	}
 
 	return *repo.RepositoryUri, string(data[4:]), nil
+}
+
+func (e *ecs) DeployLocal() error {
+	sess, err := utils.GetSession(&utils.SessionConfig{
+		Region:  e.AwsRegion,
+		Profile: e.AwsProfile,
+	})
+	if err != nil {
+		return err
+	}
+	svc := ecssvc.New(sess)
+
+	name := fmt.Sprintf("%s-%s", viper.GetString("env"), e.Name)
+
+	dso, err := svc.DescribeServices(&ecssvc.DescribeServicesInput{
+		Cluster:  &e.Cluster,
+		Services: []*string{&name},
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(dso.Services) == 0 {
+		return fmt.Errorf("app %s not found", name)
+	}
+
+	dtdo, err := svc.DeregisterTaskDefinition(&ecssvc.DeregisterTaskDefinitionInput{
+		TaskDefinition: dso.Services[0].TaskDefinition,
+	})
+	if err != nil {
+		return err
+	}
+
+	// set images
+	for i := 0; i < len(dtdo.TaskDefinition.ContainerDefinitions); i++ {
+		if dtdo.TaskDefinition.ContainerDefinitions[i].Name == &e.Name {
+			dtdo.TaskDefinition.ContainerDefinitions[i].Image = &e.Image
+		} else if len(e.Tag) != 0 {
+			name := strings.Split(*dtdo.TaskDefinition.ContainerDefinitions[i].Image, ":")[0]
+			image := fmt.Sprintf("%s:%s", name, e.Tag)
+			dtdo.TaskDefinition.ContainerDefinitions[i].Image = &image
+		}
+	}
+
+	rtdo, err := svc.RegisterTaskDefinition(&ecssvc.RegisterTaskDefinitionInput{
+		ContainerDefinitions:    dtdo.TaskDefinition.ContainerDefinitions,
+		Family:                  dtdo.TaskDefinition.Family,
+		Volumes:                 dtdo.TaskDefinition.Volumes,
+		TaskRoleArn:             dtdo.TaskDefinition.TaskRoleArn,
+		ExecutionRoleArn:        dtdo.TaskDefinition.ExecutionRoleArn,
+		RuntimePlatform:         dtdo.TaskDefinition.RuntimePlatform,
+		RequiresCompatibilities: dtdo.TaskDefinition.RequiresCompatibilities,
+		NetworkMode:             dtdo.TaskDefinition.NetworkMode,
+		Cpu:                     dtdo.TaskDefinition.Cpu,
+		Memory:                  dtdo.TaskDefinition.Memory,
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = svc.UpdateService(&ecssvc.UpdateServiceInput{
+		Cluster:        &e.Cluster,
+		Service:        &name,
+		TaskDefinition: rtdo.TaskDefinition.TaskDefinitionArn,
+	})
+	if err != nil {
+		return err
+	}
+
+	return err
 }
