@@ -88,12 +88,7 @@ func (o *SecretsEditOptions) Run() error {
 		return fmt.Errorf("can't secrets edit: %w", err)
 	}
 
-	_, err = os.Stat(absPath)
-	if err != nil {
-		return fmt.Errorf("can't secrets edit: %w", err)
-	}
-
-	f, err := os.OpenFile(absPath, os.O_RDWR, os.ModeAppend)
+	f, err := os.OpenFile(absPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0660)
 	if err != nil {
 		return fmt.Errorf("can't secrets edit: %w", err)
 	}
@@ -120,11 +115,6 @@ func (o *SecretsEditOptions) Run() error {
 	}
 
 	err = f.Truncate(0)
-	if err != nil {
-		return fmt.Errorf("can't secrets edit: %w", err)
-	}
-
-	_, err = f.Seek(0, 0)
 	if err != nil {
 		return fmt.Errorf("can't secrets edit: %w", err)
 	}
