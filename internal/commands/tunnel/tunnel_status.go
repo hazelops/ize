@@ -70,7 +70,7 @@ func (o *TunnelStatusOptions) Run(ui terminal.UI, cmd *cobra.Command) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	isUp, err := checkTunnel(ui, sg)
+	isUp, err := checkTunnel(ui)
 	if err != nil {
 		return fmt.Errorf("can't get tunnel status: %w", err)
 	}

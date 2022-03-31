@@ -1,10 +1,10 @@
 package tunnel
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/hazelops/ize/internal/config"
@@ -33,11 +33,7 @@ func NewCmdTunnelUp(ui terminal.UI) *cobra.Command {
 		Long:  "Open tunnel.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			ui := terminal.ConsoleUI(context.Background())
-			sg := ui.StepGroup()
-			defer sg.Wait()
-
-			err := o.Complete(ui, sg, cmd, args)
+			err := o.Complete(ui, cmd, args)
 			if err != nil {
 				return err
 			}
@@ -47,7 +43,7 @@ func NewCmdTunnelUp(ui terminal.UI) *cobra.Command {
 				return err
 			}
 
-			err = o.Run(ui, sg, cmd)
+			err = o.Run(ui, cmd)
 			if err != nil {
 				return err
 			}
@@ -63,7 +59,7 @@ func NewCmdTunnelUp(ui terminal.UI) *cobra.Command {
 	return cmd
 }
 
-func (o *TunnelUpOptions) Complete(ui terminal.UI, sg terminal.StepGroup, cmd *cobra.Command, args []string) error {
+func (o *TunnelUpOptions) Complete(ui terminal.UI, cmd *cobra.Command, args []string) error {
 	cfg, err := config.InitializeConfig(config.WithSSMPlugin())
 	if err != nil {
 		return fmt.Errorf("can't complete options: %w", err)
@@ -71,7 +67,7 @@ func (o *TunnelUpOptions) Complete(ui terminal.UI, sg terminal.StepGroup, cmd *c
 
 	o.Config = cfg
 
-	isUp, err := checkTunnel(ui, sg)
+	isUp, err := checkTunnel(ui)
 	if err != nil {
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
@@ -98,7 +94,6 @@ func (o *TunnelUpOptions) Complete(ui terminal.UI, sg terminal.StepGroup, cmd *c
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) == 0 {
-		s := sg.Add("writing SSH config from SSM...")
 		bastionHostID, forwardHost, err := writeSSHConfigFromSSM(o.Config.Session, o.Config.Env)
 		if err != nil {
 			return err
@@ -106,16 +101,13 @@ func (o *TunnelUpOptions) Complete(ui terminal.UI, sg terminal.StepGroup, cmd *c
 
 		o.BastionHostID = bastionHostID
 		o.ForwardHost = forwardHost
-
-		s.Done()
+		ui.Output("SSH configuration is recorded from SSM", terminal.WithSuccessStyle())
 	} else {
-		s := sg.Add("writing SSH config from flags...")
 		err := writeSSHConfigFromConfig(o.ForwardHost)
 		if err != nil {
 			return err
 		}
-
-		s.Done()
+		ui.Output("SSH configuration is recorded from config", terminal.WithSuccessStyle())
 	}
 
 	return nil
@@ -126,12 +118,17 @@ func (o *TunnelUpOptions) Validate() error {
 		return fmt.Errorf("env must be specified\n")
 	}
 
+	for _, h := range o.ForwardHost {
+		p, _ := strconv.Atoi(strings.Split(h, ":")[2])
+		if err := checkPort(p); err != nil {
+			return fmt.Errorf("can't complete validate: %w\n", err)
+		}
+	}
+
 	return nil
 }
 
-func (o *TunnelUpOptions) Run(ui terminal.UI, sg terminal.StepGroup, cmd *cobra.Command) error {
-	s := sg.Add("upping tunnel...")
-
+func (o *TunnelUpOptions) Run(ui terminal.UI, cmd *cobra.Command) error {
 	sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
 
 	if err := setAWSCredentials(o.Config.Session); err != nil {
@@ -151,7 +148,6 @@ func (o *TunnelUpOptions) Run(ui terminal.UI, sg terminal.StepGroup, cmd *cobra.
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
 
-	s.Done()
 	ui.Output("tunnel is up! Forwarded ports:", terminal.WithSuccessStyle())
 
 	var fconfig string
