@@ -62,7 +62,7 @@ func NewCmdTunnelUp(ui terminal.UI) *cobra.Command {
 func (o *TunnelUpOptions) Complete(ui terminal.UI, cmd *cobra.Command, args []string) error {
 	cfg, err := config.InitializeConfig(config.WithSSMPlugin())
 	if err != nil {
-		return fmt.Errorf("can't complete options: %w", err)
+		return fmt.Errorf("can't configure tunnel: %w", err)
 	}
 
 	o.Config = cfg
@@ -101,13 +101,13 @@ func (o *TunnelUpOptions) Complete(ui terminal.UI, cmd *cobra.Command, args []st
 
 		o.BastionHostID = bastionHostID
 		o.ForwardHost = forwardHost
-		ui.Output("SSH configuration is recorded from SSM", terminal.WithSuccessStyle())
+		ui.Output("tunnel forwarding configuration obtained from SSM", terminal.WithSuccessStyle())
 	} else {
 		err := writeSSHConfigFromConfig(o.ForwardHost)
 		if err != nil {
 			return err
 		}
-		ui.Output("SSH configuration is recorded from config", terminal.WithSuccessStyle())
+		ui.Output("tunnel forwarding configuration obtained from the config file", terminal.WithSuccessStyle())
 	}
 
 	return nil
@@ -121,7 +121,7 @@ func (o *TunnelUpOptions) Validate() error {
 	for _, h := range o.ForwardHost {
 		p, _ := strconv.Atoi(strings.Split(h, ":")[2])
 		if err := checkPort(p); err != nil {
-			return fmt.Errorf("can't complete validate: %w\n", err)
+			return fmt.Errorf("tunnel forwarding config validation failed: %w\n", err)
 		}
 	}
 

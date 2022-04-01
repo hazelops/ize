@@ -97,7 +97,7 @@ func NewCmdTunnel(ui terminal.UI) *cobra.Command {
 func (o *TunnelOptions) Complete(ui terminal.UI, cmd *cobra.Command, args []string) error {
 	cfg, err := config.InitializeConfig(config.WithSSMPlugin())
 	if err != nil {
-		return fmt.Errorf("can't complete options: %w", err)
+		return fmt.Errorf("can't configure tunnel: %w", err)
 	}
 
 	o.Config = cfg
@@ -141,13 +141,13 @@ func (o *TunnelOptions) Complete(ui terminal.UI, cmd *cobra.Command, args []stri
 
 		o.BastionHostID = bastionHostID
 		o.ForwardHost = forwardHost
-		ui.Output("SSH configuration is recorded from SSM", terminal.WithSuccessStyle())
+		ui.Output("tunnel forwarding configuration obtained from SSM", terminal.WithSuccessStyle())
 	} else {
 		err := writeSSHConfigFromConfig(o.ForwardHost)
 		if err != nil {
 			return err
 		}
-		ui.Output("SSH configuration is recorded from config", terminal.WithSuccessStyle())
+		ui.Output("tunnel forwarding configuration obtained from the config file", terminal.WithSuccessStyle())
 	}
 
 	return nil
@@ -161,7 +161,7 @@ func (o *TunnelOptions) Validate() error {
 	for _, h := range o.ForwardHost {
 		p, _ := strconv.Atoi(strings.Split(h, ":")[2])
 		if err := checkPort(p); err != nil {
-			return fmt.Errorf("can't complete validate: %w\n", err)
+			return fmt.Errorf("tunnel forwarding config validation failed: %w\n", err)
 		}
 	}
 
@@ -366,12 +366,13 @@ func getFreePort() (int, error) {
 func checkPort(port int) error {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
-		return fmt.Errorf("can't check addres %s: %w", fmt.Sprintf("127.0.0.1:%d", port), err)
+		return fmt.Errorf("can't check address %s: %w", fmt.Sprintf("127.0.0.1:%d", port), err)
 	}
 
 	_, err = net.ListenTCP("tcp", addr)
 	if err != nil {
-		return fmt.Errorf("port %d is not available: %w", port, err)
+		logrus.Error(err)
+		return fmt.Errorf("port %d is not available. Please make sure there is no other process that is using the port %d\n", port, port)
 	}
 
 	return nil
