@@ -60,10 +60,7 @@ func NewCmdTunnel(ui terminal.UI) *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			sg := ui.StepGroup()
-			defer sg.Wait()
-
-			err := o.Complete(ui, sg, cmd, args)
+			err := o.Complete(ui, cmd, args)
 			if err != nil {
 				return err
 			}
@@ -73,7 +70,7 @@ func NewCmdTunnel(ui terminal.UI) *cobra.Command {
 				return err
 			}
 
-			err = o.Run(ui, sg, cmd)
+			err = o.Run(ui, cmd)
 			if err != nil {
 				return err
 			}
@@ -97,15 +94,15 @@ func NewCmdTunnel(ui terminal.UI) *cobra.Command {
 	return cmd
 }
 
-func (o *TunnelOptions) Complete(ui terminal.UI, sg terminal.StepGroup, cmd *cobra.Command, args []string) error {
+func (o *TunnelOptions) Complete(ui terminal.UI, cmd *cobra.Command, args []string) error {
 	cfg, err := config.InitializeConfig(config.WithSSMPlugin())
 	if err != nil {
-		return fmt.Errorf("can't complete options: %w", err)
+		return fmt.Errorf("can't configure tunnel: %w", err)
 	}
 
 	o.Config = cfg
 
-	isUp, err := checkTunnel(ui, sg)
+	isUp, err := checkTunnel(ui)
 	if err != nil {
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
@@ -137,7 +134,6 @@ func (o *TunnelOptions) Complete(ui terminal.UI, sg terminal.StepGroup, cmd *cob
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) == 0 {
-		s := sg.Add("writing SSH config from SSM...")
 		bastionHostID, forwardHost, err := writeSSHConfigFromSSM(o.Config.Session, o.Config.Env)
 		if err != nil {
 			return err
@@ -145,14 +141,13 @@ func (o *TunnelOptions) Complete(ui terminal.UI, sg terminal.StepGroup, cmd *cob
 
 		o.BastionHostID = bastionHostID
 		o.ForwardHost = forwardHost
-		s.Done()
+		ui.Output("tunnel forwarding configuration obtained from SSM", terminal.WithSuccessStyle())
 	} else {
-		s := sg.Add("writing SSH config from config...", terminal.WithInfoStyle())
 		err := writeSSHConfigFromConfig(o.ForwardHost)
 		if err != nil {
 			return err
 		}
-		s.Done()
+		ui.Output("tunnel forwarding configuration obtained from the config file", terminal.WithSuccessStyle())
 	}
 
 	return nil
@@ -163,20 +158,23 @@ func (o *TunnelOptions) Validate() error {
 		return fmt.Errorf("env must be specified\n")
 	}
 
+	for _, h := range o.ForwardHost {
+		p, _ := strconv.Atoi(strings.Split(h, ":")[2])
+		if err := checkPort(p); err != nil {
+			return fmt.Errorf("tunnel forwarding config validation failed: %w\n", err)
+		}
+	}
+
 	return nil
 }
 
-func (o *TunnelOptions) Run(ui terminal.UI, sg terminal.StepGroup, cmd *cobra.Command) error {
-	s := sg.Add("sending user SSH public key...")
+func (o *TunnelOptions) Run(ui terminal.UI, cmd *cobra.Command) error {
 	logrus.Debugf("public key path: %s", o.PublicKeyFile)
 
 	err := sendSSHPublicKey(o.BastionHostID, getPublicKey(o.PublicKeyFile), o.Config.Session)
 	if err != nil {
 		return fmt.Errorf("can't run tunnel: %s", err)
 	}
-
-	s.Done()
-	s = sg.Add("upping tunnel...")
 
 	sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
 
@@ -190,14 +188,15 @@ func (o *TunnelOptions) Run(ui terminal.UI, sg terminal.StepGroup, cmd *cobra.Co
 		"-F", sshConfigPath,
 		"-i", getPrivateKey(o.PrivateKeyFile),
 	)
+
 	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
+	c.Stderr = os.Stdout
+	c.Stdin = os.Stdin
 	c.Dir = viper.GetString("ENV_DIR")
 	if err := c.Run(); err != nil {
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
 
-	s.Done()
 	ui.Output("tunnel is up! Forwarded ports:", terminal.WithSuccessStyle())
 
 	var fconfig string
@@ -364,6 +363,21 @@ func getFreePort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
+func checkPort(port int) error {
+	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		return fmt.Errorf("can't check address %s: %w", fmt.Sprintf("127.0.0.1:%d", port), err)
+	}
+
+	_, err = net.ListenTCP("tcp", addr)
+	if err != nil {
+		logrus.Error(err)
+		return fmt.Errorf("port %d is not available. Please make sure there is no other process that is using the port %d\n", port, port)
+	}
+
+	return nil
+}
+
 func writeSSHConfigFromSSM(sess *session.Session, env string) (string, []string, error) {
 	var bastionHostID string
 	var forwardHost []string
@@ -444,9 +458,7 @@ func writeSSHConfigFromConfig(forwardHost []string) error {
 	return nil
 }
 
-func checkTunnel(ui terminal.UI, sg terminal.StepGroup) (bool, error) {
-	s := sg.Add("checking for an existing tunnel...")
-
+func checkTunnel(ui terminal.UI) (bool, error) {
 	c := exec.Command(
 		"ssh", "-S", "bastion.sock", "-O", "check", "",
 	)
@@ -456,7 +468,6 @@ func checkTunnel(ui terminal.UI, sg terminal.StepGroup) (bool, error) {
 	c.Dir = viper.GetString("ENV_DIR")
 
 	err := c.Run()
-	s.Done()
 	if err == nil {
 		sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
 		sshConfig, err := getSSHConfig(sshConfigPath)
