@@ -58,13 +58,17 @@ func NewECSDeployment(app App) *ecs {
 		ecsConfig.Cluster = fmt.Sprintf("%s-%s", viper.GetString("env"), viper.GetString("namespace"))
 	}
 
+	if ecsConfig.Timeout == 0 {
+		ecsConfig.Timeout = 300
+	}
+
 	return &ecsConfig
 }
 
 // Deploy deploys app container to ECS via ECS deploy
 func (e *ecs) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 	s := sg.Add("%s: initializing Docker client...", e.Name)
-	defer func() { s.Abort() }()
+	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	skipBuildAndPush := true
 	env := viper.GetString("env")
@@ -172,7 +176,7 @@ func (e *ecs) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 	s = sg.Add("%s: deploying app container...", e.Name)
 
 	if viper.GetBool("local-terraform") {
-		err := e.DeployLocal()
+		err := e.DeployLocal(s)
 		if err != nil {
 			return err
 		}
@@ -377,7 +381,7 @@ func setupRepo(repoName string, region string, profile string) (string, string, 
 	return *repo.RepositoryUri, string(data[4:]), nil
 }
 
-func (e *ecs) DeployLocal() error {
+func (e *ecs) DeployLocal(s terminal.Step) error {
 	sess, err := utils.GetSession(&utils.SessionConfig{
 		Region:  e.AwsRegion,
 		Profile: e.AwsProfile,
@@ -444,5 +448,82 @@ func (e *ecs) DeployLocal() error {
 		return err
 	}
 
+	waitingTimeout := time.Now().Add(time.Duration(e.Timeout) * time.Second)
+	waiting := true
+
+	for waiting && time.Now().Before(waitingTimeout) {
+		d, err := isDeployed(name, e.Cluster, svc)
+		if err != nil {
+			return err
+		}
+
+		waiting = !d
+
+		if waiting {
+			time.Sleep(time.Second * 5)
+		}
+	}
+
+	if waiting && time.Now().After(waitingTimeout) {
+		return fmt.Errorf("timeout waiting for service to deploy")
+	}
+
 	return err
+}
+
+func isDeployed(name string, cluster string, svc *ecssvc.ECS) (bool, error) {
+	dso, err := svc.DescribeServices(&ecssvc.DescribeServicesInput{
+		Cluster:  &cluster,
+		Services: []*string{&name},
+	})
+	if err != nil {
+		return false, err
+	}
+
+	if len(dso.Services) == 0 {
+		return false, nil
+	}
+
+	if len(dso.Services[0].Deployments) != 1 {
+		return false, nil
+	}
+
+	runningTasks, err := svc.ListTasks(&ecssvc.ListTasksInput{
+		Cluster:     &cluster,
+		ServiceName: &name,
+	})
+	if err != nil {
+		return false, err
+	}
+
+	if runningTasks.TaskArns == nil {
+		return *dso.Services[0].DesiredCount == 0, nil
+	}
+
+	runningCount, err := getRunningTaskCount(cluster, runningTasks.TaskArns, *dso.Services[0].TaskDefinition, svc)
+	if err != nil {
+		return false, err
+	}
+
+	return runningCount == *dso.Services[0].DesiredCount, nil
+}
+
+func getRunningTaskCount(cluster string, tasks []*string, serviceArn string, svc *ecssvc.ECS) (int64, error) {
+	count := 0
+
+	dto, err := svc.DescribeTasks(&ecssvc.DescribeTasksInput{
+		Cluster: &cluster,
+		Tasks:   tasks,
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	for _, t := range dto.Tasks {
+		if *t.TaskDefinitionArn == serviceArn && *t.LastStatus == "RUNNING" {
+			count++
+		}
+	}
+
+	return int64(count), nil
 }
