@@ -14,7 +14,6 @@ require (
 	github.com/docker/distribution v2.8.1+incompatible
 	github.com/docker/docker v20.10.14+incompatible
 	github.com/fatih/color v1.13.0
-	github.com/gookit/color v1.5.0 // indirect
 	github.com/hashicorp/go-version v1.4.0
 	github.com/hashicorp/hcl/v2 v2.11.1
 	github.com/kr/pretty v0.3.0 // indirect
@@ -30,7 +29,7 @@ require (
 	github.com/oklog/ulid v1.3.1
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/opencontainers/image-spec v1.0.2 // indirect
-	github.com/pterm/pterm v0.12.39
+	github.com/pterm/pterm v0.12.40
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cobra v1.4.0
