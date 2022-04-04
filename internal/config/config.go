@@ -76,7 +76,7 @@ func InitializeConfig(options ...Option) (*Config, error) {
 		DisableTimestamp: true,
 		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
 			filename := path.Base(f.File)
-			return "", fmt.Sprintf("%s:%d", filename, f.Line)
+			return "", fmt.Sprintf(" %s:%d", filename, f.Line)
 		},
 	})
 
@@ -307,7 +307,7 @@ func readGlobalConfigFile() (*Config, error) {
 	namespace := viper.GetString("namespace")
 
 	if len(env) == 0 || len(namespace) == 0 {
-		logrus.Warn("  can't load global config without env and namespace")
+		logrus.Warn("can't load global config without env and namespace")
 		return nil, nil
 	}
 
@@ -320,7 +320,7 @@ func readGlobalConfigFile() (*Config, error) {
 	viper.AddConfigPath(fmt.Sprintf("%s/.ize", home))
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			logrus.Warn("  global config file not found")
+			logrus.Warn("global config file not found")
 			return nil, nil
 		} else {
 			return nil, fmt.Errorf("can't read config file %s: %w\n", viper.ConfigFileUsed(), err)
@@ -333,7 +333,7 @@ func readGlobalConfigFile() (*Config, error) {
 			return nil, err
 		}
 	} else {
-		logrus.Warn(fmt.Sprintf("  config for %s.%s not found", namespace, env))
+		logrus.Warn(fmt.Sprintf("config for %s.%s not found", namespace, env))
 	}
 
 	cfg.Env = env
@@ -354,7 +354,7 @@ func readConfigFile(path string) (*Config, error) {
 	}
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			logrus.Warn("  config file not found")
+			logrus.Warn("config file not found")
 			return nil, nil
 		} else {
 			return nil, fmt.Errorf("can't read config file %s: %w\n", viper.ConfigFileUsed(), err)
