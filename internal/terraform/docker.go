@@ -19,6 +19,7 @@ import (
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	t "golang.org/x/crypto/ssh/terminal"
 )
 
 const (
@@ -342,19 +343,19 @@ func (d *docker) Run() error {
 		return err
 	}
 
-	utils.SetupSignalHandlers(cli, cont.ID)
-
-	reader, err := cli.ContainerLogs(context.Background(), cont.ID, types.ContainerLogsOptions{
-		ShowStdout: true,
-		ShowStderr: true,
-		Follow:     true,
-		Timestamps: false,
+	waiter, err := cli.ContainerAttach(context.Background(), cont.ID, types.ContainerAttachOptions{
+		Stream: true,
+		Stdin:  true,
+		Stdout: true,
+		Stderr: true,
 	})
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	defer reader.Close()
+	go io.Copy(os.Stdout, waiter.Reader)
+	go io.Copy(os.Stderr, waiter.Reader)
+	go io.Copy(waiter.Conn, os.Stdin)
 
 	var f *os.File
 
@@ -367,10 +368,14 @@ func (d *docker) Run() error {
 		defer f.Close()
 	}
 
-	if f != nil {
-		io.Copy(f, reader)
-	} else {
-		io.Copy(os.Stdout, reader)
+	fd := int(os.Stdin.Fd())
+	var oldState *t.State
+	if t.IsTerminal(fd) {
+		oldState, err = t.MakeRaw(fd)
+		if err != nil {
+			return err
+		}
+		defer t.Restore(fd, oldState)
 	}
 
 	wait, errC := cli.ContainerWait(context.Background(), cont.ID, container.WaitConditionRemoved)
