@@ -1,9 +1,12 @@
-name: "Test IZE"
-
+name: "[Ubuntu]Test IZE"
+defaults:
+  run:
+    shell: bash
 env:
   AWS_REGION: us-east-1
   ENV: testnut
   NAMESPACE: nutcorp
+  AWS_PROFILE: default
 
 on:
   push:
@@ -13,10 +16,7 @@ on:
 
 jobs:
   Build:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -37,6 +37,8 @@ jobs:
         run: go build -o ./ize ./cmd
 
       - name: Run builded ize
-        run: | 
+        run: |
+          mkdir -p ~/.aws && echo -e "[${AWS_PROFILE}]\naws_access_key_id = ${AWS_ACCESS_KEY_ID}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\nregion = ${AWS_REGION}" >> ~/.aws/credentials
+          cat ~/.aws/credentials
           cd examples/simple-monorepo
-          ize terraform init
+          ${GITHUB_WORKSPACE}/ize --log-level=debug terraform init
