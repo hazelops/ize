@@ -27,7 +27,7 @@ import (
 	"github.com/hazelops/ize/internal/docker"
 	dockerutils "github.com/hazelops/ize/internal/docker/utils"
 	"github.com/hazelops/ize/pkg/terminal"
-	"github.com/mitchellh/mapstructure"
+	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -49,8 +49,9 @@ type ecs struct {
 func NewECSDeployment(app App) *ecs {
 	var ecsConfig ecs
 
-	mapstructure.Decode(app, &ecsConfig)
-	mapstructure.Decode(app.Body, &ecsConfig)
+	ecsConfig.Name = app.Name
+	viper.UnmarshalKey(fmt.Sprintf("app.%s", app.Name), &ecsConfig)
+
 	ecsConfig.AwsProfile = viper.GetString("aws_profile")
 	ecsConfig.AwsRegion = viper.GetString("aws_region")
 	ecsConfig.Tag = viper.GetString("tag")
@@ -85,7 +86,7 @@ func (e *ecs) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 
 	if !skipBuildAndPush {
 		s.Update("%s: building app container...", e.Name)
-		dockerImageName := fmt.Sprintf("%s-%s", env, e.Name)
+		dockerImageName := fmt.Sprintf("%s-%s", viper.GetString("namespace"), e.Name)
 		dockerRegistry := viper.GetString("DOCKER_REGISTRY")
 
 		e.Image = fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, strings.Trim(e.Tag, "\n"))
@@ -113,6 +114,7 @@ func (e *ecs) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 		}
 
 		s.Done()
+
 		s = sg.Add("%s: push app container...", e.Name)
 
 		repo, token, err := setupRepo(dockerImageName, e.AwsRegion, e.AwsProfile)
@@ -173,93 +175,15 @@ func (e *ecs) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 	}
 
 	s.Done()
-	s = sg.Add("%s: deploying app container...", e.Name)
 
 	if viper.GetBool("local-terraform") {
-		err := e.DeployLocal(s)
+		err := e.deployLocal(sg)
 		if err != nil {
 			return err
 		}
-
-		s.Done()
 	} else {
-		cmd := []string{"ecs", "deploy",
-			"--profile", e.AwsProfile,
-			e.Cluster,
-			fmt.Sprintf("%s-%s", env, e.Name),
-			"--task", e.TaskDefinitionArn,
-			"--image", e.Name,
-			e.Image,
-			"--diff",
-			"--timeout", strconv.Itoa(e.Timeout),
-			"--rollback",
-			"-e", e.Name,
-			"DD_VERSION", e.Tag,
-		}
-
-		cfg := container.Config{
-			AttachStdout: true,
-			AttachStderr: true,
-			AttachStdin:  true,
-			OpenStdin:    true,
-			StdinOnce:    true,
-			Tty:          true,
-			Image:        ecsDeployImage,
-			User:         fmt.Sprintf("%v:%v", os.Getuid(), os.Getgid()),
-			WorkingDir:   fmt.Sprintf("%v", viper.Get("ENV_DIR")),
-			Cmd:          cmd,
-		}
-
-		hostconfig := container.HostConfig{
-			AutoRemove: true,
-			Mounts: []mount.Mount{
-				{
-					Type:   mount.TypeBind,
-					Source: fmt.Sprintf("%v/.aws", viper.Get("HOME")),
-					Target: "/.aws",
-				},
-			},
-		}
-
-		cr, err := cli.ContainerCreate(context.Background(), &cfg, &hostconfig, &network.NetworkingConfig{}, nil, e.Name)
+		err := e.deployWithDocker(cli, sg)
 		if err != nil {
-			return err
-		}
-
-		err = cli.ContainerStart(context.Background(), cr.ID, types.ContainerStartOptions{})
-		if err != nil {
-			return err
-		}
-
-		dockerutils.SetupSignalHandlers(cli, cr.ID)
-
-		out, err := cli.ContainerLogs(context.Background(), cr.ID, types.ContainerLogsOptions{
-			ShowStdout: true,
-			ShowStderr: true,
-			Follow:     true,
-			Timestamps: false,
-		})
-		if err != nil {
-			panic(err)
-		}
-
-		defer out.Close()
-
-		io.Copy(s.TermOutput(), out)
-
-		wait, errC := cli.ContainerWait(context.Background(), cr.ID, container.WaitConditionRemoved)
-
-		select {
-		case status := <-wait:
-			if status.StatusCode == 0 {
-				s.Done()
-				s = sg.Add("%s deployment completed!", e.Name)
-				s.Done()
-				return nil
-			}
-			s.Status(terminal.ErrorStyle)
-			return fmt.Errorf("container exit status code %d", status.StatusCode)
-		case err := <-errC:
 			return err
 		}
 	}
@@ -381,7 +305,98 @@ func setupRepo(repoName string, region string, profile string) (string, string, 
 	return *repo.RepositoryUri, string(data[4:]), nil
 }
 
-func (e *ecs) DeployLocal(s terminal.Step) error {
+func (e *ecs) deployWithDocker(cli *client.Client, sg terminal.StepGroup) error {
+	s := sg.Add("%s: deploying app container...", e.Name)
+	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
+
+	cmd := []string{"ecs", "deploy",
+		"--profile", e.AwsProfile,
+		e.Cluster,
+		fmt.Sprintf("%s-%s", viper.GetString("env"), e.Name),
+		"--task", e.TaskDefinitionArn,
+		"--image", e.Name,
+		e.Image,
+		"--diff",
+		"--timeout", strconv.Itoa(e.Timeout),
+		"--rollback",
+		"-e", e.Name,
+		"DD_VERSION", e.Tag,
+	}
+
+	cfg := container.Config{
+		AttachStdout: true,
+		AttachStderr: true,
+		AttachStdin:  true,
+		OpenStdin:    true,
+		StdinOnce:    true,
+		Tty:          true,
+		Image:        ecsDeployImage,
+		User:         fmt.Sprintf("%v:%v", os.Getuid(), os.Getgid()),
+		WorkingDir:   fmt.Sprintf("%v", viper.Get("ENV_DIR")),
+		Cmd:          cmd,
+	}
+
+	hostconfig := container.HostConfig{
+		AutoRemove: true,
+		Mounts: []mount.Mount{
+			{
+				Type:   mount.TypeBind,
+				Source: fmt.Sprintf("%v/.aws", viper.Get("HOME")),
+				Target: "/.aws",
+			},
+		},
+	}
+
+	cr, err := cli.ContainerCreate(context.Background(), &cfg, &hostconfig, &network.NetworkingConfig{}, nil, e.Name)
+	if err != nil {
+		return err
+	}
+
+	err = cli.ContainerStart(context.Background(), cr.ID, types.ContainerStartOptions{})
+	if err != nil {
+		return err
+	}
+
+	dockerutils.SetupSignalHandlers(cli, cr.ID)
+
+	out, err := cli.ContainerLogs(context.Background(), cr.ID, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+		Timestamps: false,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	defer out.Close()
+
+	io.Copy(s.TermOutput(), out)
+
+	wait, errC := cli.ContainerWait(context.Background(), cr.ID, container.WaitConditionRemoved)
+
+	select {
+	case status := <-wait:
+		if status.StatusCode == 0 {
+			s.Done()
+			s = sg.Add("%s deployment completed!", e.Name)
+			s.Done()
+			return nil
+		}
+		s.Status(terminal.ErrorStyle)
+		return fmt.Errorf("container exit status code %d", status.StatusCode)
+	case err := <-errC:
+		return err
+	}
+
+	return nil
+}
+
+func (e *ecs) deployLocal(sg terminal.StepGroup) error {
+	s := sg.Add("%s: deploying app container...", e.Name)
+	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
+	pterm.SetDefaultOutput(s.TermOutput())
+
 	sess, err := utils.GetSession(&utils.SessionConfig{
 		Region:  e.AwsRegion,
 		Profile: e.AwsProfile,
@@ -389,6 +404,7 @@ func (e *ecs) DeployLocal(s terminal.Step) error {
 	if err != nil {
 		return err
 	}
+
 	svc := ecssvc.New(sess)
 
 	name := fmt.Sprintf("%s-%s", viper.GetString("env"), e.Name)
@@ -405,23 +421,34 @@ func (e *ecs) DeployLocal(s terminal.Step) error {
 		return fmt.Errorf("app %s not found", name)
 	}
 
-	dtdo, err := svc.DeregisterTaskDefinition(&ecssvc.DeregisterTaskDefinitionInput{
+	dtdo, err := svc.DescribeTaskDefinition(&ecssvc.DescribeTaskDefinitionInput{
 		TaskDefinition: dso.Services[0].TaskDefinition,
 	})
 	if err != nil {
 		return err
 	}
 
-	// set images
+	pterm.Printfln("Deploying based on task definition: %s:%d", *dtdo.TaskDefinition.Family, *dtdo.TaskDefinition.Revision)
+
+	oldTaskDef := *dtdo.TaskDefinition
+
+	var image string
 	for i := 0; i < len(dtdo.TaskDefinition.ContainerDefinitions); i++ {
-		if dtdo.TaskDefinition.ContainerDefinitions[i].Name == &e.Name {
-			dtdo.TaskDefinition.ContainerDefinitions[i].Image = &e.Image
+		container := dtdo.TaskDefinition.ContainerDefinitions[i]
+		if container.Name == &e.Name {
+			image = e.Image
+			container.Image = &image
+			pterm.Printfln(`Changed image of container "%s" to : "%s" (was: "%s")`, *container.Name, image, *container.Image)
 		} else if len(e.Tag) != 0 {
-			name := strings.Split(*dtdo.TaskDefinition.ContainerDefinitions[i].Image, ":")[0]
-			image := fmt.Sprintf("%s:%s", name, e.Tag)
-			dtdo.TaskDefinition.ContainerDefinitions[i].Image = &image
+			name := strings.Split(*container.Image, ":")[0]
+			image = fmt.Sprintf("%s:%s", name, e.Tag)
+			container.Image = &image
+			pterm.Printfln(`Changed image of container "%s" to : "%s" (was: "%s")`, *container.Name, image, *container.Image)
+
 		}
 	}
+
+	pterm.Println("Creating new task definition revision")
 
 	rtdo, err := svc.RegisterTaskDefinition(&ecssvc.RegisterTaskDefinitionInput{
 		ContainerDefinitions:    dtdo.TaskDefinition.ContainerDefinitions,
@@ -439,20 +466,54 @@ func (e *ecs) DeployLocal(s terminal.Step) error {
 		return err
 	}
 
-	_, err = svc.UpdateService(&ecssvc.UpdateServiceInput{
-		Cluster:        &e.Cluster,
-		Service:        &name,
-		TaskDefinition: rtdo.TaskDefinition.TaskDefinitionArn,
-	})
-	if err != nil {
+	pterm.Printfln("Successfully created revision: %s:%d", *rtdo.TaskDefinition.Family, *rtdo.TaskDefinition.Revision)
+
+	if err = e.updateTaskDefinition(svc, rtdo.TaskDefinition, name, "Deploying new task definition"); err != nil {
+		pterm.Printfln("Rolling back to old task definition: %s:%d", *oldTaskDef.Family, *oldTaskDef.Revision)
+		e.Timeout = 600
+		if err = e.updateTaskDefinition(svc, &oldTaskDef, name, "Deploying previous task definition"); err != nil {
+			s.TermOutput().Write([]byte(err.Error() + " - try rollback\n"))
+			return err
+		}
+
+		pterm.Println("Rollback successful")
+
+		if err = deregisterTaskDefinition(svc, &oldTaskDef); err != nil {
+			return err
+		}
+
+		pterm.Println("Deployment failed, but service has been rolled back to previous task definition:", *oldTaskDef.Family)
+	}
+
+	if err = deregisterTaskDefinition(svc, &oldTaskDef); err != nil {
 		return err
 	}
+
+	s.Done()
+
+	return nil
+}
+
+func (e *ecs) updateTaskDefinition(svc *ecssvc.ECS, td *ecssvc.TaskDefinition, serviceName string, title string) error {
+	pterm.Println("Updating service")
+
+	_, err := svc.UpdateService(&ecssvc.UpdateServiceInput{
+		Service:        aws.String(serviceName),
+		Cluster:        aws.String(e.Cluster),
+		TaskDefinition: aws.String(*td.TaskDefinitionArn),
+	})
+	if err != nil {
+		return fmt.Errorf("unable to update service: %w", err)
+	}
+
+	pterm.Printfln("Successfully changed task definition to: %s:%d", *td.Family, *td.Revision)
+	pterm.Println(title)
 
 	waitingTimeout := time.Now().Add(time.Duration(e.Timeout) * time.Second)
 	waiting := true
 
 	for waiting && time.Now().Before(waitingTimeout) {
-		d, err := isDeployed(name, e.Cluster, svc)
+		d, err := e.isDeployed(svc, serviceName)
 		if err != nil {
 			return err
 		}
@@ -465,15 +526,16 @@ func (e *ecs) DeployLocal(s terminal.Step) error {
 	}
 
 	if waiting && time.Now().After(waitingTimeout) {
-		return fmt.Errorf("timeout waiting for service to deploy")
+		pterm.Println("Deployment failed due to timeout")
+		return fmt.Errorf("deployment failed due to timeout")
 	}
 
-	return err
+	return nil
 }
 
-func isDeployed(name string, cluster string, svc *ecssvc.ECS) (bool, error) {
+func (e *ecs) isDeployed(svc *ecssvc.ECS, name string) (bool, error) {
 	dso, err := svc.DescribeServices(&ecssvc.DescribeServicesInput{
-		Cluster:  &cluster,
+		Cluster:  &e.Cluster,
 		Services: []*string{&name},
 	})
 	if err != nil {
@@ -489,7 +551,7 @@ func isDeployed(name string, cluster string, svc *ecssvc.ECS) (bool, error) {
 	}
 
 	runningTasks, err := svc.ListTasks(&ecssvc.ListTasksInput{
-		Cluster:     &cluster,
+		Cluster:     &e.Cluster,
 		ServiceName: &name,
 	})
 	if err != nil {
@@ -500,7 +562,7 @@ func isDeployed(name string, cluster string, svc *ecssvc.ECS) (bool, error) {
 		return *dso.Services[0].DesiredCount == 0, nil
 	}
 
-	runningCount, err := getRunningTaskCount(cluster, runningTasks.TaskArns, *dso.Services[0].TaskDefinition, svc)
+	runningCount, err := getRunningTaskCount(e.Cluster, runningTasks.TaskArns, *dso.Services[0].TaskDefinition, svc)
 	if err != nil {
 		return false, err
 	}
@@ -526,4 +588,19 @@ func getRunningTaskCount(cluster string, tasks []*string, serviceArn string, svc
 	}
 
 	return int64(count), nil
+}
+
+func deregisterTaskDefinition(svc *ecssvc.ECS, td *ecssvc.TaskDefinition) error {
+	pterm.Println("Deregister task definition revision")
+
+	_, err := svc.DeregisterTaskDefinition(&ecssvc.DeregisterTaskDefinitionInput{
+		TaskDefinition: td.TaskDefinitionArn,
+	})
+	if err != nil {
+		return err
+	}
+
+	pterm.Printfln("Successfully deregistered revision: %s:%d", *td.Family, *td.Revision)
+
+	return nil
 }
