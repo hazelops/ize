@@ -49,7 +49,7 @@ func Execute(args []string) {
 	}
 
 	if err := app.Execute(); err != nil {
-		ui.Output(err.Error(), terminal.WithErrorStyle())
+		ui.Output(err.Error()+"\n", terminal.WithErrorStyle())
 		time.Sleep(time.Millisecond * 50)
 	}
 }
@@ -95,8 +95,7 @@ func newApp(ui terminal.UI) (*cobra.Command, error) {
 	rootCmd.PersistentFlags().StringP("aws-region", "r", "", "(required) set AWS region (overrides value in ize.toml and IZE_AWS_REGION / AWS_REGION if any of them are set)")
 	rootCmd.PersistentFlags().StringP("namespace", "n", "", "(required) set namespace (overrides value in ize.toml and IZE_NAMESPACE / NAMESPACE if any of them are set)")
 	rootCmd.PersistentFlags().String("terraform-version", "", "set terraform-version")
-	rootCmd.PersistentFlags().Bool("local-terraform", false, "enable using local terraform")
-
+	rootCmd.PersistentFlags().String("prefer-runtime", "native", "set prefer runtime (native or docker)")
 	rootCmd.Flags().StringP("tag", "t", "", "set tag")
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 

@@ -176,7 +176,7 @@ func (e *ecs) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 
 	s.Done()
 
-	if viper.GetBool("local-terraform") {
+	if viper.GetString("prefer-runtime") == "native" {
 		err := e.deployLocal(sg)
 		if err != nil {
 			return err
