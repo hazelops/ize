@@ -156,11 +156,15 @@ func InitializeConfig(options ...Option) (*Config, error) {
 	logrus.Debug("config file used:", viper.ConfigFileUsed())
 
 	if len(cfg.AwsProfile) == 0 {
-		return nil, fmt.Errorf("AWS profile must be specified using flags or config file\n")
+		return nil, fmt.Errorf("AWS profile must be specified using flags, env or config file\n")
 	}
 
 	if len(cfg.AwsRegion) == 0 {
-		return nil, fmt.Errorf("AWS region must be specified using flags or config file\n")
+		return nil, fmt.Errorf("AWS region must be specified using flags, env or config file\n")
+	}
+
+	if len(cfg.Namespace) == 0 {
+		return nil, fmt.Errorf("namespace must be specified using flags, env or config file\n")
 	}
 
 	sess, err := utils.GetSession(&utils.SessionConfig{
