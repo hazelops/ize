@@ -94,18 +94,10 @@ func BindFlags(flags *pflag.FlagSet) {
 
 func (o *DeployInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 	var err error
-	o.Local = viper.GetBool("local-terraform")
 
-	if o.Local {
-		o.Config, err = config.InitializeConfig()
-		if err != nil {
-			return fmt.Errorf("can`t complete options: %w", err)
-		}
-	} else {
-		o.Config, err = config.InitializeConfig(config.WithDocker())
-		if err != nil {
-			return fmt.Errorf("can`t complete options: %w", err)
-		}
+	o.Config, err = config.InitializeConfig()
+	if err != nil {
+		return fmt.Errorf("can`t complete options: %w", err)
 	}
 
 	BindFlags(cmd.Flags())
@@ -139,11 +131,11 @@ func (o *DeployInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 
 func (o *DeployInfraOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified\n")
+		return fmt.Errorf("env must be specified")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("namespace must be specified\n")
+		return fmt.Errorf("namespace must be specified")
 	}
 
 	return nil
@@ -169,11 +161,14 @@ func (o *DeployInfraOptions) Run(ui terminal.UI) error {
 		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
 	}
 
-	if o.Local {
-		tf = terraform.NewLocalTerraform(o.Terraform.Version, []string{"init", "-input=true"}, env, "")
-		tf.Prepare()
-	} else {
+	if o.Config.IsDockerRuntime {
 		tf = terraform.NewDockerTerraform(o.Terraform.Version, []string{"init", "-input=true"}, env, "")
+	} else {
+		tf = terraform.NewLocalTerraform(o.Terraform.Version, []string{"init", "-input=true"}, env, "")
+		err = tf.Prepare()
+		if err != nil {
+			return fmt.Errorf("can't deploy infra: %w", err)
+		}
 	}
 
 	ui.Output("Running deploy infra...", terminal.WithHeaderStyle())
@@ -181,7 +176,7 @@ func (o *DeployInfraOptions) Run(ui terminal.UI) error {
 
 	err = tf.RunUI(ui)
 	if err != nil {
-		return fmt.Errorf("can't deploy all: %w", err)
+		return fmt.Errorf("can't deploy infra: %w", err)
 	}
 
 	ui.Output("Execution terraform plan...", terminal.WithHeaderStyle())

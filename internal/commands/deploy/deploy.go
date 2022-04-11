@@ -29,7 +29,6 @@ type DeployOptions struct {
 	Infra            Infra
 	App              apps.App
 	AutoApprove      bool
-	Local            bool
 }
 
 type Apps map[string]*apps.App
@@ -138,18 +137,9 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 			o.Infra.Version = viper.GetString("terraform_version")
 		}
 	} else {
-		o.Local = viper.GetBool("local-terraform")
-
-		if o.Local {
-			o.Config, err = config.InitializeConfig(config.WithConfigFile())
-			if err != nil {
-				return fmt.Errorf("can`t complete options: %w", err)
-			}
-		} else {
-			o.Config, err = config.InitializeConfig(config.WithDocker(), config.WithConfigFile())
-			if err != nil {
-				return fmt.Errorf("can`t complete options: %w", err)
-			}
+		o.Config, err = config.InitializeConfig(config.WithConfigFile())
+		if err != nil {
+			return fmt.Errorf("can`t complete options: %w", err)
 		}
 
 		viper.BindPFlags(cmd.Flags())
@@ -196,19 +186,23 @@ func (o *DeployOptions) Run(ui terminal.UI) error {
 
 func validate(o *DeployOptions) error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("can't validate options: env must be specified\n")
+		return fmt.Errorf("can't validate options: env must be specified")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("can't validate options: namespace must be specified\n")
+		return fmt.Errorf("can't validate options: namespace must be specified")
 	}
 
 	if len(o.Tag) == 0 {
-		return fmt.Errorf("can't validate options: tag must be specified\n")
+		return fmt.Errorf("can't validate options: tag must be specified")
 	}
 
 	if len(o.AppName) == 0 {
-		return fmt.Errorf("can't validate options: app name be specified\n")
+		return fmt.Errorf("can't validate options: app name must be specified")
+	}
+
+	if len(o.App.Type) == 0 {
+		return fmt.Errorf("can't validate options: app type must be specified")
 	}
 
 	return nil
@@ -216,20 +210,20 @@ func validate(o *DeployOptions) error {
 
 func validateAll(o *DeployOptions) error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("can't validate options: env must be specified\n")
+		return fmt.Errorf("can't validate options: env must be specified")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("can't validate options: namespace must be specified\n")
+		return fmt.Errorf("can't validate options: namespace must be specified")
 	}
 
 	if len(o.Tag) == 0 {
-		return fmt.Errorf("can't validate options: tag must be specified\n")
+		return fmt.Errorf("can't validate options: tag must be specified")
 	}
 
 	for sname, svc := range o.Apps {
 		if len(svc.Type) == 0 {
-			return fmt.Errorf("can't validate options: type for app %s must be specified\n", sname)
+			return fmt.Errorf("can't validate options: type for app %s must be specified", sname)
 		}
 	}
 
@@ -256,11 +250,14 @@ func deployAll(ui terminal.UI, o *DeployOptions) error {
 		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
 	}
 
-	if o.Local {
-		tf = terraform.NewLocalTerraform(o.Infra.Version, []string{"init", "-input=true"}, env, "")
-		tf.Prepare()
-	} else {
+	if o.Config.IsDockerRuntime {
 		tf = terraform.NewDockerTerraform(o.Infra.Version, []string{"init", "-input=true"}, env, "")
+	} else {
+		tf = terraform.NewLocalTerraform(o.Infra.Version, []string{"init", "-input=true"}, env, "")
+		err = tf.Prepare()
+		if err != nil {
+			return fmt.Errorf("can't deploy all: %w", err)
+		}
 	}
 
 	ui.Output("Running deploy infra...", terminal.WithHeaderStyle())

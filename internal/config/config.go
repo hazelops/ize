@@ -24,12 +24,13 @@ const (
 )
 
 type Config struct {
-	AwsRegion  string `mapstructure:"aws_region"`
-	AwsProfile string `mapstructure:"aws_profile"`
-	Namespace  string `mapstructure:"namespace"`
-	Env        string `mapstructure:"env"`
-	Session    *session.Session
-	IsGlobal   bool
+	AwsRegion       string `mapstructure:"aws_region"`
+	AwsProfile      string `mapstructure:"aws_profile"`
+	Namespace       string `mapstructure:"namespace"`
+	Env             string `mapstructure:"env"`
+	Session         *session.Session
+	IsGlobal        bool
+	IsDockerRuntime bool
 }
 
 type requiments struct {
@@ -161,6 +162,25 @@ func InitializeConfig(options ...Option) (*Config, error) {
 
 	if len(cfg.AwsRegion) == 0 {
 		return nil, fmt.Errorf("AWS region must be specified using flags or config file\n")
+	}
+
+	switch viper.GetString("prefer-runtime") {
+	case "native":
+		logrus.Debug("use native runtime")
+	case "docker":
+		if err := checkDocker(); err != nil {
+			return nil, err
+		}
+		cfg.IsDockerRuntime = true
+		logrus.Debug("use docker runtime")
+	default:
+		return cfg, fmt.Errorf("unknown runtime type: %s", viper.GetString("prefer-runtime"))
+	}
+
+	if viper.GetString("prefer-runtime") == "docker" {
+		if err := checkDocker(); err != nil {
+			return nil, err
+		}
 	}
 
 	sess, err := utils.GetSession(&utils.SessionConfig{

@@ -20,10 +20,10 @@ type TerraformOptions struct {
 
 var terraformLongDesc = templates.LongDesc(`
 	Run terraform command via terraform docker container.
-	By default terraform runs in a docker container.
-
-	To use a local terraform, add the --local-terraform global flag.
+	By default, terraform runs locally.
 	At the same time, terraform will be downloaded and launched from ~/.ize/versions/terraform/
+
+	To use a docker terraform, set value of "docker" to the --prefer-runtime global flag.
 `)
 
 var terraformExample = templates.Examples(`
@@ -36,6 +36,9 @@ var terraformExample = templates.Examples(`
 	# Run terraform init via config file installed from env
 	export IZE_CONFIG_FILE=/path/to/config
 	ize terraform init -input=true
+
+	# Run terraform in docker
+	ize -e dev -p default -r us-east-1 -n hazelops --prefer-runtime=docker terraform --version 1.0.10 init -input=true
 `)
 
 func NewTerraformFlags() *TerraformOptions {
@@ -82,18 +85,9 @@ func (o *TerraformOptions) Complete(cmd *cobra.Command, args []string) error {
 		err error
 	)
 
-	o.Local = viper.GetBool("local-terraform")
-
-	if o.Local {
-		cfg, err = config.InitializeConfig()
-		if err != nil {
-			return err
-		}
-	} else {
-		cfg, err = config.InitializeConfig(config.WithDocker())
-		if err != nil {
-			return err
-		}
+	cfg, err = config.InitializeConfig()
+	if err != nil {
+		return err
 	}
 
 	o.Config = cfg
@@ -128,14 +122,14 @@ func (o *TerraformOptions) Run(args []string) error {
 
 	logrus.Debug("terraform env: %s", env)
 
-	if o.Local {
+	if o.Config.IsDockerRuntime {
+		tf = terraform.NewDockerTerraform(viper.GetString("terraform_version"), args, env, "")
+	} else {
 		tf = terraform.NewLocalTerraform(viper.GetString("terraform_version"), args, env, "")
 		err = tf.Prepare()
 		if err != nil {
 			return err
 		}
-	} else {
-		tf = terraform.NewDockerTerraform(viper.GetString("terraform_version"), args, env, "")
 	}
 
 	logrus.Debug("starting terraform")

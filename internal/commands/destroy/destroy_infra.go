@@ -16,7 +16,6 @@ import (
 type DestroyInfraOptions struct {
 	Config    *config.Config
 	Terraform terraformInfraConfig
-	Local     bool
 }
 
 func NewDestroyInfraFlags() *DestroyInfraOptions {
@@ -68,18 +67,10 @@ func BindFlags(flags *pflag.FlagSet) {
 
 func (o *DestroyInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 	var err error
-	o.Local = viper.GetBool("local-terraform")
 
-	if o.Local {
-		o.Config, err = config.InitializeConfig()
-		if err != nil {
-			return fmt.Errorf("can`t complete options: %w", err)
-		}
-	} else {
-		o.Config, err = config.InitializeConfig(config.WithDocker())
-		if err != nil {
-			return fmt.Errorf("can`t complete options: %w", err)
-		}
+	o.Config, err = config.InitializeConfig()
+	if err != nil {
+		return fmt.Errorf("can`t complete options: %w", err)
 	}
 
 	BindFlags(cmd.Flags())
@@ -131,11 +122,14 @@ func (o *DestroyInfraOptions) Run(ui terminal.UI) error {
 		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
 	}
 
-	if o.Local {
-		tf = terraform.NewLocalTerraform(o.Terraform.Version, []string{"destroy", "-auto-approve"}, env, "")
-		tf.Prepare()
-	} else {
+	if o.Config.IsDockerRuntime {
 		tf = terraform.NewDockerTerraform(o.Terraform.Version, []string{"destroy", "-auto-approve"}, env, "")
+	} else {
+		tf = terraform.NewLocalTerraform(o.Terraform.Version, []string{"destroy", "-auto-approve"}, env, "")
+		err = tf.Prepare()
+		if err != nil {
+			return fmt.Errorf("can't destroy infra: %w", err)
+		}
 	}
 
 	ui.Output("Running terraform destoy...", terminal.WithHeaderStyle())

@@ -25,7 +25,6 @@ type DestroyOptions struct {
 	Infra            Infra
 	App              apps.App
 	AutoApprove      bool
-	Local            bool
 }
 
 type Apps map[string]*apps.App
@@ -133,18 +132,9 @@ func (o *DestroyOptions) Complete(cmd *cobra.Command, args []string) error {
 			o.Infra.Version = viper.GetString("terraform_version")
 		}
 	} else {
-		o.Local = viper.GetBool("local-terraform")
-
-		if o.Local {
-			o.Config, err = config.InitializeConfig()
-			if err != nil {
-				return fmt.Errorf("can`t complete options: %w", err)
-			}
-		} else {
-			o.Config, err = config.InitializeConfig(config.WithDocker())
-			if err != nil {
-				return fmt.Errorf("can`t complete options: %w", err)
-			}
+		o.Config, err = config.InitializeConfig()
+		if err != nil {
+			return fmt.Errorf("can`t complete options: %w", err)
 		}
 
 		viper.BindPFlags(cmd.Flags())
@@ -273,14 +263,14 @@ func destroyAll(ui terminal.UI, o *DestroyOptions) error {
 		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
 	}
 
-	if o.Local {
+	if o.Config.IsDockerRuntime {
+		tf = terraform.NewDockerTerraform(o.Infra.Version, []string{"destroy", "-auto-approve"}, env, "")
+	} else {
 		tf = terraform.NewLocalTerraform(o.Infra.Version, []string{"destroy", "-auto-approve"}, env, "")
 		err = tf.Prepare()
 		if err != nil {
 			return fmt.Errorf("can't destroy all: %w", err)
 		}
-	} else {
-		tf = terraform.NewDockerTerraform(o.Infra.Version, []string{"destroy", "-auto-approve"}, env, "")
 	}
 
 	ui.Output("Running destroy infra...", terminal.WithHeaderStyle())
