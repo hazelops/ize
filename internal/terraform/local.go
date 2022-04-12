@@ -33,7 +33,7 @@ func NewLocalTerraform(version string, command []string, env []string, out strin
 }
 
 func (l *local) Run() error {
-	err := term.New().InteractiveRun(l.tfpath, l.command)
+	err := term.New(term.WithDir(viper.GetString("ENV_DIR"))).InteractiveRun(l.tfpath, l.command)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,11 @@ func (l *local) RunUI(ui terminal.UI) error {
 	s := sg.Add("running terraform v%s...", l.version)
 	defer func() { s.Abort(); time.Sleep(time.Millisecond * 100) }()
 
-	t := term.New(term.WithStderr(s.TermOutput()), term.WithStdout(s.TermOutput()), term.WithDir(viper.GetString("ENV_DIR")))
+	t := term.New(
+		term.WithStderr(s.TermOutput()),
+		term.WithStdout(s.TermOutput()),
+		term.WithDir(viper.GetString("ENV_DIR")),
+	)
 
 	err := t.InteractiveRun(l.tfpath, l.command)
 	if err != nil {
