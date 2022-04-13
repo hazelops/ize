@@ -29,6 +29,7 @@ type DeployOptions struct {
 	Infra            Infra
 	App              apps.App
 	AutoApprove      bool
+	UI               terminal.UI
 }
 
 type Apps map[string]*apps.App
@@ -64,7 +65,7 @@ func NewDeployFlags() *DeployOptions {
 	return &DeployOptions{}
 }
 
-func NewCmdDeploy(ui terminal.UI) *cobra.Command {
+func NewCmdDeploy() *cobra.Command {
 	o := NewDeployFlags()
 
 	cmd := &cobra.Command{
@@ -90,7 +91,7 @@ func NewCmdDeploy(ui terminal.UI) *cobra.Command {
 				return err
 			}
 
-			err = o.Run(ui)
+			err = o.Run()
 			if err != nil {
 				return err
 			}
@@ -102,7 +103,7 @@ func NewCmdDeploy(ui terminal.UI) *cobra.Command {
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "approve deploy all")
 
 	cmd.AddCommand(
-		NewCmdDeployInfra(ui),
+		NewCmdDeployInfra(),
 	)
 
 	return cmd
@@ -148,6 +149,7 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 	}
 
 	o.Tag = viper.GetString("tag")
+	o.UI = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
 
 	return nil
 }
@@ -168,7 +170,8 @@ func (o *DeployOptions) Validate() error {
 	return nil
 }
 
-func (o *DeployOptions) Run(ui terminal.UI) error {
+func (o *DeployOptions) Run() error {
+	ui := o.UI
 	if o.AppName == "" {
 		err := deployAll(ui, o)
 		if err != nil {

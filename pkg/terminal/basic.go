@@ -25,10 +25,14 @@ type basicUI struct {
 
 // Returns a UI which will write to the current processes
 // stdout/stderr.
-func ConsoleUI(ctx context.Context) UI {
+func ConsoleUI(ctx context.Context, plain bool) UI {
 	// We do both of these checks because some sneaky environments fool
 	// one or the other and we really only want the glint-based UI in
 	// truly interactive environments.
+	if plain {
+		return NonInteractiveUI(ctx)
+	}
+
 	glint := isatty.IsTerminal(os.Stdout.Fd()) && sshterm.IsTerminal(int(os.Stdout.Fd()))
 	if glint {
 		glint = false

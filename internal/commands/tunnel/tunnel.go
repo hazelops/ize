@@ -3,6 +3,7 @@ package tunnel
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -43,13 +44,14 @@ type TunnelOptions struct {
 	PublicKeyFile  string
 	BastionHostID  string
 	ForwardHost    []string
+	UI             terminal.UI
 }
 
 func NewTunnelFlags() *TunnelOptions {
 	return &TunnelOptions{}
 }
 
-func NewCmdTunnel(ui terminal.UI) *cobra.Command {
+func NewCmdTunnel() *cobra.Command {
 	o := NewTunnelFlags()
 
 	cmd := &cobra.Command{
@@ -60,7 +62,7 @@ func NewCmdTunnel(ui terminal.UI) *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			err := o.Complete(ui, cmd, args)
+			err := o.Complete(cmd, args)
 			if err != nil {
 				return err
 			}
@@ -70,7 +72,7 @@ func NewCmdTunnel(ui terminal.UI) *cobra.Command {
 				return err
 			}
 
-			err = o.Run(ui, cmd)
+			err = o.Run(cmd)
 			if err != nil {
 				return err
 			}
@@ -80,10 +82,10 @@ func NewCmdTunnel(ui terminal.UI) *cobra.Command {
 	}
 
 	cmd.AddCommand(
-		NewCmdSSHKey(ui),
-		NewCmdTunnelUp(ui),
-		NewCmdTunnelDown(ui),
-		NewCmdTunnelStatus(ui),
+		NewCmdSSHKey(),
+		NewCmdTunnelUp(),
+		NewCmdTunnelDown(),
+		NewCmdTunnelStatus(),
 	)
 
 	cmd.Flags().StringVar(&o.PrivateKeyFile, "ssh-private-key", "", "set ssh key private path")
@@ -94,15 +96,16 @@ func NewCmdTunnel(ui terminal.UI) *cobra.Command {
 	return cmd
 }
 
-func (o *TunnelOptions) Complete(ui terminal.UI, cmd *cobra.Command, args []string) error {
+func (o *TunnelOptions) Complete(cmd *cobra.Command, args []string) error {
 	cfg, err := config.InitializeConfig(config.WithSSMPlugin())
 	if err != nil {
 		return fmt.Errorf("can't configure tunnel: %w", err)
 	}
 
 	o.Config = cfg
+	o.UI = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
 
-	isUp, err := checkTunnel(ui)
+	isUp, err := checkTunnel(o.UI)
 	if err != nil {
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
@@ -121,11 +124,11 @@ func (o *TunnelOptions) Complete(ui terminal.UI, cmd *cobra.Command, args []stri
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) != 0 {
-		return fmt.Errorf("cat't complete options: --forward-host parameter requires --bastion-instance-id\n")
+		return fmt.Errorf("cat't complete options: --forward-host parameter requires --bastion-instance-id")
 	}
 
 	if len(o.ForwardHost) == 0 && len(o.BastionHostID) != 0 {
-		return fmt.Errorf("cat't complete options: --bastion-instance-id requires --forward-host parameter\n")
+		return fmt.Errorf("cat't complete options: --bastion-instance-id requires --forward-host parameter")
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) == 0 {
@@ -141,13 +144,13 @@ func (o *TunnelOptions) Complete(ui terminal.UI, cmd *cobra.Command, args []stri
 
 		o.BastionHostID = bastionHostID
 		o.ForwardHost = forwardHost
-		ui.Output("tunnel forwarding configuration obtained from SSM", terminal.WithSuccessStyle())
+		o.UI.Output("tunnel forwarding configuration obtained from SSM", terminal.WithSuccessStyle())
 	} else {
 		err := writeSSHConfigFromConfig(o.ForwardHost)
 		if err != nil {
 			return err
 		}
-		ui.Output("tunnel forwarding configuration obtained from the config file", terminal.WithSuccessStyle())
+		o.UI.Output("tunnel forwarding configuration obtained from the config file", terminal.WithSuccessStyle())
 	}
 
 	return nil
@@ -155,20 +158,21 @@ func (o *TunnelOptions) Complete(ui terminal.UI, cmd *cobra.Command, args []stri
 
 func (o *TunnelOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified\n")
+		return fmt.Errorf("env must be specified")
 	}
 
 	for _, h := range o.ForwardHost {
 		p, _ := strconv.Atoi(strings.Split(h, ":")[2])
 		if err := checkPort(p); err != nil {
-			return fmt.Errorf("tunnel forwarding config validation failed: %w\n", err)
+			return fmt.Errorf("tunnel forwarding config validation failed: %w", err)
 		}
 	}
 
 	return nil
 }
 
-func (o *TunnelOptions) Run(ui terminal.UI, cmd *cobra.Command) error {
+func (o *TunnelOptions) Run(cmd *cobra.Command) error {
+	ui := o.UI
 	logrus.Debugf("public key path: %s", o.PublicKeyFile)
 
 	err := sendSSHPublicKey(o.BastionHostID, getPublicKey(o.PublicKeyFile), o.Config.Session)
@@ -372,7 +376,7 @@ func checkPort(port int) error {
 	_, err = net.ListenTCP("tcp", addr)
 	if err != nil {
 		logrus.Error(err)
-		return fmt.Errorf("port %d is not available. Please make sure there is no other process that is using the port %d\n", port, port)
+		return fmt.Errorf("port %d is not available. Please make sure there is no other process that is using the port %d", port, port)
 	}
 
 	return nil
@@ -428,7 +432,7 @@ func writeSSHConfigFromConfig(forwardHost []string) error {
 	for k, v := range forwardHost {
 		ss := strings.Split(v, ":")
 		if len(ss) < 2 || len(ss) > 3 {
-			return fmt.Errorf("can't complete options: invalid format for forward host (should be host:port:localport)\n")
+			return fmt.Errorf("can't complete options: invalid format for forward host (should be host:port:localport)")
 		}
 		if len(ss) == 2 {
 			p, err := getFreePort()
@@ -438,7 +442,7 @@ func writeSSHConfigFromConfig(forwardHost []string) error {
 			forwardHost[k] = forwardHost[k] + ":" + strconv.Itoa(p)
 			ss = append(ss, strconv.Itoa(p))
 		} else if len(ss[2]) == 0 {
-			return fmt.Errorf("can't complete options: invalid format for forward host (should be host:port:localport)\n")
+			return fmt.Errorf("can't complete options: invalid format for forward host (should be host:port:localport)")
 		}
 		tmplData = append(tmplData, fmt.Sprintf("%s %s:%s", ss[2], ss[0], ss[1]))
 	}

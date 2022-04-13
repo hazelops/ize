@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,13 +19,14 @@ type TunnelUpOptions struct {
 	PrivateKeyFile string
 	BastionHostID  string
 	ForwardHost    []string
+	UI             terminal.UI
 }
 
 func NewTunnelUpFlags() *TunnelUpOptions {
 	return &TunnelUpOptions{}
 }
 
-func NewCmdTunnelUp(ui terminal.UI) *cobra.Command {
+func NewCmdTunnelUp() *cobra.Command {
 	o := NewTunnelUpFlags()
 
 	cmd := &cobra.Command{
@@ -32,8 +34,9 @@ func NewCmdTunnelUp(ui terminal.UI) *cobra.Command {
 		Short: "open tunnel",
 		Long:  "Open tunnel.",
 		RunE: func(cmd *cobra.Command, args []string) error {
+
 			cmd.SilenceUsage = true
-			err := o.Complete(ui, cmd, args)
+			err := o.Complete(cmd, args)
 			if err != nil {
 				return err
 			}
@@ -43,7 +46,7 @@ func NewCmdTunnelUp(ui terminal.UI) *cobra.Command {
 				return err
 			}
 
-			err = o.Run(ui, cmd)
+			err = o.Run(cmd)
 			if err != nil {
 				return err
 			}
@@ -59,7 +62,8 @@ func NewCmdTunnelUp(ui terminal.UI) *cobra.Command {
 	return cmd
 }
 
-func (o *TunnelUpOptions) Complete(ui terminal.UI, cmd *cobra.Command, args []string) error {
+func (o *TunnelUpOptions) Complete(md *cobra.Command, args []string) error {
+	o.UI = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
 	cfg, err := config.InitializeConfig(config.WithSSMPlugin())
 	if err != nil {
 		return fmt.Errorf("can't configure tunnel: %w", err)
@@ -67,7 +71,7 @@ func (o *TunnelUpOptions) Complete(ui terminal.UI, cmd *cobra.Command, args []st
 
 	o.Config = cfg
 
-	isUp, err := checkTunnel(ui)
+	isUp, err := checkTunnel(o.UI)
 	if err != nil {
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
@@ -81,11 +85,11 @@ func (o *TunnelUpOptions) Complete(ui terminal.UI, cmd *cobra.Command, args []st
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) != 0 {
-		return fmt.Errorf("cat't complete options: --forward-host parameter requires --bastion-instance-id\n")
+		return fmt.Errorf("cat't complete options: --forward-host parameter requires --bastion-instance-id")
 	}
 
 	if len(o.ForwardHost) == 0 && len(o.BastionHostID) != 0 {
-		return fmt.Errorf("cat't complete options: --bastion-instance-id requires --forward-host parameter\n")
+		return fmt.Errorf("cat't complete options: --bastion-instance-id requires --forward-host parameter")
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) == 0 {
@@ -101,13 +105,13 @@ func (o *TunnelUpOptions) Complete(ui terminal.UI, cmd *cobra.Command, args []st
 
 		o.BastionHostID = bastionHostID
 		o.ForwardHost = forwardHost
-		ui.Output("tunnel forwarding configuration obtained from SSM", terminal.WithSuccessStyle())
+		o.UI.Output("tunnel forwarding configuration obtained from SSM", terminal.WithSuccessStyle())
 	} else {
 		err := writeSSHConfigFromConfig(o.ForwardHost)
 		if err != nil {
 			return err
 		}
-		ui.Output("tunnel forwarding configuration obtained from the config file", terminal.WithSuccessStyle())
+		o.UI.Output("tunnel forwarding configuration obtained from the config file", terminal.WithSuccessStyle())
 	}
 
 	return nil
@@ -115,20 +119,21 @@ func (o *TunnelUpOptions) Complete(ui terminal.UI, cmd *cobra.Command, args []st
 
 func (o *TunnelUpOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified\n")
+		return fmt.Errorf("env must be specified")
 	}
 
 	for _, h := range o.ForwardHost {
 		p, _ := strconv.Atoi(strings.Split(h, ":")[2])
 		if err := checkPort(p); err != nil {
-			return fmt.Errorf("tunnel forwarding config validation failed: %w\n", err)
+			return fmt.Errorf("tunnel forwarding config validation failed: %w", err)
 		}
 	}
 
 	return nil
 }
 
-func (o *TunnelUpOptions) Run(ui terminal.UI, cmd *cobra.Command) error {
+func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
+	ui := o.UI
 	sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
 
 	if err := setAWSCredentials(o.Config.Session); err != nil {

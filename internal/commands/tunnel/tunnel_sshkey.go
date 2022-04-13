@@ -9,18 +9,20 @@ import (
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type TunnelSSHKeyOptions struct {
 	Config        *config.Config
 	PublicKeyFile string
+	UI            terminal.UI
 }
 
 func NewSSHKeyFlags() *TunnelSSHKeyOptions {
 	return &TunnelSSHKeyOptions{}
 }
 
-func NewCmdSSHKey(ui terminal.UI) *cobra.Command {
+func NewCmdSSHKey() *cobra.Command {
 	o := NewSSHKeyFlags()
 
 	cmd := &cobra.Command{
@@ -60,6 +62,7 @@ func (o *TunnelSSHKeyOptions) Complete(cmd *cobra.Command, args []string) error 
 	}
 
 	o.Config = cfg
+	o.UI = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
 
 	if o.PublicKeyFile == "" {
 		home, _ := os.UserHomeDir()
@@ -71,14 +74,14 @@ func (o *TunnelSSHKeyOptions) Complete(cmd *cobra.Command, args []string) error 
 
 func (o *TunnelSSHKeyOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified\n")
+		return fmt.Errorf("env must be specified")
 	}
 
 	return nil
 }
 
 func (o *TunnelSSHKeyOptions) Run() error {
-	ui := terminal.ConsoleUI(context.Background())
+	ui := o.UI
 	sg := ui.StepGroup()
 	defer sg.Wait()
 

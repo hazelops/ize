@@ -2,10 +2,8 @@ package console
 
 import (
 	"bytes"
-	"context"
 	"testing"
 
-	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 )
@@ -71,7 +69,7 @@ func TestRunConsole(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			cmd := NewCmdConsole(terminal.ConsoleUI(context.Background()))
+			cmd := NewCmdConsole()
 			cmd.SilenceUsage = true
 			out := &bytes.Buffer{}
 			cmd.SetOut(out)

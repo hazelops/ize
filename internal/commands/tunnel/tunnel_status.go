@@ -1,22 +1,25 @@
 package tunnel
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type TunnelStatusOptions struct {
 	Config *config.Config
+	UI     terminal.UI
 }
 
 func NewTunnelStatusOptions() *TunnelStatusOptions {
 	return &TunnelStatusOptions{}
 }
 
-func NewCmdTunnelStatus(ui terminal.UI) *cobra.Command {
+func NewCmdTunnelStatus() *cobra.Command {
 	o := NewTunnelStatusOptions()
 
 	cmd := &cobra.Command{
@@ -35,7 +38,7 @@ func NewCmdTunnelStatus(ui terminal.UI) *cobra.Command {
 				return err
 			}
 
-			err = o.Run(ui, cmd)
+			err = o.Run(cmd)
 			if err != nil {
 				return err
 			}
@@ -54,19 +57,21 @@ func (o *TunnelStatusOptions) Complete(cmd *cobra.Command, args []string) error 
 	}
 
 	o.Config = cfg
+	o.UI = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
 
 	return nil
 }
 
 func (o *TunnelStatusOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified\n")
+		return fmt.Errorf("env must be specified")
 	}
 
 	return nil
 }
 
-func (o *TunnelStatusOptions) Run(ui terminal.UI, cmd *cobra.Command) error {
+func (o *TunnelStatusOptions) Run(cmd *cobra.Command) error {
+	ui := o.UI
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
@@ -76,7 +81,7 @@ func (o *TunnelStatusOptions) Run(ui terminal.UI, cmd *cobra.Command) error {
 	}
 
 	if !isUp {
-		return fmt.Errorf("can't get tunnel status: tunnel is down\n")
+		return fmt.Errorf("can't get tunnel status: tunnel is down")
 	}
 
 	return nil

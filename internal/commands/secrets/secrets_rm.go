@@ -1,6 +1,7 @@
 package secrets
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type SecretsRemoveOptions struct {
@@ -16,13 +18,14 @@ type SecretsRemoveOptions struct {
 	AppName     string
 	Backend     string
 	SecretsPath string
+	ui          terminal.UI
 }
 
 func NewSecretsRemoveFlags() *SecretsRemoveOptions {
 	return &SecretsRemoveOptions{}
 }
 
-func NewCmdSecretsRemove(ui terminal.UI) *cobra.Command {
+func NewCmdSecretsRemove() *cobra.Command {
 	o := NewSecretsRemoveFlags()
 
 	cmd := &cobra.Command{
@@ -37,7 +40,7 @@ func NewCmdSecretsRemove(ui terminal.UI) *cobra.Command {
 				return err
 			}
 
-			err = o.Run(ui)
+			err = o.Run()
 			if err != nil {
 				return err
 			}
@@ -65,6 +68,8 @@ func (o *SecretsRemoveOptions) Complete(cmd *cobra.Command, args []string) error
 		o.SecretsPath = fmt.Sprintf("/%s/%s", o.Config.Env, o.AppName)
 	}
 
+	o.ui = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
+
 	return nil
 }
 
@@ -76,7 +81,8 @@ func (o *SecretsRemoveOptions) Validate() error {
 	return nil
 }
 
-func (o *SecretsRemoveOptions) Run(ui terminal.UI) error {
+func (o *SecretsRemoveOptions) Run() error {
+	ui := o.ui
 	sg := ui.StepGroup()
 	defer sg.Wait()
 

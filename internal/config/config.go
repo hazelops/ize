@@ -228,6 +228,12 @@ func InitializeConfig(options ...Option) (*Config, error) {
 		}
 	}
 
+	fmt.Println(viper.AllSettings())
+
+	if viper.GetBool("plain-text") {
+		pterm.DisableStyling()
+	}
+
 	return cfg, nil
 }
 

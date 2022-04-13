@@ -1,10 +1,8 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hazelops/ize/internal/commands/config"
 	"github.com/hazelops/ize/internal/commands/console"
@@ -19,7 +17,6 @@ import (
 	"github.com/hazelops/ize/internal/commands/terraform"
 	"github.com/hazelops/ize/internal/commands/tunnel"
 	"github.com/hazelops/ize/pkg/templates"
-	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -41,20 +38,17 @@ So let's not do it but rather embrace the simplicity and minimalism.
 func Execute(args []string) {
 	go CheckLatestRealese()
 
-	ui := terminal.ConsoleUI(context.Background())
-
-	app, err := newApp(ui)
+	app, err := newApp()
 	if err != nil {
-		ui.Output(err.Error())
+		pterm.Error.Println(err)
 	}
 
 	if err := app.Execute(); err != nil {
-		ui.Output(err.Error()+"\n", terminal.WithErrorStyle())
-		time.Sleep(time.Millisecond * 50)
+		pterm.Error.Println(err)
 	}
 }
 
-func newApp(ui terminal.UI) (*cobra.Command, error) {
+func newApp() (*cobra.Command, error) {
 	rootCmd := &cobra.Command{
 		Use:              "ize",
 		TraverseChildren: true,
@@ -72,16 +66,16 @@ func newApp(ui terminal.UI) (*cobra.Command, error) {
 	}
 
 	rootCmd.AddCommand(
-		deploy.NewCmdDeploy(ui),
-		destroy.NewCmdDestroy(ui),
-		console.NewCmdConsole(ui),
+		deploy.NewCmdDeploy(),
+		destroy.NewCmdDestroy(),
+		console.NewCmdConsole(),
 		env.NewCmdEnv(),
 		mfa.NewCmdMfa(),
 		terraform.NewCmdTerraform(),
-		secrets.NewCmdSecrets(ui),
+		secrets.NewCmdSecrets(),
 		initialize.NewCmdInit(),
-		tunnel.NewCmdTunnel(ui),
-		exec.NewCmdExec(ui),
+		tunnel.NewCmdTunnel(),
+		exec.NewCmdExec(),
 		config.NewCmdConfig(),
 		logs.NewCmdLogs(),
 		NewGendocCmd(),
@@ -89,6 +83,7 @@ func newApp(ui terminal.UI) (*cobra.Command, error) {
 	)
 
 	rootCmd.PersistentFlags().StringP("log-level", "l", "", "enable debug messages")
+	rootCmd.PersistentFlags().Bool("plain-text", false, "enable plain text")
 	rootCmd.PersistentFlags().StringP("config-file", "c", "", "set config file name")
 	rootCmd.PersistentFlags().StringP("env", "e", "", "(required) set environment name (overrides value set in IZE_ENV / ENV if any of them are set)")
 	rootCmd.PersistentFlags().StringP("aws-profile", "p", "", "(required) set AWS profile (overrides value in ize.toml and IZE_AWS_PROFILE / AWS_PROFILE if any of them are set)")

@@ -1,6 +1,7 @@
 package console
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -11,19 +12,21 @@ import (
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type ConsoleOptions struct {
 	Config     *config.Config
 	AppName    string
 	EcsCluster string
+	ui         terminal.UI
 }
 
 func NewConsoleFlags() *ConsoleOptions {
 	return &ConsoleOptions{}
 }
 
-func NewCmdConsole(ui terminal.UI) *cobra.Command {
+func NewCmdConsole() *cobra.Command {
 	o := NewConsoleFlags()
 
 	cmd := &cobra.Command{
@@ -43,7 +46,7 @@ func NewCmdConsole(ui terminal.UI) *cobra.Command {
 				return err
 			}
 
-			err = o.Run(ui)
+			err = o.Run()
 			if err != nil {
 				return err
 			}
@@ -76,20 +79,24 @@ func (o *ConsoleOptions) Complete(cmd *cobra.Command, args []string) error {
 
 func (o *ConsoleOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("can't validate: env must be specified\n")
+		return fmt.Errorf("can't validate: env must be specified")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("can't validate: namespace must be specified\n")
+		return fmt.Errorf("can't validate: namespace must be specified")
 	}
 
 	if len(o.AppName) == 0 {
-		return fmt.Errorf("can't validate: app name must be specified\n")
+		return fmt.Errorf("can't validate: app name must be specified")
 	}
+
+	o.ui = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
+
 	return nil
 }
 
-func (o *ConsoleOptions) Run(ui terminal.UI) error {
+func (o *ConsoleOptions) Run() error {
+	ui := o.ui
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
@@ -115,7 +122,7 @@ func (o *ConsoleOptions) Run(ui terminal.UI) error {
 	logrus.Debugf("list task output: %s", lto)
 
 	if len(lto.TaskArns) == 0 {
-		return fmt.Errorf("running task not found\n")
+		return fmt.Errorf("running task not found")
 	}
 
 	s.Done()

@@ -25,6 +25,7 @@ type DestroyOptions struct {
 	Infra            Infra
 	App              apps.App
 	AutoApprove      bool
+	ui               terminal.UI
 }
 
 type Apps map[string]*apps.App
@@ -59,7 +60,7 @@ func NewDestroyFlags() *DestroyOptions {
 	return &DestroyOptions{}
 }
 
-func NewCmdDestroy(ui terminal.UI) *cobra.Command {
+func NewCmdDestroy() *cobra.Command {
 	o := NewDestroyFlags()
 
 	cmd := &cobra.Command{
@@ -85,7 +86,7 @@ func NewCmdDestroy(ui terminal.UI) *cobra.Command {
 				return err
 			}
 
-			err = o.Run(ui)
+			err = o.Run()
 			if err != nil {
 				return err
 			}
@@ -97,7 +98,7 @@ func NewCmdDestroy(ui terminal.UI) *cobra.Command {
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "approve deploy all")
 
 	cmd.AddCommand(
-		NewCmdDestroyInfra(ui),
+		NewCmdDestroyInfra(),
 	)
 
 	return cmd
@@ -143,6 +144,7 @@ func (o *DestroyOptions) Complete(cmd *cobra.Command, args []string) error {
 	}
 
 	o.Tag = viper.GetString("tag")
+	o.ui = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
 
 	return nil
 }
@@ -163,7 +165,8 @@ func (o *DestroyOptions) Validate() error {
 	return nil
 }
 
-func (o *DestroyOptions) Run(ui terminal.UI) error {
+func (o *DestroyOptions) Run() error {
+	ui := o.ui
 	if o.AppName == "" {
 		err := destroyAll(ui, o)
 		if err != nil {
@@ -181,19 +184,19 @@ func (o *DestroyOptions) Run(ui terminal.UI) error {
 
 func validate(o *DestroyOptions) error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("can't validate options: env must be specified\n")
+		return fmt.Errorf("can't validate options: env must be specified")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("can't validate options: namespace must be specified\n")
+		return fmt.Errorf("can't validate options: namespace must be specified")
 	}
 
 	if len(o.Tag) == 0 {
-		return fmt.Errorf("can't validate options: tag must be specified\n")
+		return fmt.Errorf("can't validate options: tag must be specified")
 	}
 
 	if len(o.AppName) == 0 {
-		return fmt.Errorf("can't validate options: app name be specified\n")
+		return fmt.Errorf("can't validate options: app name be specified")
 	}
 
 	return nil
@@ -201,20 +204,20 @@ func validate(o *DestroyOptions) error {
 
 func validateAll(o *DestroyOptions) error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("can't validate options: env must be specified\n")
+		return fmt.Errorf("can't validate options: env must be specified")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("can't validate options: namespace must be specified\n")
+		return fmt.Errorf("can't validate options: namespace must be specified")
 	}
 
 	if len(o.Tag) == 0 {
-		return fmt.Errorf("can't validate options: tag must be specified\n")
+		return fmt.Errorf("can't validate options: tag must be specified")
 	}
 
 	for sname, svc := range o.Apps {
 		if len(svc.Type) == 0 {
-			return fmt.Errorf("can't validate options: type for app %s must be specified\n", sname)
+			return fmt.Errorf("can't validate options: type for app %s must be specified", sname)
 		}
 	}
 
