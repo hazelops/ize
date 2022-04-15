@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hazelops/ize/internal/config"
@@ -10,13 +11,14 @@ import (
 
 type TunnelStatusOptions struct {
 	Config *config.Config
+	UI     terminal.UI
 }
 
 func NewTunnelStatusOptions() *TunnelStatusOptions {
 	return &TunnelStatusOptions{}
 }
 
-func NewCmdTunnelStatus(ui terminal.UI) *cobra.Command {
+func NewCmdTunnelStatus() *cobra.Command {
 	o := NewTunnelStatusOptions()
 
 	cmd := &cobra.Command{
@@ -35,7 +37,7 @@ func NewCmdTunnelStatus(ui terminal.UI) *cobra.Command {
 				return err
 			}
 
-			err = o.Run(ui, cmd)
+			err = o.Run(cmd)
 			if err != nil {
 				return err
 			}
@@ -48,25 +50,27 @@ func NewCmdTunnelStatus(ui terminal.UI) *cobra.Command {
 }
 
 func (o *TunnelStatusOptions) Complete(cmd *cobra.Command, args []string) error {
-	cfg, err := config.InitializeConfig()
+	cfg, err := config.GetConfig()
 	if err != nil {
 		return fmt.Errorf("can't complete options: %w", err)
 	}
 
 	o.Config = cfg
+	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
 
 	return nil
 }
 
 func (o *TunnelStatusOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified\n")
+		return fmt.Errorf("env must be specified")
 	}
 
 	return nil
 }
 
-func (o *TunnelStatusOptions) Run(ui terminal.UI, cmd *cobra.Command) error {
+func (o *TunnelStatusOptions) Run(cmd *cobra.Command) error {
+	ui := o.UI
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
@@ -76,7 +80,7 @@ func (o *TunnelStatusOptions) Run(ui terminal.UI, cmd *cobra.Command) error {
 	}
 
 	if !isUp {
-		return fmt.Errorf("can't get tunnel status: tunnel is down\n")
+		return fmt.Errorf("can't get tunnel status: tunnel is down")
 	}
 
 	return nil

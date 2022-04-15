@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
-	"runtime"
 	"strings"
 
 	"github.com/Masterminds/semver"
@@ -31,11 +29,11 @@ type Config struct {
 	Session         *session.Session
 	IsGlobal        bool
 	IsDockerRuntime bool
+	IsPlainText     bool
 }
 
 type requiments struct {
 	configFile bool
-	docker     bool
 	smplugin   bool
 }
 
@@ -47,40 +45,44 @@ func WithConfigFile() Option {
 	}
 }
 
-func WithDocker() Option {
-	return func(r *requiments) {
-		r.docker = true
-	}
-}
-
 func WithSSMPlugin() Option {
 	return func(r *requiments) {
 		r.smplugin = true
 	}
 }
 
-func InitializeConfig(options ...Option) (*Config, error) {
-	cfg := &Config{}
-	var err error
-
+func CheckRequirements(options ...Option) error {
 	r := requiments{}
 	for _, opt := range options {
 		opt(&r)
 	}
 
-	viper.SetEnvPrefix("IZE")
-	viper.AutomaticEnv()
+	if r.smplugin {
+		if err := checkSessionManagerPlugin(); err != nil {
+			return err
+		}
+	}
 
-	logrus.SetReportCaller(true)
-	logrus.SetFormatter(&logrus.TextFormatter{
-		PadLevelText:     true,
-		DisableTimestamp: true,
-		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
-			filename := path.Base(f.File)
-			return "", fmt.Sprintf(" %s:%d", filename, f.Line)
-		},
-	})
+	switch viper.GetString("prefer-runtime") {
+	case "native":
+		logrus.Debug("use native runtime")
+	case "docker":
+		if err := checkDocker(); err != nil {
+			return err
+		}
+		logrus.Debug("use docker runtime")
+	default:
+		return fmt.Errorf("unknown runtime type: %s", viper.GetString("prefer-runtime"))
+	}
 
+	if len(viper.ConfigFileUsed()) == 0 && r.configFile {
+		return fmt.Errorf("this command required config file")
+	}
+
+	return nil
+}
+
+func GetConfig() (*Config, error) {
 	switch viper.GetString("log-level") {
 	case "info":
 		logrus.SetLevel(logrus.InfoLevel)
@@ -100,91 +102,22 @@ func InitializeConfig(options ...Option) (*Config, error) {
 		logrus.SetLevel(logrus.FatalLevel)
 	}
 
-	if r.smplugin {
-		if err := checkSessionManagerPlugin(); err != nil {
-			return nil, err
-		}
-	}
-
-	if r.docker {
-		if err := checkDocker(); err != nil {
-			return nil, err
-		}
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("can't initialize config: %w", err)
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("can't initialize config: %w", err)
-	}
-
-	viper.SetDefault("ENV", os.Getenv("ENV"))
-	viper.SetDefault("AWS_PROFILE", os.Getenv("AWS_PROFILE"))
-	viper.SetDefault("AWS_REGION", os.Getenv("AWS_REGION"))
-	viper.SetDefault("NAMESPACE", os.Getenv("NAMESPACE"))
-	// Default paths
-	viper.SetDefault("ROOT_DIR", cwd)
-	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
-	setDefaultDirectories(cwd)
-
-	// TODO: those static defaults should probably go to a separate package and/or function. Also would include image names and such.
-	viper.SetDefault("TERRAFORM_VERSION", "1.1.3")
-
-	cfg, err = readConfigFile(viper.GetString("config-file"))
-	if err != nil {
-		return nil, fmt.Errorf("can't initialize config: %w", err)
-	}
-
-	if cfg == nil {
-		cfg, err = readGlobalConfigFile()
-		if err != nil {
-			return nil, fmt.Errorf("can't initialize config: %w", err)
-		}
-	}
-
-	if cfg == nil && r.configFile {
-		return nil, fmt.Errorf("this command required config file\n")
-	}
-	if cfg == nil {
-		if err := viper.Unmarshal(&cfg); err != nil {
-			return nil, err
-		}
-	}
-
 	logrus.Debug("config file used:", viper.ConfigFileUsed())
 
+	cfg := &Config{}
+
+	viper.Unmarshal(&cfg)
+
 	if len(cfg.AwsProfile) == 0 {
-		return nil, fmt.Errorf("AWS profile must be specified using flags, env or config file\n")
+		return nil, fmt.Errorf("AWS profile must be specified using flags, env or config file")
 	}
 
 	if len(cfg.AwsRegion) == 0 {
-		return nil, fmt.Errorf("AWS region must be specified using flags, env or config file\n")
+		return nil, fmt.Errorf("AWS region must be specified using flags, env or config file")
 	}
 
 	if len(cfg.Namespace) == 0 {
-		return nil, fmt.Errorf("namespace must be specified using flags, env or config file\n")
-	}
-
-	switch viper.GetString("prefer-runtime") {
-	case "native":
-		logrus.Debug("use native runtime")
-	case "docker":
-		if err := checkDocker(); err != nil {
-			return nil, err
-		}
-		cfg.IsDockerRuntime = true
-		logrus.Debug("use docker runtime")
-	default:
-		return cfg, fmt.Errorf("unknown runtime type: %s", viper.GetString("prefer-runtime"))
-	}
-
-	if viper.GetString("prefer-runtime") == "docker" {
-		if err := checkDocker(); err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("namespace must be specified using flags, env or config file")
 	}
 
 	sess, err := utils.GetSession(&utils.SessionConfig{
@@ -204,34 +137,91 @@ func InitializeConfig(options ...Option) (*Config, error) {
 		return nil, err
 	}
 
-	tag := ""
-	out, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output()
-	if err != nil {
-		tag = viper.GetString("ENV")
-		pterm.Warning.Printfln("could not run git rev-parse, the default tag was set: %s", tag)
-	} else {
-		tag = strings.Trim(string(out), "\n")
-	}
-
 	viper.SetDefault("DOCKER_REGISTRY", fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, viper.GetString("aws_region")))
-	viper.SetDefault("TF_LOG", fmt.Sprintf(""))
-	viper.SetDefault("TAG", string(tag))
 	// Reset env directory to default because env may change
-	setDefaultDirectories(cwd)
 	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
 
+	plainText := viper.GetBool("plain-text") || viper.GetBool("plain_text")
+
+	if plainText {
+		pterm.DisableStyling()
+	}
+
+	cfg.IsPlainText = plainText
+
+	if viper.GetString("prefer-runtime") == "docker" {
+		cfg.IsDockerRuntime = true
+	}
+
+	return cfg, nil
+}
+
+func InitConfig() {
+	viper.SetEnvPrefix("IZE")
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+
+	viper.SetDefault("ENV", os.Getenv("ENV"))
+	viper.SetDefault("AWS_PROFILE", os.Getenv("AWS_PROFILE"))
+	viper.SetDefault("AWS_REGION", os.Getenv("AWS_REGION"))
+	viper.SetDefault("NAMESPACE", os.Getenv("NAMESPACE"))
+	// TODO: those static defaults should probably go to a separate package and/or function. Also would include image names and such.
+	viper.SetDefault("TERRAFORM_VERSION", "1.1.3")
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		logrus.Fatalln("can't initialize config: %w", err)
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		logrus.Fatalln("can't initialize config: %w", err)
+	}
+
+	viper.SetDefault("ROOT_DIR", cwd)
+	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
+	setDefaultInfraDir(cwd)
+
+	cfg, err := readConfigFile(viper.GetString("config-file"))
+	if err != nil {
+		logrus.Fatal("can't initialize config: %w", err)
+	}
+
+	if cfg == nil {
+		cfg, err = readGlobalConfigFile()
+		if err != nil {
+			logrus.Fatal("can't initialize config: %w", err)
+		}
+	}
+
+	logrus.Debug("config file used:", viper.ConfigFileUsed())
+
+	if cfg == nil {
+		if err := viper.Unmarshal(&cfg); err != nil {
+			logrus.Fatalln(err)
+		}
+	}
+
+	out, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output()
+	if err == nil {
+		viper.SetDefault("TAG", viper.GetString("ENV"))
+		pterm.Warning.Printfln("could not run git rev-parse, the default tag was set: %s", viper.GetString("TAG"))
+	} else {
+		viper.SetDefault("TAG", strings.Trim(string(out), "\n"))
+	}
+
+	viper.SetDefault("TF_LOG", "")
+
 	if cfg.IsGlobal {
-		viper.SetDefault("ENV_DIR", fmt.Sprintf("%s/.ize/%s/%s", home, viper.GetString("NAMESPACE"), viper.GetString("ENV")))
+		viper.SetDefault("ENV_DIR", fmt.Sprintf("%s/.ize/%s/%s", home, cfg.Namespace, cfg.Env))
 		_, err := os.Stat(viper.GetString("ENV_DIR"))
 		if os.IsNotExist(err) {
 			os.MkdirAll(viper.GetString("ENV_DIR"), defaultPerm)
 		}
 	}
 
-	return cfg, nil
 }
 
-func setDefaultDirectories(cwd string) {
+func setDefaultInfraDir(cwd string) {
 	viper.SetDefault("INFRA_DIR", fmt.Sprintf("%v/.ize", cwd))
 	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.ize/env/%v", cwd, viper.GetString("ENV")))
 	_, err := os.Stat(viper.GetString("INFRA_DIR"))
@@ -275,9 +265,9 @@ func checkSessionManagerPlugin() error {
 			}
 
 			if c.Check(v) {
-				return fmt.Errorf("python version %s below required %s\n", v.String(), "2.6.5")
+				return fmt.Errorf("python version %s below required %s", v.String(), "2.6.5")
 			}
-			return errors.New("python is not installed\n")
+			return errors.New("python is not installed")
 		}
 
 		c, err := semver.NewConstraint("<= 3.3.0")
@@ -291,7 +281,7 @@ func checkSessionManagerPlugin() error {
 		}
 
 		if c.Check(v) {
-			return fmt.Errorf("python version %s below required %s\n", v.String(), "3.3.0")
+			return fmt.Errorf("python version %s below required %s", v.String(), "3.3.0")
 		}
 
 		pterm.DefaultSection.Println("Installing SSM Agent plugin")
@@ -331,7 +321,6 @@ func readGlobalConfigFile() (*Config, error) {
 	namespace := viper.GetString("namespace")
 
 	if len(env) == 0 || len(namespace) == 0 {
-		logrus.Warn("can't load global config without env and namespace")
 		return nil, nil
 	}
 
@@ -344,10 +333,9 @@ func readGlobalConfigFile() (*Config, error) {
 	viper.AddConfigPath(fmt.Sprintf("%s/.ize", home))
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			logrus.Warn("global config file not found")
 			return nil, nil
 		} else {
-			return nil, fmt.Errorf("can't read config file %s: %w\n", viper.ConfigFileUsed(), err)
+			return nil, fmt.Errorf("can't read config file %s: %w", viper.ConfigFileUsed(), err)
 		}
 	}
 
@@ -357,7 +345,7 @@ func readGlobalConfigFile() (*Config, error) {
 			return nil, err
 		}
 	} else {
-		logrus.Warn(fmt.Sprintf("config for %s.%s not found", namespace, env))
+		logrus.Debug(fmt.Sprintf("config for %s.%s not found", namespace, env))
 	}
 
 	cfg.Env = env
@@ -378,10 +366,9 @@ func readConfigFile(path string) (*Config, error) {
 	}
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			logrus.Warn("config file not found")
 			return nil, nil
 		} else {
-			return nil, fmt.Errorf("can't read config file %s: %w\n", viper.ConfigFileUsed(), err)
+			return nil, fmt.Errorf("can't read config file %s: %w", viper.ConfigFileUsed(), err)
 		}
 	}
 

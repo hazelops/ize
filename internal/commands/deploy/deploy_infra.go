@@ -1,6 +1,7 @@
 package deploy
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -24,6 +25,7 @@ type DeployInfraOptions struct {
 	Type      string
 	Terraform terraformInfraConfig
 	Local     bool
+	UI        terminal.UI
 }
 
 var deployInfraLongDesc = templates.LongDesc(`
@@ -46,7 +48,7 @@ func NewDeployInfraFlags() *DeployInfraOptions {
 	return &DeployInfraOptions{}
 }
 
-func NewCmdDeployInfra(ui terminal.UI) *cobra.Command {
+func NewCmdDeployInfra() *cobra.Command {
 	o := NewDeployInfraFlags()
 
 	cmd := &cobra.Command{
@@ -66,7 +68,7 @@ func NewCmdDeployInfra(ui terminal.UI) *cobra.Command {
 				return err
 			}
 
-			err = o.Run(ui)
+			err = o.Run()
 			if err != nil {
 				return err
 			}
@@ -95,7 +97,7 @@ func BindFlags(flags *pflag.FlagSet) {
 func (o *DeployInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 	var err error
 
-	o.Config, err = config.InitializeConfig()
+	o.Config, err = config.GetConfig()
 	if err != nil {
 		return fmt.Errorf("can`t complete options: %w", err)
 	}
@@ -126,6 +128,8 @@ func (o *DeployInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 		o.Terraform.Version = viper.GetString("terraform_version")
 	}
 
+	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
+
 	return nil
 }
 
@@ -141,7 +145,8 @@ func (o *DeployInfraOptions) Validate() error {
 	return nil
 }
 
-func (o *DeployInfraOptions) Run(ui terminal.UI) error {
+func (o *DeployInfraOptions) Run() error {
+	ui := o.UI
 	var tf terraform.Terraform
 
 	v, err := o.Config.Session.Config.Credentials.Get()

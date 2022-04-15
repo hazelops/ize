@@ -1,6 +1,7 @@
 package destroy
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -16,13 +17,14 @@ import (
 type DestroyInfraOptions struct {
 	Config    *config.Config
 	Terraform terraformInfraConfig
+	ui        terminal.UI
 }
 
 func NewDestroyInfraFlags() *DestroyInfraOptions {
 	return &DestroyInfraOptions{}
 }
 
-func NewCmdDestroyInfra(ui terminal.UI) *cobra.Command {
+func NewCmdDestroyInfra() *cobra.Command {
 	o := NewDestroyInfraFlags()
 
 	cmd := &cobra.Command{
@@ -40,7 +42,7 @@ func NewCmdDestroyInfra(ui terminal.UI) *cobra.Command {
 				return err
 			}
 
-			err = o.Run(ui)
+			err = o.Run()
 			if err != nil {
 				return err
 			}
@@ -68,7 +70,7 @@ func BindFlags(flags *pflag.FlagSet) {
 func (o *DestroyInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 	var err error
 
-	o.Config, err = config.InitializeConfig()
+	o.Config, err = config.GetConfig()
 	if err != nil {
 		return fmt.Errorf("can`t complete options: %w", err)
 	}
@@ -91,18 +93,21 @@ func (o *DestroyInfraOptions) Complete(cmd *cobra.Command, args []string) error 
 		o.Terraform.Version = viper.GetString("terraform_version")
 	}
 
+	o.ui = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
+
 	return nil
 }
 
 func (o *DestroyInfraOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified\n")
+		return fmt.Errorf("env must be specified")
 	}
 
 	return nil
 }
 
-func (o *DestroyInfraOptions) Run(ui terminal.UI) error {
+func (o *DestroyInfraOptions) Run() error {
+	ui := o.ui
 	var tf terraform.Terraform
 
 	logrus.Infof("infra: %s", o.Terraform)

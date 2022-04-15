@@ -1,6 +1,7 @@
 package secrets
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -24,13 +25,14 @@ type SecretsPushOptions struct {
 	FilePath    string
 	SecretsPath string
 	Force       bool
+	ui          terminal.UI
 }
 
 func NewSecretsPushFlags() *SecretsPushOptions {
 	return &SecretsPushOptions{}
 }
 
-func NewCmdSecretsPush(ui terminal.UI) *cobra.Command {
+func NewCmdSecretsPush() *cobra.Command {
 	o := NewSecretsPushFlags()
 
 	cmd := &cobra.Command{
@@ -51,7 +53,7 @@ func NewCmdSecretsPush(ui terminal.UI) *cobra.Command {
 				return err
 			}
 
-			err = o.Run(ui)
+			err = o.Run()
 			if err != nil {
 				return err
 			}
@@ -69,7 +71,7 @@ func NewCmdSecretsPush(ui terminal.UI) *cobra.Command {
 }
 
 func (o *SecretsPushOptions) Complete(cmd *cobra.Command, args []string) error {
-	cfg, err := config.InitializeConfig()
+	cfg, err := config.GetConfig()
 	if err != nil {
 		return err
 	}
@@ -85,6 +87,8 @@ func (o *SecretsPushOptions) Complete(cmd *cobra.Command, args []string) error {
 		o.SecretsPath = fmt.Sprintf("/%s/%s", o.Config.Env, o.AppName)
 	}
 
+	o.ui = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
+
 	return nil
 }
 
@@ -96,7 +100,8 @@ func (o *SecretsPushOptions) Validate() error {
 	return nil
 }
 
-func (o *SecretsPushOptions) Run(ui terminal.UI) error {
+func (o *SecretsPushOptions) Run() error {
+	ui := o.ui
 	sg := ui.StepGroup()
 	defer sg.Wait()
 

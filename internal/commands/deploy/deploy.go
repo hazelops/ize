@@ -29,6 +29,7 @@ type DeployOptions struct {
 	Infra            Infra
 	App              apps.App
 	AutoApprove      bool
+	UI               terminal.UI
 }
 
 type Apps map[string]*apps.App
@@ -64,7 +65,7 @@ func NewDeployFlags() *DeployOptions {
 	return &DeployOptions{}
 }
 
-func NewCmdDeploy(ui terminal.UI) *cobra.Command {
+func NewCmdDeploy() *cobra.Command {
 	o := NewDeployFlags()
 
 	cmd := &cobra.Command{
@@ -90,7 +91,7 @@ func NewCmdDeploy(ui terminal.UI) *cobra.Command {
 				return err
 			}
 
-			err = o.Run(ui)
+			err = o.Run()
 			if err != nil {
 				return err
 			}
@@ -102,7 +103,7 @@ func NewCmdDeploy(ui terminal.UI) *cobra.Command {
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "approve deploy all")
 
 	cmd.AddCommand(
-		NewCmdDeployInfra(ui),
+		NewCmdDeployInfra(),
 	)
 
 	return cmd
@@ -112,7 +113,10 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 	var err error
 
 	if len(args) == 0 {
-		o.Config, err = config.InitializeConfig(config.WithConfigFile())
+		if err := config.CheckRequirements(config.WithConfigFile()); err != nil {
+			return err
+		}
+		o.Config, err = config.GetConfig()
 		viper.BindPFlags(cmd.Flags())
 		if err != nil {
 			return fmt.Errorf("can`t complete options: %w", err)
@@ -120,10 +124,6 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 
 		viper.UnmarshalKey("app", &o.Apps)
 		viper.UnmarshalKey("infra.terraform", &o.Infra)
-
-		for _, v := range o.Apps {
-			fmt.Println(*v)
-		}
 
 		if len(o.Infra.Profile) == 0 {
 			o.Infra.Profile = o.Config.AwsProfile
@@ -137,7 +137,10 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 			o.Infra.Version = viper.GetString("terraform_version")
 		}
 	} else {
-		o.Config, err = config.InitializeConfig(config.WithConfigFile())
+		if err := config.CheckRequirements(config.WithConfigFile()); err != nil {
+			return err
+		}
+		o.Config, err = config.GetConfig()
 		if err != nil {
 			return fmt.Errorf("can`t complete options: %w", err)
 		}
@@ -148,6 +151,7 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 	}
 
 	o.Tag = viper.GetString("tag")
+	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
 
 	return nil
 }
@@ -168,7 +172,8 @@ func (o *DeployOptions) Validate() error {
 	return nil
 }
 
-func (o *DeployOptions) Run(ui terminal.UI) error {
+func (o *DeployOptions) Run() error {
+	ui := o.UI
 	if o.AppName == "" {
 		err := deployAll(ui, o)
 		if err != nil {

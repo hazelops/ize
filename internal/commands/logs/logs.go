@@ -58,7 +58,10 @@ func NewCmdLogs() *cobra.Command {
 }
 
 func (o *LogsOptions) Complete(cmd *cobra.Command, args []string) error {
-	cfg, err := config.InitializeConfig(config.WithSSMPlugin())
+	if err := config.CheckRequirements(config.WithSSMPlugin()); err != nil {
+		return err
+	}
+	cfg, err := config.GetConfig()
 	if err != nil {
 		return err
 	}

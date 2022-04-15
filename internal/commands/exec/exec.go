@@ -1,6 +1,7 @@
 package exec
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -19,13 +20,14 @@ type ExecOptions struct {
 	AppName    string
 	EcsCluster string
 	Command    string
+	ui         terminal.UI
 }
 
 func NewExecFlags() *ExecOptions {
 	return &ExecOptions{}
 }
 
-func NewCmdExec(ui terminal.UI) *cobra.Command {
+func NewCmdExec() *cobra.Command {
 	o := NewExecFlags()
 
 	cmd := &cobra.Command{
@@ -46,7 +48,7 @@ func NewCmdExec(ui terminal.UI) *cobra.Command {
 				return err
 			}
 
-			err = o.Run(ui, cmd)
+			err = o.Run(cmd)
 			if err != nil {
 				return err
 			}
@@ -61,7 +63,10 @@ func NewCmdExec(ui terminal.UI) *cobra.Command {
 }
 
 func (o *ExecOptions) Complete(cmd *cobra.Command, args []string, argsLenAtDash int) error {
-	cfg, err := config.InitializeConfig(config.WithSSMPlugin())
+	if err := config.CheckRequirements(config.WithSSMPlugin()); err != nil {
+		return err
+	}
+	cfg, err := config.GetConfig()
 	if err != nil {
 		return err
 	}
@@ -76,25 +81,28 @@ func (o *ExecOptions) Complete(cmd *cobra.Command, args []string, argsLenAtDash 
 
 	o.Command = strings.Join(args[argsLenAtDash:], " ")
 
+	o.ui = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
+
 	return nil
 }
 
 func (o *ExecOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("can't validate: env must be specified\n")
+		return fmt.Errorf("can't validate: env must be specified")
 	}
 
 	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("can't validate: namespace must be specified\n")
+		return fmt.Errorf("can't validate: namespace must be specified")
 	}
 
 	if len(o.AppName) == 0 {
-		return fmt.Errorf("can't validate: app name must be specified\n")
+		return fmt.Errorf("can't validate: app name must be specified")
 	}
 	return nil
 }
 
-func (o *ExecOptions) Run(ui terminal.UI, cmd *cobra.Command) error {
+func (o *ExecOptions) Run(cmd *cobra.Command) error {
+	ui := o.ui
 	sg := ui.StepGroup()
 	defer sg.Wait()
 

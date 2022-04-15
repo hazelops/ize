@@ -7,24 +7,23 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-
-
 type TunnelDownOptions struct {
 	Config *config.Config
+	UI     terminal.UI
 }
 
 func NewTunnelDownOptions() *TunnelDownOptions {
 	return &TunnelDownOptions{}
 }
 
-func NewCmdTunnelDown(ui terminal.UI) *cobra.Command {
+func NewCmdTunnelDown() *cobra.Command {
 	o := NewTunnelDownOptions()
 
 	cmd := &cobra.Command{
@@ -57,12 +56,13 @@ func NewCmdTunnelDown(ui terminal.UI) *cobra.Command {
 }
 
 func (o *TunnelDownOptions) Complete(cmd *cobra.Command, args []string) error {
-	cfg, err := config.InitializeConfig()
+	cfg, err := config.GetConfig()
 	if err != nil {
 		return fmt.Errorf("can't complete options: %w", err)
 	}
 
 	o.Config = cfg
+	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
 
 	return nil
 }
@@ -76,8 +76,6 @@ func (o *TunnelDownOptions) Validate() error {
 }
 
 func (o *TunnelDownOptions) Run(cmd *cobra.Command) error {
-  ui := terminal.ConsoleUI(context.Background())
-  
 	c := exec.Command(
 		"ssh", "-S", "bastion.sock", "-O", "exit", "",
 	)
@@ -94,10 +92,10 @@ func (o *TunnelDownOptions) Run(cmd *cobra.Command) error {
 			logrus.Debug(out.String())
 			return fmt.Errorf("unable to bring the tunnel down: %w", err)
 		}
-		return fmt.Errorf("unable to bring the tunnel down: tunnel is not active\n")
+		return fmt.Errorf("unable to bring the tunnel down: tunnel is not active")
 	}
 
-	ui.Output("tunnel is down!\n", terminal.WithSuccessStyle())
+	o.UI.Output("tunnel is down!\n", terminal.WithSuccessStyle())
 
 	return nil
 }

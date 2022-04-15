@@ -1,10 +1,10 @@
 package commands
 
 import (
-	"context"
 	"fmt"
+	"path"
+	"runtime"
 	"strings"
-	"time"
 
 	"github.com/hazelops/ize/internal/commands/config"
 	"github.com/hazelops/ize/internal/commands/console"
@@ -18,9 +18,10 @@ import (
 	"github.com/hazelops/ize/internal/commands/secrets"
 	"github.com/hazelops/ize/internal/commands/terraform"
 	"github.com/hazelops/ize/internal/commands/tunnel"
+	cfg "github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/templates"
-	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -38,24 +39,8 @@ and is too simple to be considered sophisticated.
 So let's not do it but rather embrace the simplicity and minimalism.
 `)
 
-func Execute(args []string) {
-	go CheckLatestRealese()
-
-	ui := terminal.ConsoleUI(context.Background())
-
-	app, err := newApp(ui)
-	if err != nil {
-		ui.Output(err.Error())
-	}
-
-	if err := app.Execute(); err != nil {
-		ui.Output(err.Error()+"\n", terminal.WithErrorStyle())
-		time.Sleep(time.Millisecond * 50)
-	}
-}
-
-func newApp(ui terminal.UI) (*cobra.Command, error) {
-	rootCmd := &cobra.Command{
+var (
+	rootCmd = &cobra.Command{
 		Use:              "ize",
 		TraverseChildren: true,
 		SilenceErrors:    true,
@@ -70,27 +55,23 @@ func newApp(ui terminal.UI) (*cobra.Command, error) {
 			cmd.Help()
 		},
 	}
+)
 
-	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
 
-	rootCmd.AddCommand(
-		deploy.NewCmdDeploy(ui),
-		destroy.NewCmdDestroy(ui),
-		console.NewCmdConsole(ui),
-		env.NewCmdEnv(),
-		mfa.NewCmdMfa(),
-		terraform.NewCmdTerraform(),
-		secrets.NewCmdSecrets(ui),
-		initialize.NewCmdInit(),
-		tunnel.NewCmdTunnel(ui),
-		exec.NewCmdExec(ui),
-		config.NewCmdConfig(),
-		logs.NewCmdLogs(),
-		NewGendocCmd(),
-		NewVersionCmd(),
-	)
+func Execute(args []string) {
+	go CheckLatestRealese()
+
+	if err := rootCmd.Execute(); err != nil {
+		pterm.Error.Println(err)
+	}
+}
+
+func init() {
+	initLogrus()
+	customizeDefaultPtermPrefix()
 
 	rootCmd.PersistentFlags().StringP("log-level", "l", "", "enable debug messages")
+	rootCmd.PersistentFlags().Bool("plain-text", false, "enable plain text")
 	rootCmd.PersistentFlags().StringP("config-file", "c", "", "set config file name")
 	rootCmd.PersistentFlags().StringP("env", "e", "", "(required) set environment name (overrides value set in IZE_ENV / ENV if any of them are set)")
 	rootCmd.PersistentFlags().StringP("aws-profile", "p", "", "(required) set AWS profile (overrides value in ize.toml and IZE_AWS_PROFILE / AWS_PROFILE if any of them are set)")
@@ -99,20 +80,65 @@ func newApp(ui terminal.UI) (*cobra.Command, error) {
 	rootCmd.PersistentFlags().String("terraform-version", "", "set terraform-version")
 	rootCmd.PersistentFlags().String("prefer-runtime", "native", "set prefer runtime (native or docker)")
 	rootCmd.Flags().StringP("tag", "t", "", "set tag")
-	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-
-	BindFlags(rootCmd.PersistentFlags())
 	viper.BindPFlags(rootCmd.PersistentFlags())
+	rootCmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
+		viper.BindPFlag(strings.ReplaceAll(f.Name, "_", "-"), rootCmd.PersistentFlags().Lookup(f.Name))
+	})
 
-	return rootCmd, nil
+	addCommands()
+
+	cobra.OnInitialize(cfg.InitConfig)
 }
 
-func BindFlags(flags *pflag.FlagSet) {
-	replacer := strings.NewReplacer("-", "_")
+func addCommands() {
+	rootCmd.AddCommand(
+		deploy.NewCmdDeploy(),
+		destroy.NewCmdDestroy(),
+		console.NewCmdConsole(),
+		env.NewCmdEnv(),
+		mfa.NewCmdMfa(),
+		terraform.NewCmdTerraform(),
+		secrets.NewCmdSecrets(),
+		initialize.NewCmdInit(),
+		tunnel.NewCmdTunnel(),
+		exec.NewCmdExec(),
+		config.NewCmdConfig(),
+		logs.NewCmdLogs(),
+		NewGendocCmd(),
+		NewVersionCmd(),
+	)
+}
 
-	flags.VisitAll(func(flag *pflag.Flag) {
-		if err := viper.BindPFlag(replacer.Replace(flag.Name), flag); err != nil {
-			panic("unable to bind flag " + flag.Name + ": " + err.Error())
-		}
+func initLogrus() {
+	logrus.SetReportCaller(true)
+	logrus.SetFormatter(&logrus.TextFormatter{
+		PadLevelText:     true,
+		DisableTimestamp: true,
+		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+			filename := path.Base(f.File)
+			return "", fmt.Sprintf(" %s:%d", filename, f.Line)
+		},
 	})
+}
+
+func customizeDefaultPtermPrefix() {
+	pterm.Info.Prefix = pterm.Prefix{
+		Text:  "ℹ",
+		Style: pterm.NewStyle(pterm.FgBlue),
+	}
+
+	pterm.Success.Prefix = pterm.Prefix{
+		Text:  "✓",
+		Style: pterm.NewStyle(pterm.FgGreen),
+	}
+
+	pterm.Error.Prefix = pterm.Prefix{
+		Text:  "✗",
+		Style: pterm.NewStyle(pterm.FgRed),
+	}
+
+	pterm.Warning.Prefix = pterm.Prefix{
+		Text:  "⚠",
+		Style: pterm.NewStyle(pterm.FgYellow),
+	}
 }

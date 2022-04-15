@@ -59,7 +59,7 @@ func NewCmdSecretsEdit() *cobra.Command {
 }
 
 func (o *SecretsEditOptions) Complete(cmd *cobra.Command, args []string) error {
-	cfg, err := config.InitializeConfig()
+	cfg, err := config.GetConfig()
 	if err != nil {
 		return err
 	}
