@@ -120,8 +120,6 @@ func (o *TerraformOptions) Run(args []string) error {
 		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
 	}
 
-	logrus.Debug("terraform env: %s", env)
-
 	if o.Config.IsDockerRuntime {
 		tf = terraform.NewDockerTerraform(viper.GetString("terraform_version"), args, env, "")
 	} else {
