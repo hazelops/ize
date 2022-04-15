@@ -57,6 +57,7 @@ var (
 	}
 )
 
+
 func Execute(args []string) {
 	go CheckLatestRealese()
 
