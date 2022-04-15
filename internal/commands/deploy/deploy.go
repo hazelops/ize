@@ -265,7 +265,7 @@ func deployAll(ui terminal.UI, o *DeployOptions) error {
 		}
 	}
 
-	ui.Output("Running deploy infra...", terminal.WithHeaderStyle())
+	ui.Output(fmt.Sprintf("[%s] Running deploy infra...", viper.Get("ENV")), terminal.WithHeaderStyle())
 	ui.Output("Execution terraform init...", terminal.WithHeaderStyle())
 
 	err = tf.RunUI(ui)
