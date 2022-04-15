@@ -12,7 +12,6 @@ import (
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type ConsoleOptions struct {
@@ -61,7 +60,10 @@ func NewCmdConsole() *cobra.Command {
 }
 
 func (o *ConsoleOptions) Complete(cmd *cobra.Command, args []string) error {
-	cfg, err := config.InitializeConfig(config.WithSSMPlugin())
+	if err := config.CheckRequirements(config.WithSSMPlugin()); err != nil {
+		return err
+	}
+	cfg, err := config.GetConfig()
 	if err != nil {
 		return err
 	}
@@ -90,7 +92,7 @@ func (o *ConsoleOptions) Validate() error {
 		return fmt.Errorf("can't validate: app name must be specified")
 	}
 
-	o.ui = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
+	o.ui = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
 
 	return nil
 }

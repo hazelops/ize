@@ -56,13 +56,13 @@ func NewCmdTunnelDown() *cobra.Command {
 }
 
 func (o *TunnelDownOptions) Complete(cmd *cobra.Command, args []string) error {
-	cfg, err := config.InitializeConfig()
+	cfg, err := config.GetConfig()
 	if err != nil {
 		return fmt.Errorf("can't complete options: %w", err)
 	}
 
 	o.Config = cfg
-	o.UI = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
+	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
 
 	return nil
 }

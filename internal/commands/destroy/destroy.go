@@ -108,7 +108,10 @@ func (o *DestroyOptions) Complete(cmd *cobra.Command, args []string) error {
 	var err error
 
 	if len(args) == 0 {
-		o.Config, err = config.InitializeConfig(config.WithConfigFile())
+		if err := config.CheckRequirements(config.WithConfigFile()); err != nil {
+			return err
+		}
+		o.Config, err = config.GetConfig()
 		viper.BindPFlags(cmd.Flags())
 		if err != nil {
 			return fmt.Errorf("can`t complete options: %w", err)
@@ -133,7 +136,7 @@ func (o *DestroyOptions) Complete(cmd *cobra.Command, args []string) error {
 			o.Infra.Version = viper.GetString("terraform_version")
 		}
 	} else {
-		o.Config, err = config.InitializeConfig()
+		o.Config, err = config.GetConfig()
 		if err != nil {
 			return fmt.Errorf("can`t complete options: %w", err)
 		}
@@ -144,7 +147,7 @@ func (o *DestroyOptions) Complete(cmd *cobra.Command, args []string) error {
 	}
 
 	o.Tag = viper.GetString("tag")
-	o.ui = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
+	o.ui = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
 
 	return nil
 }

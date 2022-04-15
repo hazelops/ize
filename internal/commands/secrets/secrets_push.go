@@ -71,7 +71,7 @@ func NewCmdSecretsPush() *cobra.Command {
 }
 
 func (o *SecretsPushOptions) Complete(cmd *cobra.Command, args []string) error {
-	cfg, err := config.InitializeConfig()
+	cfg, err := config.GetConfig()
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (o *SecretsPushOptions) Complete(cmd *cobra.Command, args []string) error {
 		o.SecretsPath = fmt.Sprintf("/%s/%s", o.Config.Env, o.AppName)
 	}
 
-	o.ui = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
+	o.ui = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
 
 	return nil
 }

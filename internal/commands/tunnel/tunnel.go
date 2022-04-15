@@ -97,13 +97,16 @@ func NewCmdTunnel() *cobra.Command {
 }
 
 func (o *TunnelOptions) Complete(cmd *cobra.Command, args []string) error {
-	cfg, err := config.InitializeConfig(config.WithSSMPlugin())
+	if err := config.CheckRequirements(config.WithSSMPlugin()); err != nil {
+		return err
+	}
+	cfg, err := config.GetConfig()
 	if err != nil {
 		return fmt.Errorf("can't configure tunnel: %w", err)
 	}
 
 	o.Config = cfg
-	o.UI = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
+	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
 
 	isUp, err := checkTunnel(o.UI)
 	if err != nil {

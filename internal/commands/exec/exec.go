@@ -13,7 +13,6 @@ import (
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type ExecOptions struct {
@@ -64,7 +63,10 @@ func NewCmdExec() *cobra.Command {
 }
 
 func (o *ExecOptions) Complete(cmd *cobra.Command, args []string, argsLenAtDash int) error {
-	cfg, err := config.InitializeConfig(config.WithSSMPlugin())
+	if err := config.CheckRequirements(config.WithSSMPlugin()); err != nil {
+		return err
+	}
+	cfg, err := config.GetConfig()
 	if err != nil {
 		return err
 	}
@@ -79,7 +81,7 @@ func (o *ExecOptions) Complete(cmd *cobra.Command, args []string, argsLenAtDash 
 
 	o.Command = strings.Join(args[argsLenAtDash:], " ")
 
-	o.ui = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
+	o.ui = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
 
 	return nil
 }

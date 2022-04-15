@@ -11,12 +11,7 @@ import (
 	"strings"
 
 	"github.com/pterm/pterm"
-	"github.com/spf13/cobra"
 )
-
-type cmder interface {
-	getCommand() *cobra.Command
-}
 
 func CheckCommand(command string, subcommand []string) (string, error) {
 	out, err := exec.Command(command, subcommand...).Output()

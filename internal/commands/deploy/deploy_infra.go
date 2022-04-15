@@ -97,7 +97,7 @@ func BindFlags(flags *pflag.FlagSet) {
 func (o *DeployInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 	var err error
 
-	o.Config, err = config.InitializeConfig()
+	o.Config, err = config.GetConfig()
 	if err != nil {
 		return fmt.Errorf("can`t complete options: %w", err)
 	}
@@ -128,7 +128,7 @@ func (o *DeployInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 		o.Terraform.Version = viper.GetString("terraform_version")
 	}
 
-	o.UI = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
+	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
 
 	return nil
 }

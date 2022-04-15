@@ -70,7 +70,7 @@ func BindFlags(flags *pflag.FlagSet) {
 func (o *DestroyInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 	var err error
 
-	o.Config, err = config.InitializeConfig()
+	o.Config, err = config.GetConfig()
 	if err != nil {
 		return fmt.Errorf("can`t complete options: %w", err)
 	}

@@ -63,8 +63,11 @@ func NewCmdTunnelUp() *cobra.Command {
 }
 
 func (o *TunnelUpOptions) Complete(md *cobra.Command, args []string) error {
-	o.UI = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
-	cfg, err := config.InitializeConfig(config.WithSSMPlugin())
+	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
+	if err := config.CheckRequirements(config.WithSSMPlugin()); err != nil {
+		return err
+	}
+	cfg, err := config.GetConfig()
 	if err != nil {
 		return fmt.Errorf("can't configure tunnel: %w", err)
 	}

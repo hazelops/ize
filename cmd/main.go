@@ -19,32 +19,8 @@ import (
 	"os"
 
 	"github.com/hazelops/ize/internal/commands"
-	"github.com/pterm/pterm"
 )
 
 func main() {
-
-	// Customize default error.
-
-	pterm.Info.Prefix = pterm.Prefix{
-		Text:  "ℹ",
-		Style: pterm.NewStyle(pterm.FgBlue),
-	}
-
-	pterm.Success.Prefix = pterm.Prefix{
-		Text:  "✓",
-		Style: pterm.NewStyle(pterm.FgGreen),
-	}
-
-	pterm.Error.Prefix = pterm.Prefix{
-		Text:  "✗",
-		Style: pterm.NewStyle(pterm.FgRed),
-	}
-
-	pterm.Warning.Prefix = pterm.Prefix{
-		Text:  "⚠",
-		Style: pterm.NewStyle(pterm.FgYellow),
-	}
-
 	commands.Execute(os.Args[1:])
 }

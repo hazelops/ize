@@ -7,7 +7,6 @@ import (
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type TunnelStatusOptions struct {
@@ -51,13 +50,13 @@ func NewCmdTunnelStatus() *cobra.Command {
 }
 
 func (o *TunnelStatusOptions) Complete(cmd *cobra.Command, args []string) error {
-	cfg, err := config.InitializeConfig()
+	cfg, err := config.GetConfig()
 	if err != nil {
 		return fmt.Errorf("can't complete options: %w", err)
 	}
 
 	o.Config = cfg
-	o.UI = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
+	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
 
 	return nil
 }

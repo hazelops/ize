@@ -14,12 +14,8 @@ func NewGendocCmd() *cobra.Command {
 		Long:                  "Create docs.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			root, err := newApp()
-			if err != nil {
-				return err
-			}
 
-			err = doc.GenMarkdownTree(root, "./commands")
+			err := doc.GenMarkdownTree(rootCmd, "./commands")
 			if err != nil {
 				return err
 			}
