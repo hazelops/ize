@@ -71,6 +71,8 @@ func newApp(ui terminal.UI) (*cobra.Command, error) {
 		},
 	}
 
+	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
+
 	rootCmd.AddCommand(
 		deploy.NewCmdDeploy(ui),
 		destroy.NewCmdDestroy(ui),
