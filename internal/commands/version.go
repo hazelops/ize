@@ -2,8 +2,10 @@ package commands
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
+	"text/template"
 
 	"github.com/Masterminds/semver"
 	"github.com/pterm/pterm"
@@ -17,11 +19,18 @@ func NewVersionCmd() *cobra.Command {
 		Use:   "version",
 		Short: "show IZE version",
 		Run: func(cmd *cobra.Command, args []string) {
-			pterm.Info.Printfln("Version: %s", GetVersionNumber())
+			c := cmd.Parent()
+			tmpl(c.OutOrStdout(), c.VersionTemplate(), c)
 		},
 	}
 
 	return cmd
+}
+
+func tmpl(w io.Writer, text string, data interface{}) error {
+	t := template.New("top")
+	template.Must(t.Parse(text))
+	return t.Execute(w, data)
 }
 
 func GetVersionNumber() string {
