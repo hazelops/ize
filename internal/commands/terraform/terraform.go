@@ -2,6 +2,7 @@ package terraform
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/terraform"
@@ -112,6 +113,7 @@ func (o *TerraformOptions) Run(args []string) error {
 
 	env := []string{
 		fmt.Sprintf("ENV=%v", o.Config.Env),
+		fmt.Sprintf("USER=%v", os.Getenv("USER")),
 		fmt.Sprintf("AWS_PROFILE=%v", o.Config.AwsProfile),
 		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
 		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),

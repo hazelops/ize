@@ -202,7 +202,7 @@ func InitConfig() {
 	}
 
 	out, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output()
-	if err == nil {
+	if err != nil {
 		viper.SetDefault("TAG", viper.GetString("ENV"))
 		pterm.Warning.Printfln("could not run git rev-parse, the default tag was set: %s", viper.GetString("TAG"))
 	} else {
