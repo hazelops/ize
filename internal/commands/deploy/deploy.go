@@ -148,6 +148,14 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 		viper.BindPFlags(cmd.Flags())
 		o.AppName = cmd.Flags().Args()[0]
 		viper.UnmarshalKey(fmt.Sprintf("app.%s", o.AppName), &o.App)
+
+		if len(o.App.Type) == 0 {
+			o.App.Type = "ecs"
+		}
+
+		if len(o.App.Path) == 0 {
+			o.App.Path = fmt.Sprintf("./projects/%s", o.AppName)
+		}
 	}
 
 	o.Tag = viper.GetString("tag")

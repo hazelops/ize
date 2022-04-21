@@ -47,9 +47,11 @@ type ecs struct {
 }
 
 func NewECSDeployment(app App) *ecs {
-	var ecsConfig ecs
+	ecsConfig := ecs{
+		Name: app.Name,
+		Path: app.Path,
+	}
 
-	ecsConfig.Name = app.Name
 	viper.UnmarshalKey(fmt.Sprintf("app.%s", app.Name), &ecsConfig)
 
 	ecsConfig.AwsProfile = viper.GetString("aws_profile")
