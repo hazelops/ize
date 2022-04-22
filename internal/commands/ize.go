@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/hazelops/ize/internal/commands/config"
+	"github.com/hazelops/ize/internal/commands/configure"
 	"github.com/hazelops/ize/internal/commands/console"
 	"github.com/hazelops/ize/internal/commands/deploy"
 	"github.com/hazelops/ize/internal/commands/destroy"
@@ -102,7 +102,7 @@ func addCommands() {
 		initialize.NewCmdInit(),
 		tunnel.NewCmdTunnel(),
 		exec.NewCmdExec(),
-		config.NewCmdConfig(),
+		configure.NewCmdConfig(),
 		logs.NewCmdLogs(),
 		NewGendocCmd(),
 		NewVersionCmd(),
