@@ -23,12 +23,12 @@ type DestroyOptions struct {
 	SkipBuildAndPush bool
 	Apps             Apps
 	Infra            Infra
-	App              apps.App
+	App              interface{}
 	AutoApprove      bool
 	ui               terminal.UI
 }
 
-type Apps map[string]*apps.App
+type Apps map[string]*interface{}
 
 type Infra struct {
 	Version string `mapstructure:"terraform_version"`
@@ -218,12 +218,6 @@ func validateAll(o *DestroyOptions) error {
 		return fmt.Errorf("can't validate options: tag must be specified")
 	}
 
-	for sname, svc := range o.Apps {
-		if len(svc.Type) == 0 {
-			return fmt.Errorf("can't validate options: type for app %s must be specified", sname)
-		}
-	}
-
 	return nil
 }
 
@@ -238,10 +232,24 @@ func destroyAll(ui terminal.UI, o *DestroyOptions) error {
 	err := apps.InReversDependencyOrder(aws.BackgroundContext(), o.Apps, func(c context.Context, name string) error {
 		o.Config.AwsProfile = o.Infra.Profile
 
-		o.Apps[name].Name = name
-		err := o.Apps[name].Destroy(sg, ui)
+		at := (*o.Apps[name]).(map[string]interface{})["type"].(string)
+
+		var deployment apps.Deployment
+
+		switch at {
+		case "ecs":
+			deployment = apps.NewECSDeployment(name, *o.Apps[name])
+		case "serverless":
+			deployment = apps.NewServerlessDeployment(name, *o.Apps[name])
+		case "alias":
+			deployment = apps.NewAliasDeployment(name)
+		default:
+			return fmt.Errorf("apps type of %s not supported", at)
+		}
+
+		err := deployment.Destroy(sg, ui)
 		if err != nil {
-			return fmt.Errorf("can't destroy all: %w", err)
+			return err
 		}
 
 		return nil
@@ -297,8 +305,32 @@ func destroyApp(ui terminal.UI, o *DestroyOptions) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	o.App.Name = o.AppName
-	err := o.App.Destroy(sg, ui)
+	var appType string
+
+	app, ok := o.App.(map[string]interface{})
+	if !ok {
+		appType = "ecs"
+	} else {
+		appType, ok = app["type"].(string)
+		if !ok {
+			appType = "ecs"
+		}
+	}
+
+	var deployment apps.Deployment
+
+	switch appType {
+	case "ecs":
+		deployment = apps.NewECSDeployment(o.AppName, o.App)
+	case "serverless":
+		deployment = apps.NewServerlessDeployment(o.AppName, o.App)
+	case "alias":
+		deployment = apps.NewAliasDeployment(o.AppName)
+	default:
+		return fmt.Errorf("apps type of %s not supported", appType)
+	}
+
+	err := deployment.Destroy(sg, ui)
 	if err != nil {
 		return fmt.Errorf("can't destroy: %w", err)
 	}

@@ -51,17 +51,17 @@ var (
 )
 
 // InDependencyOrder applies the function to the apps of the project taking in account the dependency order
-func InDependencyOrder(ctx context.Context, apps map[string]*App, fn func(context.Context, string) error) error {
+func InDependencyOrder(ctx context.Context, apps map[string]*interface{}, fn func(context.Context, string) error) error {
 	return visit(ctx, apps, upDirectionTraversalConfig, fn, AppStopped)
 }
 
 // InReverseDependencyOrder applies the function to the apps of the project in reverse order of dependencies
-func InReversDependencyOrder(ctx context.Context, apps map[string]*App, fn func(context.Context, string) error) error {
+func InReversDependencyOrder(ctx context.Context, apps map[string]*interface{}, fn func(context.Context, string) error) error {
 	return visit(ctx, apps, downDirectionTraversalConfig, fn, AppStarted)
 }
 
 // NewGraph returns the dependency graph of the apps
-func NewGraph(apps map[string]*App, initialStatus AppStatus) *Graph {
+func NewGraph(apps map[string]*interface{}, initialStatus AppStatus) *Graph {
 	graph := &Graph{
 		lock:     sync.RWMutex{},
 		Vertices: map[string]*Vertex{},
@@ -72,8 +72,16 @@ func NewGraph(apps map[string]*App, initialStatus AppStatus) *Graph {
 	}
 
 	for n, s := range apps {
-		for _, name := range s.DependsOn {
-			_ = graph.AddEdge(n, name)
+		a, ok := (*s).(map[string]interface{})
+		if !ok {
+			fmt.Println("!ok")
+		}
+
+		for t, name := range a {
+			if t == "type" {
+				_ = graph.AddEdge(n, name.(string))
+
+			}
 		}
 	}
 
@@ -176,7 +184,7 @@ func remove(slice []string, item string) []string {
 	return s
 }
 
-func visit(ctx context.Context, apps map[string]*App, traversalConfig graphTraversalConfig, fn func(context.Context, string) error, initialStatus AppStatus) error {
+func visit(ctx context.Context, apps map[string]*interface{}, traversalConfig graphTraversalConfig, fn func(context.Context, string) error, initialStatus AppStatus) error {
 	g := NewGraph(apps, initialStatus)
 	if b, err := g.HasCycles(); b {
 		return err

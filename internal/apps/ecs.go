@@ -27,6 +27,7 @@ import (
 	"github.com/hazelops/ize/internal/docker"
 	dockerutils "github.com/hazelops/ize/internal/docker/utils"
 	"github.com/hazelops/ize/pkg/terminal"
+	"github.com/mitchellh/mapstructure"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -46,13 +47,20 @@ type ecs struct {
 	Tag               string
 }
 
-func NewECSDeployment(app App) *ecs {
-	ecsConfig := ecs{
-		Name: app.Name,
-		Path: app.Path,
+func NewECSDeployment(name string, app interface{}) *ecs {
+	ecsConfig := ecs{}
+
+	raw, ok := app.(map[string]interface{})
+	if ok {
+		ecsConfig.Name = name
+		mapstructure.Decode(raw, &ecsConfig)
 	}
 
-	viper.UnmarshalKey(fmt.Sprintf("app.%s", app.Name), &ecsConfig)
+	ecsConfig.Name = name
+
+	if ecsConfig.Path == "" {
+		ecsConfig.Path = fmt.Sprintf("./projects/%s", name)
+	}
 
 	ecsConfig.AwsProfile = viper.GetString("aws_profile")
 	ecsConfig.AwsRegion = viper.GetString("aws_region")
