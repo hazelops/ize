@@ -364,8 +364,6 @@ func deployApp(ui terminal.UI, o *DeployOptions) error {
 
 	var appType string
 
-	fmt.Println(o.App)
-
 	app, ok := o.App.(map[string]interface{})
 	if !ok {
 		appType = "ecs"

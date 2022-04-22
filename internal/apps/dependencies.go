@@ -73,14 +73,12 @@ func NewGraph(apps map[string]*interface{}, initialStatus AppStatus) *Graph {
 
 	for n, s := range apps {
 		a, ok := (*s).(map[string]interface{})
-		if !ok {
-			fmt.Println("!ok")
-		}
+		if ok {
+			for t, name := range a {
+				if t == "type" {
+					_ = graph.AddEdge(n, name.(string))
 
-		for t, name := range a {
-			if t == "type" {
-				_ = graph.AddEdge(n, name.(string))
-
+				}
 			}
 		}
 	}
