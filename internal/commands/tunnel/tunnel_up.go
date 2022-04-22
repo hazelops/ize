@@ -63,7 +63,6 @@ func NewCmdTunnelUp() *cobra.Command {
 }
 
 func (o *TunnelUpOptions) Complete(md *cobra.Command, args []string) error {
-	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
 	if err := config.CheckRequirements(config.WithSSMPlugin()); err != nil {
 		return err
 	}
@@ -73,6 +72,7 @@ func (o *TunnelUpOptions) Complete(md *cobra.Command, args []string) error {
 	}
 
 	o.Config = cfg
+	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
 
 	isUp, err := checkTunnel(o.UI)
 	if err != nil {
