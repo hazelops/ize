@@ -1,4 +1,4 @@
-package config
+package configure
 
 import (
 	"fmt"
@@ -11,19 +11,19 @@ import (
 	"github.com/spf13/viper"
 )
 
-type ConfigOptions struct {
+type ConfigureOptions struct {
 }
 
-func NewConfigFlags() *ConfigOptions {
-	return &ConfigOptions{}
+func NewConfigFlags() *ConfigureOptions {
+	return &ConfigureOptions{}
 }
 
 func NewCmdConfig() *cobra.Command {
 	o := NewConfigFlags()
 
 	cmd := &cobra.Command{
-		Use:   "config",
-		Short: "generate global config",
+		Use:   "configure",
+		Short: "generate global configuration",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := o.Run()
 			if err != nil {
@@ -37,7 +37,7 @@ func NewCmdConfig() *cobra.Command {
 	return cmd
 }
 
-func (o *ConfigOptions) Run() error {
+func (o *ConfigureOptions) Run() error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return err
