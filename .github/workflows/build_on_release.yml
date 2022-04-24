@@ -76,7 +76,7 @@ jobs:
         uses: Rorychan/jira-releases-action@v1
         with:
           jira-server: 'https://hazelops.atlassian.net'
-          jira-email: 'ize-ops@hazelops.com'
+          jira-email: 'dmitry@hazelops.com'
           jira-api-token: ${{ secrets.JIRA_API_TOKEN }}
           project-name: 'IZE'
           release-name: ${{ github.event.release.name }}
