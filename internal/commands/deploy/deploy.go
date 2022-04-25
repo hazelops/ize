@@ -25,14 +25,14 @@ type DeployOptions struct {
 	AppName          string
 	Tag              string
 	SkipBuildAndPush bool
-	Apps             map[string]*apps.App
+	Apps             map[string]*interface{}
 	Infra            Infra
-	App              apps.App
+	App              interface{}
 	AutoApprove      bool
 	UI               terminal.UI
 }
 
-type Apps map[string]*apps.App
+type Apps map[string]*interface{}
 
 type Infra struct {
 	Version string `mapstructure:"terraform_version"`
@@ -137,9 +137,6 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 			o.Infra.Version = viper.GetString("terraform_version")
 		}
 	} else {
-		if err := config.CheckRequirements(config.WithConfigFile()); err != nil {
-			return err
-		}
 		o.Config, err = config.GetConfig()
 		if err != nil {
 			return fmt.Errorf("can`t complete options: %w", err)
@@ -206,10 +203,6 @@ func validate(o *DeployOptions) error {
 		return fmt.Errorf("can't validate options: app name must be specified")
 	}
 
-	if len(o.App.Type) == 0 {
-		return fmt.Errorf("can't validate options: app type must be specified")
-	}
-
 	return nil
 }
 
@@ -224,12 +217,6 @@ func validateAll(o *DeployOptions) error {
 
 	if len(o.Tag) == 0 {
 		return fmt.Errorf("can't validate options: tag must be specified")
-	}
-
-	for sname, svc := range o.Apps {
-		if len(svc.Type) == 0 {
-			return fmt.Errorf("can't validate options: type for app %s must be specified", sname)
-		}
 	}
 
 	return nil
@@ -339,10 +326,24 @@ func deployAll(ui terminal.UI, o *DeployOptions) error {
 	err = apps.InDependencyOrder(aws.BackgroundContext(), o.Apps, func(c context.Context, name string) error {
 		o.Config.AwsProfile = o.Infra.Profile
 
-		o.Apps[name].Name = name
-		err := o.Apps[name].Deploy(sg, ui)
+		at := (*o.Apps[name]).(map[string]interface{})["type"].(string)
+
+		var deployment apps.Deployment
+
+		switch at {
+		case "ecs":
+			deployment = apps.NewECSDeployment(name, *o.Apps[name])
+		case "serverless":
+			deployment = apps.NewServerlessDeployment(name, *o.Apps[name])
+		case "alias":
+			deployment = apps.NewAliasDeployment(name)
+		default:
+			return fmt.Errorf("apps type of %s not supported", at)
+		}
+
+		err := deployment.Deploy(sg, ui)
 		if err != nil {
-			return fmt.Errorf("can't deploy all: %w", err)
+			return err
 		}
 
 		return nil
@@ -351,8 +352,7 @@ func deployAll(ui terminal.UI, o *DeployOptions) error {
 		return err
 	}
 
-	s := sg.Add("Deploy all completed!")
-	s.Done()
+	ui.Output("Deploy all completed!\n", terminal.WithSuccessStyle())
 
 	return nil
 }
@@ -362,10 +362,34 @@ func deployApp(ui terminal.UI, o *DeployOptions) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	o.App.Name = o.AppName
-	err := o.App.Deploy(sg, ui)
+	var appType string
+
+	app, ok := o.App.(map[string]interface{})
+	if !ok {
+		appType = "ecs"
+	} else {
+		appType, ok = app["type"].(string)
+		if !ok {
+			appType = "ecs"
+		}
+	}
+
+	var deployment apps.Deployment
+
+	switch appType {
+	case "ecs":
+		deployment = apps.NewECSDeployment(o.AppName, o.App)
+	case "serverless":
+		deployment = apps.NewServerlessDeployment(o.AppName, o.App)
+	case "alias":
+		deployment = apps.NewAliasDeployment(o.AppName)
+	default:
+		return fmt.Errorf("apps type of %s not supported", appType)
+	}
+
+	err := deployment.Deploy(sg, ui)
 	if err != nil {
-		return fmt.Errorf("can't deploy: %w", err)
+		return err
 	}
 
 	ui.Output("deploy app %s completed\n", o.AppName, terminal.WithSuccessStyle())

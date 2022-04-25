@@ -28,11 +28,19 @@ type serverless struct {
 	CreateDomain            bool `mapstructure:"creare_domain"`
 }
 
-func NewServerlessDeployment(app App) *serverless {
-	var slsConfig serverless
+func NewServerlessDeployment(name string, app interface{}) *serverless {
+	slsConfig := serverless{}
 
-	mapstructure.Decode(app, &slsConfig)
-	mapstructure.Decode(app.Body, &slsConfig)
+	raw, ok := app.(map[string]interface{})
+	if ok {
+		mapstructure.Decode(raw, &slsConfig)
+	}
+
+	slsConfig.Name = name
+
+	if slsConfig.Path == "" {
+		slsConfig.Path = fmt.Sprintf("./projects/%s", name)
+	}
 
 	if len(slsConfig.File) == 0 {
 		slsConfig.File = "serverless.yml"
