@@ -3,6 +3,7 @@ package tunnel
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"strconv"
@@ -153,6 +154,10 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 	c.Stderr = os.Stderr
 	c.Dir = viper.GetString("ENV_DIR")
 	if err := c.Run(); err != nil {
+		patherr, ok := err.(*fs.PathError)
+		if ok {
+			return fmt.Errorf("unable to access folder '%s': %w", c.Dir, patherr.Err)
+		}
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
 
