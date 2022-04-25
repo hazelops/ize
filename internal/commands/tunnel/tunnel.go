@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net"
 	"os"
@@ -201,6 +202,10 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 	c.Stdin = os.Stdin
 	c.Dir = viper.GetString("ENV_DIR")
 	if err := c.Run(); err != nil {
+		patherr, ok := err.(*fs.PathError)
+		if ok {
+			return fmt.Errorf("unable to access folder '%s': %w", c.Dir, patherr.Err)
+		}
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/fs"
 	"os/exec"
 	"syscall"
 
@@ -84,8 +85,14 @@ func (o *TunnelDownOptions) Run(cmd *cobra.Command) error {
 	c.Stderr = out
 	c.Dir = viper.GetString("ENV_DIR")
 
+	fmt.Println(viper.GetString("ENV_DIR"))
+
 	err := c.Run()
 	if err != nil {
+		patherr, ok := err.(*fs.PathError)
+		if ok {
+			return fmt.Errorf("unable to access folder '%s': %w", c.Dir, patherr.Err)
+		}
 		exiterr := err.(*exec.ExitError)
 		status := exiterr.Sys().(syscall.WaitStatus)
 		if status.ExitStatus() != 255 {
