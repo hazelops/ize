@@ -16,9 +16,11 @@ import (
 	"github.com/hazelops/ize/internal/commands/logs"
 	"github.com/hazelops/ize/internal/commands/mfa"
 	"github.com/hazelops/ize/internal/commands/secrets"
+	"github.com/hazelops/ize/internal/commands/status"
 	"github.com/hazelops/ize/internal/commands/terraform"
 	"github.com/hazelops/ize/internal/commands/tunnel"
 	cfg "github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/version"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
@@ -45,21 +47,20 @@ var (
 		TraverseChildren: true,
 		SilenceErrors:    true,
 		Long:             deployIzeDesc,
-		Version:          Version,
+		Version:          version.FullVersionNumber(),
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Printf("%s\n%s\n%s\n\n",
 				pterm.White(pterm.Bold.Sprint("Welcome to IZE")),
 				pterm.Sprintf("%s %s", pterm.Blue("Docs:"), "https://ize.sh/docs"),
-				pterm.Sprintf("%s %s", pterm.Green("Version:"), Version),
+				pterm.Sprintf("%s %s", pterm.Green("Version:"), version.FullVersionNumber()),
 			)
 			cmd.Help()
 		},
 	}
 )
 
-
 func Execute(args []string) {
-	go CheckLatestRealese()
+	go version.CheckLatestRealese()
 
 	if err := rootCmd.Execute(); err != nil {
 		pterm.Error.Println(err)
@@ -104,6 +105,7 @@ func addCommands() {
 		exec.NewCmdExec(),
 		configure.NewCmdConfig(),
 		logs.NewCmdLogs(),
+		status.NewDebugCmd(),
 		NewGendocCmd(),
 		NewVersionCmd(),
 	)
