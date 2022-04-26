@@ -15,7 +15,7 @@ require (
 	github.com/docker/docker v20.10.14+incompatible
 	github.com/fatih/color v1.13.0
 	github.com/hashicorp/go-version v1.4.0
-	github.com/hashicorp/hcl/v2 v2.11.1
+	github.com/hashicorp/hcl/v2 v2.12.0
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/lab47/vterm v0.0.0-20211107042118-80c3d2849f9c
 	github.com/mattn/go-isatty v0.0.14
