@@ -34,3 +34,4 @@ jobs:
         HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
         RELEASE_VERSION: ${{ github.sha }}
         FURY_TOKEN: ${{ secrets.FURY_PUSH_TOKEN }}
+        SHORT_GIT_SHA: $(git rev-parse --short HEAD)

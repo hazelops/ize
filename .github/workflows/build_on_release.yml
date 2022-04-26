@@ -35,6 +35,7 @@ jobs:
         HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
         RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
         FURY_TOKEN: ${{ secrets.FURY_PUSH_TOKEN }}
+        SHORT_GIT_SHA: $(git rev-parse --short HEAD)
 
     - name: create docs
       run: |
