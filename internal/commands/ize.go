@@ -16,6 +16,7 @@ import (
 	"github.com/hazelops/ize/internal/commands/logs"
 	"github.com/hazelops/ize/internal/commands/mfa"
 	"github.com/hazelops/ize/internal/commands/secrets"
+	"github.com/hazelops/ize/internal/commands/status"
 	"github.com/hazelops/ize/internal/commands/terraform"
 	"github.com/hazelops/ize/internal/commands/tunnel"
 	cfg "github.com/hazelops/ize/internal/config"
@@ -104,6 +105,7 @@ func addCommands() {
 		exec.NewCmdExec(),
 		configure.NewCmdConfig(),
 		logs.NewCmdLogs(),
+		status.NewDebugCmd(),
 		NewGendocCmd(),
 		NewVersionCmd(),
 	)
