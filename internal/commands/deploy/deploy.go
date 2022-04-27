@@ -77,7 +77,7 @@ func NewCmdDeploy() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			if len(args) == 0 && !o.AutoApprove {
-				pterm.Warning.Println("please set flag --auto-approve")
+				pterm.Warning.Println("Please set flag --auto-approve")
 				return nil
 			}
 
@@ -392,7 +392,7 @@ func deployApp(ui terminal.UI, o *DeployOptions) error {
 		return err
 	}
 
-	ui.Output("deploy app %s completed\n", o.AppName, terminal.WithSuccessStyle())
+	ui.Output("Deploy app %s completed\n", o.AppName, terminal.WithSuccessStyle())
 
 	return nil
 }

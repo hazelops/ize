@@ -85,13 +85,13 @@ func (o *SecretsRemoveOptions) Run() error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("removing secrets for %s...", o.AppName)
+	s := sg.Add("Removing secrets for %s...", o.AppName)
 	defer func() { s.Abort(); time.Sleep(time.Millisecond * 50) }()
 
 	if o.Backend == "ssm" {
 		err := o.rm(s)
 		if err != nil {
-			pterm.DefaultSection.Sprintfln("secrets have been removed from %s", o.SecretsPath)
+			pterm.DefaultSection.Sprintfln("Secrets have been removed from %s", o.SecretsPath)
 			return err
 		}
 	} else {

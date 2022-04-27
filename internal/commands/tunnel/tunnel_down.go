@@ -102,7 +102,7 @@ func (o *TunnelDownOptions) Run(cmd *cobra.Command) error {
 		return fmt.Errorf("unable to bring the tunnel down: tunnel is not active")
 	}
 
-	o.UI.Output("tunnel is down!\n", terminal.WithSuccessStyle())
+	o.UI.Output("Tunnel is down!\n", terminal.WithSuccessStyle())
 
 	return nil
 }

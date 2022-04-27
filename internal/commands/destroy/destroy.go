@@ -72,7 +72,7 @@ func NewCmdDestroy() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			if len(args) == 0 && !o.AutoApprove {
-				pterm.Warning.Println("please set flag --auto-approve")
+				pterm.Warning.Println("Please set flag --auto-approve")
 				return nil
 			}
 

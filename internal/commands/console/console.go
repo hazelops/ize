@@ -107,7 +107,7 @@ func (o *ConsoleOptions) Run() error {
 	logrus.Infof("app name: %s, cluster name: %s", appName, o.EcsCluster)
 	logrus.Infof("region: %s, profile: %s", o.Config.AwsProfile, o.Config.AwsRegion)
 
-	s := sg.Add("accessing container...")
+	s := sg.Add("Accessing container...")
 	defer func() { s.Abort(); time.Sleep(time.Millisecond * 50) }()
 
 	ecsSvc := ecs.New(o.Config.Session)
@@ -128,7 +128,7 @@ func (o *ConsoleOptions) Run() error {
 	}
 
 	s.Done()
-	s = sg.Add("executing command...")
+	s = sg.Add("Executing command...")
 
 	out, err := ecsSvc.ExecuteCommand(&ecs.ExecuteCommandInput{
 		Container:   &o.AppName,

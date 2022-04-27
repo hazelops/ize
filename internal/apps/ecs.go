@@ -205,7 +205,7 @@ func (e *ecs) Destroy(sg terminal.StepGroup, ui terminal.UI) error {
 	ui.Output("Destroying ECS applications requires destroying the infrastructure.", terminal.WithWarningStyle())
 	time.Sleep(time.Millisecond * 100)
 
-	s := sg.Add("%s destroying completed!", e.Name)
+	s := sg.Add("%s: destroying completed!", e.Name)
 	defer func() { s.Abort() }()
 	s.Done()
 
@@ -389,7 +389,7 @@ func (e *ecs) deployWithDocker(cli *client.Client, sg terminal.StepGroup) error 
 	case status := <-wait:
 		if status.StatusCode == 0 {
 			s.Done()
-			s = sg.Add("%s deployment completed!", e.Name)
+			s = sg.Add("%s: deployment completed!", e.Name)
 			s.Done()
 			return nil
 		}

@@ -109,13 +109,13 @@ func (o *TunnelUpOptions) Complete(md *cobra.Command, args []string) error {
 
 		o.BastionHostID = bastionHostID
 		o.ForwardHost = forwardHost
-		o.UI.Output("tunnel forwarding configuration obtained from SSM", terminal.WithSuccessStyle())
+		o.UI.Output("Tunnel forwarding configuration obtained from SSM", terminal.WithSuccessStyle())
 	} else {
 		err := writeSSHConfigFromConfig(o.ForwardHost)
 		if err != nil {
 			return err
 		}
-		o.UI.Output("tunnel forwarding configuration obtained from the config file", terminal.WithSuccessStyle())
+		o.UI.Output("Tunnel forwarding configuration obtained from the config file", terminal.WithSuccessStyle())
 	}
 
 	return nil
@@ -161,7 +161,7 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
 
-	ui.Output("tunnel is up! Forwarded ports:", terminal.WithSuccessStyle())
+	ui.Output("Tunnel is up! Forwarded ports:", terminal.WithSuccessStyle())
 
 	var fconfig string
 	for _, h := range o.ForwardHost {

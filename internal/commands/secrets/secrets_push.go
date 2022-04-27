@@ -105,7 +105,7 @@ func (o *SecretsPushOptions) Run() error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("pushing secrets for %s...", o.AppName)
+	s := sg.Add("Pushing secrets for %s...", o.AppName)
 	defer func() { s.Abort() }()
 	if o.Backend == "ssm" {
 		err := o.push(s)
@@ -117,7 +117,7 @@ func (o *SecretsPushOptions) Run() error {
 	}
 
 	s.Done()
-	ui.Output("pushing secrets complete!\n", terminal.WithSuccessStyle())
+	ui.Output("Pushing secrets complete!\n", terminal.WithSuccessStyle())
 
 	return nil
 }

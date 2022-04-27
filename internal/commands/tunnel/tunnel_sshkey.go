@@ -86,7 +86,7 @@ func (o *TunnelSSHKeyOptions) Run() error {
 
 	logrus.Debugf("public key path: %s", o.PublicKeyFile)
 
-	s := sg.Add("sending the SSH user's public key...")
+	s := sg.Add("Sending the SSH user's public key...")
 
 	to, err := getTerraformOutput(o.Config.Session, o.Config.Env)
 	if err != nil {
