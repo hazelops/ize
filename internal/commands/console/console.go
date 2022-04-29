@@ -1,15 +1,13 @@
 package console
 
 import (
-	"context"
 	"fmt"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/ssmsession"
-	"github.com/hazelops/ize/pkg/terminal"
+	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -18,7 +16,6 @@ type ConsoleOptions struct {
 	Config     *config.Config
 	AppName    string
 	EcsCluster string
-	ui         terminal.UI
 }
 
 func NewConsoleFlags() *ConsoleOptions {
@@ -92,23 +89,16 @@ func (o *ConsoleOptions) Validate() error {
 		return fmt.Errorf("can't validate: app name must be specified")
 	}
 
-	o.ui = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
-
 	return nil
 }
 
 func (o *ConsoleOptions) Run() error {
-	ui := o.ui
-	sg := ui.StepGroup()
-	defer sg.Wait()
-
 	appName := fmt.Sprintf("%s-%s", o.Config.Env, o.AppName)
 
 	logrus.Infof("app name: %s, cluster name: %s", appName, o.EcsCluster)
 	logrus.Infof("region: %s, profile: %s", o.Config.AwsProfile, o.Config.AwsRegion)
 
-	s := sg.Add("Accessing container...")
-	defer func() { s.Abort(); time.Sleep(time.Millisecond * 50) }()
+	s, _ := pterm.DefaultSpinner.WithRemoveWhenDone().Start("Getting access to container...")
 
 	ecsSvc := ecs.New(o.Config.Session)
 
@@ -127,8 +117,7 @@ func (o *ConsoleOptions) Run() error {
 		return fmt.Errorf("running task not found")
 	}
 
-	s.Done()
-	s = sg.Add("Executing command...")
+	s.UpdateText("Executing command...")
 
 	out, err := ecsSvc.ExecuteCommand(&ecs.ExecuteCommandInput{
 		Container:   &o.AppName,
@@ -141,7 +130,7 @@ func (o *ConsoleOptions) Run() error {
 		return err
 	}
 
-	s.Done()
+	s.Success()
 
 	ssmCmd := ssmsession.NewSSMPluginCommand(o.Config.AwsRegion)
 	ssmCmd.Start((out.Session))

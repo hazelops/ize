@@ -3,7 +3,6 @@ package tunnel
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -23,7 +22,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/pkg/terminal"
+	"github.com/pterm/pterm"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -45,7 +44,6 @@ type TunnelOptions struct {
 	PublicKeyFile  string
 	BastionHostID  string
 	ForwardHost    []string
-	UI             terminal.UI
 }
 
 func NewTunnelFlags() *TunnelOptions {
@@ -107,9 +105,8 @@ func (o *TunnelOptions) Complete(cmd *cobra.Command, args []string) error {
 	}
 
 	o.Config = cfg
-	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
 
-	isUp, err := checkTunnel(o.UI)
+	isUp, err := checkTunnel()
 	if err != nil {
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
@@ -148,13 +145,13 @@ func (o *TunnelOptions) Complete(cmd *cobra.Command, args []string) error {
 
 		o.BastionHostID = bastionHostID
 		o.ForwardHost = forwardHost
-		o.UI.Output("Tunnel forwarding configuration obtained from SSM", terminal.WithSuccessStyle())
+		pterm.Success.Println("Tunnel forwarding configuration obtained from SSM")
 	} else {
 		err := writeSSHConfigFromConfig(o.ForwardHost)
 		if err != nil {
 			return err
 		}
-		o.UI.Output("Tunnel forwarding configuration obtained from the config file", terminal.WithSuccessStyle())
+		pterm.Success.Println("Tunnel forwarding configuration obtained from the config file")
 	}
 
 	return nil
@@ -176,7 +173,6 @@ func (o *TunnelOptions) Validate() error {
 }
 
 func (o *TunnelOptions) Run(cmd *cobra.Command) error {
-	ui := o.UI
 	logrus.Debugf("public key path: %s", o.PublicKeyFile)
 
 	err := sendSSHPublicKey(o.BastionHostID, getPublicKey(o.PublicKeyFile), o.Config.Session)
@@ -209,14 +205,14 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
 
-	ui.Output("Tunnel is up! Forwarded ports:", terminal.WithSuccessStyle())
+	pterm.Success.Println("Tunnel is up! Forwarded ports:")
 
 	var fconfig string
 	for _, h := range o.ForwardHost {
 		ss := strings.Split(h, ":")
 		fconfig += fmt.Sprintf("%s:%s ➡ localhost:%s\n", ss[0], ss[1], ss[2])
 	}
-	ui.Output(fconfig)
+	pterm.Println(fconfig)
 
 	return nil
 }
@@ -470,7 +466,7 @@ func writeSSHConfigFromConfig(forwardHost []string) error {
 	return nil
 }
 
-func checkTunnel(ui terminal.UI) (bool, error) {
+func checkTunnel() (bool, error) {
 	c := exec.Command(
 		"ssh", "-S", "bastion.sock", "-O", "check", "",
 	)
@@ -487,14 +483,13 @@ func checkTunnel(ui terminal.UI) (bool, error) {
 			return false, fmt.Errorf("can't check tunnel: %w", err)
 		}
 
-		ui.Output("Tunnel is up. Forwarding config:", terminal.WithSuccessStyle())
-
+		pterm.Success.Println("Tunnel is up. Forwarding config:")
 		hosts := getHosts(sshConfig)
 		var fconfig string
 		for _, h := range hosts {
 			fconfig += fmt.Sprintf("%s:%s ➡ localhost:%s\n", h[2], h[3], h[1])
 		}
-		ui.Output(fconfig)
+		pterm.Println(fconfig)
 
 		return true, nil
 	}

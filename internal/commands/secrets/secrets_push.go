@@ -1,7 +1,6 @@
 package secrets
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -12,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -25,7 +23,6 @@ type SecretsPushOptions struct {
 	FilePath    string
 	SecretsPath string
 	Force       bool
-	ui          terminal.UI
 }
 
 func NewSecretsPushFlags() *SecretsPushOptions {
@@ -87,26 +84,19 @@ func (o *SecretsPushOptions) Complete(cmd *cobra.Command, args []string) error {
 		o.SecretsPath = fmt.Sprintf("/%s/%s", o.Config.Env, o.AppName)
 	}
 
-	o.ui = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
-
 	return nil
 }
 
 func (o *SecretsPushOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified\n")
+		return fmt.Errorf("env must be specified")
 	}
 
 	return nil
 }
 
 func (o *SecretsPushOptions) Run() error {
-	ui := o.ui
-	sg := ui.StepGroup()
-	defer sg.Wait()
-
-	s := sg.Add("Pushing secrets for %s...", o.AppName)
-	defer func() { s.Abort() }()
+	s, _ := pterm.DefaultSpinner.Start(fmt.Sprintf("Pushing secrets for %s...", o.AppName))
 	if o.Backend == "ssm" {
 		err := o.push(s)
 		if err != nil {
@@ -116,20 +106,19 @@ func (o *SecretsPushOptions) Run() error {
 		return fmt.Errorf("backend with type %s not found or not supported", o.Backend)
 	}
 
-	s.Done()
-	ui.Output("Pushing secrets complete!\n", terminal.WithSuccessStyle())
+	s.Success("Pushing secrets complete!")
 
 	return nil
 }
 
-func (o *SecretsPushOptions) push(s terminal.Step) error {
-	fmt.Fprintf(s.TermOutput(), "reading secrets from file...\n")
+func (o *SecretsPushOptions) push(s *pterm.SpinnerPrinter) error {
+	s.UpdateText("Reading secrets from file...")
 	values, err := getKeyValuePairs(o.FilePath)
 	if err != nil {
 		return err
 	}
 
-	fmt.Fprintf(s.TermOutput(), "pushing secrets to %s://%s...\n", o.Backend, o.SecretsPath)
+	s.UpdateText(fmt.Sprintf("Pushing secrets to %s://%s...", o.Backend, o.SecretsPath))
 
 	ssmSvc := ssm.New(o.Config.Session)
 
@@ -172,7 +161,7 @@ func (o *SecretsPushOptions) push(s terminal.Step) error {
 		}
 	}
 
-	return err
+	return nil
 }
 
 func getKeyValuePairs(filePath string) (map[string]string, error) {

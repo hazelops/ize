@@ -143,4 +143,6 @@ func customizeDefaultPtermPrefix() {
 		Text:  "⚠",
 		Style: pterm.NewStyle(pterm.FgYellow),
 	}
+
+	pterm.DefaultSpinner.Sequence = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 }
