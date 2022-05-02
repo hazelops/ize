@@ -152,7 +152,7 @@ func (sls *serverless) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 	}
 
 	s.Done()
-	s = sg.Add("%s deployment completed!", sls.Name)
+	s = sg.Add("%s: deployment completed!", sls.Name)
 	s.Done()
 
 	return nil
@@ -232,7 +232,7 @@ func (sls *serverless) Destroy(sg terminal.StepGroup, ui terminal.UI) error {
 	}
 
 	s.Done()
-	s = sg.Add("%s deployment completed!", sls.Name)
+	s = sg.Add("%s: deployment completed!", sls.Name)
 	s.Done()
 
 	return nil

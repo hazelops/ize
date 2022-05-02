@@ -144,7 +144,7 @@ func (o *DestroyInfraOptions) Run() error {
 		return err
 	}
 
-	ui.Output("terraform destoy completed!\n", terminal.WithSuccessStyle())
+	ui.Output("Terraform destoy completed!\n", terminal.WithSuccessStyle())
 
 	return nil
 }

@@ -1,16 +1,14 @@
 package exec
 
 import (
-	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/ssmsession"
-	"github.com/hazelops/ize/pkg/terminal"
+	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -20,7 +18,6 @@ type ExecOptions struct {
 	AppName    string
 	EcsCluster string
 	Command    string
-	ui         terminal.UI
 }
 
 func NewExecFlags() *ExecOptions {
@@ -81,8 +78,6 @@ func (o *ExecOptions) Complete(cmd *cobra.Command, args []string, argsLenAtDash 
 
 	o.Command = strings.Join(args[argsLenAtDash:], " ")
 
-	o.ui = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
-
 	return nil
 }
 
@@ -102,17 +97,12 @@ func (o *ExecOptions) Validate() error {
 }
 
 func (o *ExecOptions) Run(cmd *cobra.Command) error {
-	ui := o.ui
-	sg := ui.StepGroup()
-	defer sg.Wait()
-
 	appName := fmt.Sprintf("%s-%s", o.Config.Env, o.AppName)
 
 	logrus.Infof("app name: %s, cluster name: %s", appName, o.EcsCluster)
 	logrus.Infof("region: %s, profile: %s", o.Config.AwsProfile, o.Config.AwsRegion)
 
-	s := sg.Add("accessing container...")
-	defer func() { s.Abort(); time.Sleep(time.Millisecond * 50) }()
+	s, _ := pterm.DefaultSpinner.WithRemoveWhenDone().Start("Getting access to container...")
 
 	ecsSvc := ecs.New(o.Config.Session)
 
@@ -126,11 +116,10 @@ func (o *ExecOptions) Run(cmd *cobra.Command) error {
 	}
 
 	if len(lto.TaskArns) == 0 {
-		return fmt.Errorf("running task not found\n")
+		return fmt.Errorf("running task not found")
 	}
 
-	s.Done()
-	s = sg.Add("executing command...")
+	s.UpdateText("Executing command...")
 
 	out, err := ecsSvc.ExecuteCommand(&ecs.ExecuteCommandInput{
 		Container:   &o.AppName,
@@ -143,7 +132,7 @@ func (o *ExecOptions) Run(cmd *cobra.Command) error {
 		return err
 	}
 
-	s.Done()
+	s.Success()
 
 	ssmCmd := ssmsession.NewSSMPluginCommand(o.Config.AwsRegion)
 	ssmCmd.Start((out.Session))

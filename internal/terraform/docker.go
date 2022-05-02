@@ -79,7 +79,7 @@ func (d *docker) RunUI(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("initializing Docker client...")
+	s := sg.Add("Initializing Docker client...")
 	defer func() { s.Abort(); time.Sleep(time.Millisecond * 50) }()
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
@@ -88,7 +88,7 @@ func (d *docker) RunUI(ui terminal.UI) error {
 	}
 
 	s.Done()
-	s = sg.Add("cleanuping old containers...")
+	s = sg.Add("Cleanuping old containers...")
 
 	err = cleanupOldContainers(cli)
 	if err != nil {

@@ -2,14 +2,13 @@ package tunnel
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io/fs"
 	"os/exec"
 	"syscall"
 
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/pkg/terminal"
+	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -17,7 +16,6 @@ import (
 
 type TunnelDownOptions struct {
 	Config *config.Config
-	UI     terminal.UI
 }
 
 func NewTunnelDownOptions() *TunnelDownOptions {
@@ -63,7 +61,6 @@ func (o *TunnelDownOptions) Complete(cmd *cobra.Command, args []string) error {
 	}
 
 	o.Config = cfg
-	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
 
 	return nil
 }
@@ -102,7 +99,7 @@ func (o *TunnelDownOptions) Run(cmd *cobra.Command) error {
 		return fmt.Errorf("unable to bring the tunnel down: tunnel is not active")
 	}
 
-	o.UI.Output("tunnel is down!\n", terminal.WithSuccessStyle())
+	pterm.Success.Println("Tunnel is down!")
 
 	return nil
 }

@@ -74,43 +74,37 @@ func (o *SecretsRemoveOptions) Complete(cmd *cobra.Command, args []string) error
 
 func (o *SecretsRemoveOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified\n")
+		return fmt.Errorf("env must be specified")
 	}
 
 	return nil
 }
 
 func (o *SecretsRemoveOptions) Run() error {
-	ui := o.ui
-	sg := ui.StepGroup()
-	defer sg.Wait()
-
-	s := sg.Add("removing secrets for %s...", o.AppName)
-	defer func() { s.Abort(); time.Sleep(time.Millisecond * 50) }()
-
+	s, _ := pterm.DefaultSpinner.Start(fmt.Sprintf("Removing secrets for %s...", o.AppName))
 	if o.Backend == "ssm" {
 		err := o.rm(s)
 		if err != nil {
-			pterm.DefaultSection.Sprintfln("secrets have been removed from %s", o.SecretsPath)
+			pterm.DefaultSection.Sprintfln("Secrets have been removed from %s", o.SecretsPath)
 			return err
 		}
 	} else {
 		return fmt.Errorf("backend %s is not found or not supported", o.Backend)
 	}
 
-	s.Done()
-	ui.Output("Removing secrets complete!\n", terminal.WithSuccessStyle())
+	s.Success("Removing secrets complete!")
 
 	return nil
 }
 
-func (o *SecretsRemoveOptions) rm(s terminal.Step) error {
+func (o *SecretsRemoveOptions) rm(s *pterm.SpinnerPrinter) error {
 	if o.SecretsPath == "" {
-		fmt.Fprintf(s.TermOutput(), "path was not set...")
+		s.UpdateText("Path was not set...")
+		time.Sleep(2 * time.Second)
 		return nil
 	}
 
-	fmt.Fprintf(s.TermOutput(), "removing secrets from %s://%s...\n", o.Backend, o.SecretsPath)
+	s.UpdateText(fmt.Sprintf("Removing secrets from %s://%s...", o.Backend, o.SecretsPath))
 
 	ssmSvc := ssm.New(o.Config.Session)
 
@@ -121,11 +115,13 @@ func (o *SecretsRemoveOptions) rm(s terminal.Step) error {
 		return err
 	}
 
-	fmt.Fprintf(s.TermOutput(), "getting secrets...\n")
+	s.UpdateText("Getting secrets...")
 
 	if len(out.Parameters) == 0 {
-		fmt.Fprintf(s.TermOutput(), "no values found...\n")
-		fmt.Fprintf(s.TermOutput(), "removing secrets...\n")
+		s.UpdateText("No values found...")
+		time.Sleep(2 * time.Second)
+		s.UpdateText("Removing secrets...")
+		time.Sleep(1 * time.Second)
 		return nil
 	}
 
@@ -142,7 +138,7 @@ func (o *SecretsRemoveOptions) rm(s terminal.Step) error {
 		return err
 	}
 
-	fmt.Fprintf(s.TermOutput(), "removing secrets...\n")
+	s.UpdateText("Removing secrets...")
 
 	return nil
 }

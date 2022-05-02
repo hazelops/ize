@@ -70,7 +70,7 @@ func (l *local) RunUI(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("running terraform v%s...", l.version)
+	s := sg.Add("Running terraform v%s...", l.version)
 	defer func() { s.Abort(); time.Sleep(time.Millisecond * 100) }()
 
 	t := term.New(
