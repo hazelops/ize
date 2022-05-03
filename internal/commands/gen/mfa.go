@@ -1,4 +1,4 @@
-package mfa
+package gen
 
 import (
 	"fmt"
