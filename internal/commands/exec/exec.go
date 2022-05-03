@@ -18,6 +18,7 @@ type ExecOptions struct {
 	AppName    string
 	EcsCluster string
 	Command    string
+	Task       string
 }
 
 func NewExecFlags() *ExecOptions {
@@ -55,6 +56,7 @@ func NewCmdExec() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.EcsCluster, "ecs-cluster", "", "set ECS cluster name")
+	cmd.Flags().StringVar(&o.Task, "task", "", "set task id")
 
 	return cmd
 }
@@ -106,17 +108,23 @@ func (o *ExecOptions) Run(cmd *cobra.Command) error {
 
 	ecsSvc := ecs.New(o.Config.Session)
 
-	lto, err := ecsSvc.ListTasks(&ecs.ListTasksInput{
-		Cluster:       &o.EcsCluster,
-		DesiredStatus: aws.String(ecs.DesiredStatusRunning),
-		ServiceName:   &appName,
-	})
-	if err != nil {
-		return err
-	}
+	if o.Task == "" {
+		lto, err := ecsSvc.ListTasks(&ecs.ListTasksInput{
+			Cluster:       &o.EcsCluster,
+			DesiredStatus: aws.String(ecs.DesiredStatusRunning),
+			ServiceName:   &appName,
+		})
+		if err != nil {
+			return err
+		}
 
-	if len(lto.TaskArns) == 0 {
-		return fmt.Errorf("running task not found")
+		logrus.Debugf("list task output: %s", lto)
+
+		if len(lto.TaskArns) == 0 {
+			return fmt.Errorf("running task not found")
+		}
+
+		o.Task = *lto.TaskArns[0]
 	}
 
 	s.UpdateText("Executing command...")
@@ -125,7 +133,7 @@ func (o *ExecOptions) Run(cmd *cobra.Command) error {
 		Container:   &o.AppName,
 		Interactive: aws.Bool(true),
 		Cluster:     &o.EcsCluster,
-		Task:        lto.TaskArns[0],
+		Task:        &o.Task,
 		Command:     aws.String(o.Command),
 	})
 	if err != nil {

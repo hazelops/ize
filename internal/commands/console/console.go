@@ -16,6 +16,7 @@ type ConsoleOptions struct {
 	Config     *config.Config
 	AppName    string
 	EcsCluster string
+	Task       string
 }
 
 func NewConsoleFlags() *ConsoleOptions {
@@ -52,6 +53,7 @@ func NewCmdConsole() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.EcsCluster, "ecs-cluster", "", "set ECS cluster name")
+	cmd.Flags().StringVar(&o.Task, "task", "", "set task id")
 
 	return cmd
 }
@@ -102,19 +104,23 @@ func (o *ConsoleOptions) Run() error {
 
 	ecsSvc := ecs.New(o.Config.Session)
 
-	lto, err := ecsSvc.ListTasks(&ecs.ListTasksInput{
-		Cluster:       &o.EcsCluster,
-		DesiredStatus: aws.String(ecs.DesiredStatusRunning),
-		ServiceName:   &appName,
-	})
-	if err != nil {
-		return err
-	}
+	if o.Task == "" {
+		lto, err := ecsSvc.ListTasks(&ecs.ListTasksInput{
+			Cluster:       &o.EcsCluster,
+			DesiredStatus: aws.String(ecs.DesiredStatusRunning),
+			ServiceName:   &appName,
+		})
+		if err != nil {
+			return err
+		}
 
-	logrus.Debugf("list task output: %s", lto)
+		logrus.Debugf("list task output: %s", lto)
 
-	if len(lto.TaskArns) == 0 {
-		return fmt.Errorf("running task not found")
+		if len(lto.TaskArns) == 0 {
+			return fmt.Errorf("running task not found")
+		}
+
+		o.Task = *lto.TaskArns[0]
 	}
 
 	s.UpdateText("Executing command...")
@@ -123,7 +129,7 @@ func (o *ConsoleOptions) Run() error {
 		Container:   &o.AppName,
 		Interactive: aws.Bool(true),
 		Cluster:     &o.EcsCluster,
-		Task:        lto.TaskArns[0],
+		Task:        &o.Task,
 		Command:     aws.String("/bin/sh"),
 	})
 	if err != nil {
