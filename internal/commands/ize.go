@@ -10,11 +10,10 @@ import (
 	"github.com/hazelops/ize/internal/commands/console"
 	"github.com/hazelops/ize/internal/commands/deploy"
 	"github.com/hazelops/ize/internal/commands/destroy"
-	"github.com/hazelops/ize/internal/commands/env"
 	"github.com/hazelops/ize/internal/commands/exec"
+	"github.com/hazelops/ize/internal/commands/gen"
 	"github.com/hazelops/ize/internal/commands/initialize"
 	"github.com/hazelops/ize/internal/commands/logs"
-	"github.com/hazelops/ize/internal/commands/mfa"
 	"github.com/hazelops/ize/internal/commands/secrets"
 	"github.com/hazelops/ize/internal/commands/status"
 	"github.com/hazelops/ize/internal/commands/terraform"
@@ -63,7 +62,6 @@ func Execute(args []string) {
 	go version.CheckLatestRealese()
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println()
 		pterm.Error.Println(err)
 	}
 }
@@ -72,6 +70,7 @@ func init() {
 	initLogrus()
 	customizeDefaultPtermPrefix()
 
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
 	rootCmd.PersistentFlags().StringP("log-level", "l", "", "enable debug messages")
 	rootCmd.PersistentFlags().Bool("plain-text", false, "enable plain text")
 	rootCmd.PersistentFlags().StringP("config-file", "c", "", "set config file name")
@@ -97,8 +96,6 @@ func addCommands() {
 		deploy.NewCmdDeploy(),
 		destroy.NewCmdDestroy(),
 		console.NewCmdConsole(),
-		env.NewCmdEnv(),
-		mfa.NewCmdMfa(),
 		terraform.NewCmdTerraform(),
 		secrets.NewCmdSecrets(),
 		initialize.NewCmdInit(),
@@ -107,7 +104,7 @@ func addCommands() {
 		configure.NewCmdConfig(),
 		logs.NewCmdLogs(),
 		status.NewDebugCmd(),
-		NewGendocCmd(),
+		gen.NewCmdGen(),
 		NewVersionCmd(),
 	)
 }

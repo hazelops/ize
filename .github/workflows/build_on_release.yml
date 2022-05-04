@@ -40,7 +40,7 @@ jobs:
     - name: create docs
       run: |
         mkdir -p commands
-        go run ./cmd gendoc
+        go run ./cmd gen doc
 
     - name: convert MD to HTML
       uses: baileyjm02/markdown-to-pdf@v1

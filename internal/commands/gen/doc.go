@@ -1,4 +1,4 @@
-package commands
+package gen
 
 import (
 	"github.com/pterm/pterm"
@@ -6,16 +6,16 @@ import (
 	"github.com/spf13/cobra/doc"
 )
 
-func NewGendocCmd() *cobra.Command {
+func NewCmdDoc() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:                   "gendoc",
+		Use:                   "doc",
 		Short:                 "create docs",
 		DisableFlagsInUseLine: true,
 		Long:                  "Create docs.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
-			err := doc.GenMarkdownTree(rootCmd, "./commands")
+			err := doc.GenMarkdownTree(cmd.Parent(), "./commands")
 			if err != nil {
 				return err
 			}

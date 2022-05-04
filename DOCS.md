@@ -87,7 +87,7 @@ To load completions for every new session, execute once:
 
 ###### 1.1 macOS:
 ```shell
-ize completion zsh > /usr/local/share/zsh/site-functions/_ize
+ize gen completion zsh > /usr/local/share/zsh/site-functions/_ize
 ```
 
 ###### 1.2 Linux:
@@ -99,7 +99,7 @@ sudo zsh
 Input your root password and run:
 
 ```shell
-ize completion zsh > "${fpath[1]}/_ize"
+ize gen completion zsh > "${fpath[1]}/_ize"
 ```
 
 To take effect for this setup you should run `source ~/.zshrc` or simply restart shell.
@@ -114,7 +114,7 @@ To load completions for every new session, you should execute once:
 
 ###### 2.1 MacOS:
 ```shell
-ize completion bash > /usr/local/etc/bash_completion.d/ize
+ize gen completion bash > /usr/local/etc/bash_completion.d/ize
 ```
 
 ###### 2.2 Linux:
@@ -126,7 +126,7 @@ sudo bash
 Input your root password and run:
 
 ```shell
-ize completion bash > /etc/bash_completion.d/ize
+ize gen completion bash > /etc/bash_completion.d/ize
 ```
 
 To take effect for this setup you should run `source ~/.bashrc` or simply restart shell.

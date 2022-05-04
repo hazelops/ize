@@ -86,7 +86,7 @@ echo "autoload -U compinit; compinit" >>  ~/.zshrc
 ```
 Load autocompletion on every session
 ```shell
-ize completion zsh > /usr/local/share/zsh/site-functions/_ize
+ize gen completion zsh > /usr/local/share/zsh/site-functions/_ize
 ```
 
 More information on [other platforms & shells](DOCS.md#autocomplete)
