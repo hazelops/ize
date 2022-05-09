@@ -1,0 +1,13 @@
+aws_profile = "nutcorp-dev"
+aws_region = "us-east-1"
+env = "testnut"
+namespace = "testnut"
+terraform_version = "1.1.7"
+
+[app.squibby]
+type = "ecs"
+path = "./projects/squibby"
+
+[app.goblin]
+type = "ecs"
+path = "./projects/goblin"
