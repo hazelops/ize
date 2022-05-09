@@ -27,8 +27,8 @@ func NewCmdTunnelDown() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "down",
-		Short: "close tunnel",
-		Long:  "Close tunnel.",
+		Short: "Close tunnel",
+		Long:  "Close tunnel",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 

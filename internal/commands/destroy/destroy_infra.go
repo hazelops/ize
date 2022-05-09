@@ -29,7 +29,7 @@ func NewCmdDestroyInfra() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "infra",
-		Short: "destroy infra",
+		Short: "Destroy infrastructure",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)
@@ -137,14 +137,14 @@ func (o *DestroyInfraOptions) Run() error {
 		}
 	}
 
-	ui.Output("Running terraform destoy...", terminal.WithHeaderStyle())
+	ui.Output("Running terraform destroy...", terminal.WithHeaderStyle())
 
 	err = tf.RunUI(ui)
 	if err != nil {
 		return err
 	}
 
-	ui.Output("Terraform destoy completed!\n", terminal.WithSuccessStyle())
+	ui.Output("Terraform destroy completed!\n", terminal.WithSuccessStyle())
 
 	return nil
 }

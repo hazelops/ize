@@ -21,7 +21,7 @@ func NewCmdMfa() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "mfa",
-		Short: "return export command with AWS MFA credentials",
+		Short: "Generate a list of exports for your shell to use ize with MFA-enabled AWS account",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)

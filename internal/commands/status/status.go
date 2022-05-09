@@ -17,7 +17,7 @@ import (
 func NewDebugCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
-		Short: "show debug information",
+		Short: "Show debug information",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			sess, err := utils.GetSession(&utils.SessionConfig{

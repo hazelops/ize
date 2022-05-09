@@ -23,8 +23,8 @@ func NewCmdTunnelStatus() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "status",
-		Short: "status tunnel",
-		Long:  "Status tunnel.",
+		Short: "Tunnel status",
+		Long:  "Tunnel running status",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)

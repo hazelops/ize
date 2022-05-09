@@ -30,8 +30,8 @@ func NewCmdExec() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "exec [app-name] -- [commands]",
-		Short: "exec command in ECS container",
-		Long:  "Connect to a container in the ECS app via AWS SSM and run command.\nTakes ECS app name as an argument.",
+		Short: "Exec command in ECS container",
+		Long:  "Connect to a container in the ECS app via AWS SSM and run command.\nTakes ECS app name as an argument",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true

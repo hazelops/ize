@@ -29,7 +29,7 @@ func NewCmdSecretsRemove() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:              "rm",
-		Short:            "remove secrets from storage",
+		Short:            "Remove secrets from storage",
 		Long:             "This command removes secrets from storage",
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

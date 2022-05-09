@@ -9,9 +9,9 @@ import (
 func NewCmdDoc() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                   "doc",
-		Short:                 "create docs",
+		Short:                 "Create docs",
 		DisableFlagsInUseLine: true,
-		Long:                  "Create docs.",
+		Long:                  "Create docs with ize commands description",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 

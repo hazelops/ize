@@ -26,8 +26,8 @@ func NewCmdSSHKey() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "ssh-key",
-		Short: "send ssh key to remote server",
-		Long:  "Send ssh key to remote server.",
+		Short: "Send ssh key to remote server",
+		Long:  "Send ssh key to remote server",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)

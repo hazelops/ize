@@ -55,7 +55,7 @@ func NewCmdTunnel() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:              "tunnel",
-		Short:            "tunnel management",
+		Short:            "Tunnel management",
 		Long:             "Tunnel management.",
 		Args:             cobra.NoArgs,
 		TraverseChildren: true,

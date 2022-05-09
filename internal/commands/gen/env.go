@@ -44,7 +44,7 @@ func NewCmdEnv() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "env",
-		Short:   "generate terraform files",
+		Short:   "Generate terraform files",
 		Long:    envLongDesc,
 		Example: envExample,
 		RunE: func(cmd *cobra.Command, args []string) error {

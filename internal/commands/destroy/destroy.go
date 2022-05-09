@@ -36,12 +36,12 @@ type Infra struct {
 	Profile string `mapstructure:"aws_profile"`
 }
 
-var destoyLongDesc = templates.LongDesc(`
-	Destroy infraftructure or app.
-	For destoy app the app name must be specimfied. 
+var destroyLongDesc = templates.LongDesc(`
+	Destroy infrastructure or application.
+	For app destroy the app name must be specified.
 `)
 
-var destoyExample = templates.Examples(`
+var destroyExample = templates.Examples(`
 	# Destroy all (config file required)
 	ize destroy
 
@@ -51,7 +51,7 @@ var destoyExample = templates.Examples(`
 	# Destroy app via config file
 	ize --config-file (or -c) /path/to/config destroy <app name>
 
-	# Destroy app via config file installed from env
+	# Destroy app using config file installed from env
 	export IZE_CONFIG_FILE=/path/to/config
 	ize destroy <app name>
 `)
@@ -65,14 +65,14 @@ func NewCmdDestroy() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "destroy [flags] [app name]",
-		Example: destoyExample,
-		Short:   "destoy anything",
-		Long:    destoyLongDesc,
+		Example: destroyExample,
+		Short:   "Destroy application",
+		Long:    destroyLongDesc,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			if len(args) == 0 && !o.AutoApprove {
-				pterm.Warning.Println("Please set flag --auto-approve")
+				pterm.Warning.Println("Please set the flag: --auto-approve")
 				return nil
 			}
 
@@ -335,7 +335,7 @@ func destroyApp(ui terminal.UI, o *DestroyOptions) error {
 		return fmt.Errorf("can't destroy: %w", err)
 	}
 
-	ui.Output("destroy app %s completed\n", o.AppName, terminal.WithSuccessStyle())
+	ui.Output("Destroy app %s completed\n", o.AppName, terminal.WithSuccessStyle())
 
 	return nil
 }

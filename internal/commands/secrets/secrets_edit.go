@@ -28,8 +28,8 @@ func NewCmdSecretsEdit() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "edit",
-		Short: "edit secrets file",
-		Long:  "This open secrets file in default editor.",
+		Short: "Edit secrets file",
+		Long:  "This command open secrets file in default text editor",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true

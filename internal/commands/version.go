@@ -10,7 +10,7 @@ import (
 func NewVersionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
-		Short: "show IZE version",
+		Short: "Show IZE version",
 		Run: func(cmd *cobra.Command, args []string) {
 			c := cmd.Parent()
 			tmpl(c.OutOrStdout(), c.VersionTemplate(), c)

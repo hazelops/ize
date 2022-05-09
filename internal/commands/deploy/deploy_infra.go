@@ -53,7 +53,7 @@ func NewCmdDeployInfra() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "infra",
-		Short:   "manage infra deployments",
+		Short:   "Manage infra deployments",
 		Long:    deployInfraLongDesc,
 		Example: deployInfraExample,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -99,7 +99,7 @@ func (o *DeployInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 
 	o.Config, err = config.GetConfig()
 	if err != nil {
-		return fmt.Errorf("can`t complete options: %w", err)
+		return fmt.Errorf("can't deploy your stack: %w", err)
 	}
 
 	BindFlags(cmd.Flags())
