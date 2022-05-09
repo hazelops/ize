@@ -2,6 +2,7 @@ package terraform
 
 import (
 	"fmt"
+	"io"
 	"path/filepath"
 	"time"
 
@@ -16,19 +17,19 @@ const (
 )
 
 type local struct {
-	version    string
-	command    []string
-	env        []string
-	outputPath string
-	tfpath     string
+	version string
+	command []string
+	env     []string
+	output  io.Writer
+	tfpath  string
 }
 
-func NewLocalTerraform(version string, command []string, env []string, out string) *local {
+func NewLocalTerraform(version string, command []string, env []string, out io.Writer) *local {
 	return &local{
-		version:    version,
-		command:    command,
-		env:        env,
-		outputPath: out,
+		version: version,
+		command: command,
+		env:     env,
+		output:  out,
 	}
 }
 
@@ -62,8 +63,8 @@ func (l *local) NewCmd(cmd []string) {
 	l.command = cmd
 }
 
-func (l *local) SetOutput(path string) {
-	l.outputPath = path
+func (l *local) SetOut(out io.Writer) {
+	l.output = out
 }
 
 func (l *local) RunUI(ui terminal.UI) error {
@@ -73,9 +74,14 @@ func (l *local) RunUI(ui terminal.UI) error {
 	s := sg.Add("Running terraform v%s...", l.version)
 	defer func() { s.Abort(); time.Sleep(time.Millisecond * 100) }()
 
+	stdout := s.TermOutput()
+	if l.output != nil {
+		stdout = l.output
+	}
+
 	t := term.New(
 		term.WithStderr(s.TermOutput()),
-		term.WithStdout(s.TermOutput()),
+		term.WithStdout(stdout),
 		term.WithDir(viper.GetString("ENV_DIR")),
 	)
 

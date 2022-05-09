@@ -123,9 +123,9 @@ func (o *TerraformOptions) Run(args []string) error {
 	}
 
 	if o.Config.IsDockerRuntime {
-		tf = terraform.NewDockerTerraform(viper.GetString("terraform_version"), args, env, "")
+		tf = terraform.NewDockerTerraform(viper.GetString("terraform_version"), args, env, nil)
 	} else {
-		tf = terraform.NewLocalTerraform(viper.GetString("terraform_version"), args, env, "")
+		tf = terraform.NewLocalTerraform(viper.GetString("terraform_version"), args, env, nil)
 		err = tf.Prepare()
 		if err != nil {
 			return err

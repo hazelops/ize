@@ -1,11 +1,11 @@
 package deploy
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -167,9 +167,9 @@ func (o *DeployInfraOptions) Run() error {
 	}
 
 	if o.Config.IsDockerRuntime {
-		tf = terraform.NewDockerTerraform(o.Terraform.Version, []string{"init", "-input=true"}, env, "")
+		tf = terraform.NewDockerTerraform(o.Terraform.Version, []string{"init", "-input=true"}, env, nil)
 	} else {
-		tf = terraform.NewLocalTerraform(o.Terraform.Version, []string{"init", "-input=true"}, env, "")
+		tf = terraform.NewLocalTerraform(o.Terraform.Version, []string{"init", "-input=true"}, env, nil)
 		err = tf.Prepare()
 		if err != nil {
 			return fmt.Errorf("can't deploy infra: %w", err)
@@ -204,11 +204,11 @@ func (o *DeployInfraOptions) Run() error {
 		return err
 	}
 
-	//terraform output run options
-	outputPath := fmt.Sprintf("%s/.terraform/output.json", viper.Get("ENV_DIR"))
-
 	tf.NewCmd([]string{"output", "-json"})
-	tf.SetOutput(outputPath)
+
+	var output bytes.Buffer
+
+	tf.SetOut(&output)
 
 	ui.Output("Execution terraform output...", terminal.WithHeaderStyle())
 
@@ -219,14 +219,7 @@ func (o *DeployInfraOptions) Run() error {
 
 	name := fmt.Sprintf("/%s/terraform-output", o.Config.Env)
 
-	outputFile, err := os.Open(outputPath)
-	if err != nil {
-		return err
-	}
-
-	defer outputFile.Close()
-
-	byteValue, _ := ioutil.ReadAll(outputFile)
+	byteValue, _ := ioutil.ReadAll(&output)
 	sDec := base64.StdEncoding.EncodeToString(byteValue)
 	if err != nil {
 		return err
@@ -241,7 +234,7 @@ func (o *DeployInfraOptions) Run() error {
 		DataType:  aws.String("text"),
 	})
 
-	ui.Output("deploy infra completed!\n", terminal.WithSuccessStyle())
+	ui.Output("Deploy infra completed!\n", terminal.WithSuccessStyle())
 
 	return nil
 }

@@ -48,18 +48,18 @@ func cleanupOldContainers(cli *client.Client) error {
 }
 
 type docker struct {
-	version    string
-	command    []string
-	env        []string
-	outputPath string
+	version string
+	command []string
+	env     []string
+	output  io.Writer
 }
 
-func NewDockerTerraform(version string, command []string, env []string, out string) *docker {
+func NewDockerTerraform(version string, command []string, env []string, out io.Writer) *docker {
 	return &docker{
-		version:    version,
-		command:    command,
-		env:        env,
-		outputPath: out,
+		version: version,
+		command: command,
+		env:     env,
+		output:  out,
 	}
 }
 
@@ -71,8 +71,8 @@ func (d *docker) NewCmd(cmd []string) {
 	d.command = cmd
 }
 
-func (d *docker) SetOutput(path string) {
-	d.outputPath = path
+func (d *docker) SetOut(out io.Writer) {
+	d.output = out
 }
 
 func (d *docker) RunUI(ui terminal.UI) error {
@@ -213,19 +213,9 @@ func (d *docker) RunUI(ui terminal.UI) error {
 
 	defer reader.Close()
 
-	var f *os.File
+	if d.output != nil {
+		io.Copy(d.output, reader)
 
-	if d.outputPath != "" {
-		f, err = os.Create(d.outputPath)
-		if err != nil {
-			return err
-		}
-
-		defer f.Close()
-	}
-
-	if f != nil {
-		io.Copy(f, reader)
 	} else {
 		io.Copy(s.TermOutput(), reader)
 	}
@@ -356,17 +346,6 @@ func (d *docker) Run() error {
 	go io.Copy(os.Stdout, waiter.Reader)
 	go io.Copy(os.Stderr, waiter.Reader)
 	go io.Copy(waiter.Conn, os.Stdin)
-
-	var f *os.File
-
-	if d.outputPath != "" {
-		f, err = os.Create(d.outputPath)
-		if err != nil {
-			return err
-		}
-
-		defer f.Close()
-	}
 
 	fd := int(os.Stdin.Fd())
 	var oldState *t.State
