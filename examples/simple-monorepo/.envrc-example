@@ -1,3 +1,0 @@
-export AWS_PROFILE=nutcorp-dev
-export ENV=testnut
-export AWS_REGION=us-east-1
