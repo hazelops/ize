@@ -278,9 +278,9 @@ func destroyAll(ui terminal.UI, o *DestroyOptions) error {
 	}
 
 	if o.Config.IsDockerRuntime {
-		tf = terraform.NewDockerTerraform(o.Infra.Version, []string{"destroy", "-auto-approve"}, env, "")
+		tf = terraform.NewDockerTerraform(o.Infra.Version, []string{"destroy", "-auto-approve"}, env, nil)
 	} else {
-		tf = terraform.NewLocalTerraform(o.Infra.Version, []string{"destroy", "-auto-approve"}, env, "")
+		tf = terraform.NewLocalTerraform(o.Infra.Version, []string{"destroy", "-auto-approve"}, env, nil)
 		err = tf.Prepare()
 		if err != nil {
 			return fmt.Errorf("can't destroy all: %w", err)
@@ -335,7 +335,7 @@ func destroyApp(ui terminal.UI, o *DestroyOptions) error {
 		return fmt.Errorf("can't destroy: %w", err)
 	}
 
-	ui.Output("destroy app %s completed\n", o.AppName, terminal.WithSuccessStyle())
+	ui.Output("Destroy app %s completed\n", o.AppName, terminal.WithSuccessStyle())
 
 	return nil
 }

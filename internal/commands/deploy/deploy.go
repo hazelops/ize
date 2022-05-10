@@ -1,11 +1,11 @@
 package deploy
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
-	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -243,9 +243,9 @@ func deployAll(ui terminal.UI, o *DeployOptions) error {
 	}
 
 	if o.Config.IsDockerRuntime {
-		tf = terraform.NewDockerTerraform(o.Infra.Version, []string{"init", "-input=true"}, env, "")
+		tf = terraform.NewDockerTerraform(o.Infra.Version, []string{"init", "-input=true"}, env, nil)
 	} else {
-		tf = terraform.NewLocalTerraform(o.Infra.Version, []string{"init", "-input=true"}, env, "")
+		tf = terraform.NewLocalTerraform(o.Infra.Version, []string{"init", "-input=true"}, env, nil)
 		err = tf.Prepare()
 		if err != nil {
 			return fmt.Errorf("can't deploy all: %w", err)
@@ -281,10 +281,12 @@ func deployAll(ui terminal.UI, o *DeployOptions) error {
 	}
 
 	//terraform output run options
-	outputPath := fmt.Sprintf("%s/.terraform/output.json", viper.Get("ENV_DIR"))
 
 	tf.NewCmd([]string{"output", "-json"})
-	tf.SetOutput(outputPath)
+
+	var output bytes.Buffer
+
+	tf.SetOut(&output)
 
 	ui.Output("Execution terraform output...", terminal.WithHeaderStyle())
 
@@ -295,14 +297,7 @@ func deployAll(ui terminal.UI, o *DeployOptions) error {
 
 	name := fmt.Sprintf("/%s/terraform-output", o.Config.Env)
 
-	outputFile, err := os.Open(outputPath)
-	if err != nil {
-		return err
-	}
-
-	defer outputFile.Close()
-
-	byteValue, _ := ioutil.ReadAll(outputFile)
+	byteValue, _ := ioutil.ReadAll(&output)
 	sDec := base64.StdEncoding.EncodeToString(byteValue)
 	if err != nil {
 		return err
