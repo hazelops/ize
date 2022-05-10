@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"runtime"
 	"strings"
@@ -63,6 +64,7 @@ func Execute(args []string) {
 
 	if err := rootCmd.Execute(); err != nil {
 		pterm.Error.Println(err)
+		os.Exit(1)
 	}
 }
 
