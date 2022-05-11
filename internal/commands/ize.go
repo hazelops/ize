@@ -73,7 +73,7 @@ func init() {
 	customizeDefaultPtermPrefix()
 
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
-	rootCmd.PersistentFlags().StringP("log-level", "l", "", "enable debug messages (possible levels: info, debug, trace, panic, warn, error, fatal(default))")
+	rootCmd.PersistentFlags().StringP("log-level", "l", "", "set log level. Possible levels: info, debug, trace, panic, warn, error, fatal(default)")
 	rootCmd.PersistentFlags().Bool("plain-text", false, "enable plain text")
 	rootCmd.PersistentFlags().StringP("config-file", "c", "", "set config file name")
 	rootCmd.PersistentFlags().StringP("env", "e", "", "(required) set environment name (overrides value set in IZE_ENV / ENV if any of them are set)")
