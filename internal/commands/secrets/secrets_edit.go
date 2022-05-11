@@ -88,6 +88,8 @@ func (o *SecretsEditOptions) Run() error {
 		return fmt.Errorf("can't secrets edit: %w", err)
 	}
 
+	checkSecretFolder()
+
 	f, err := os.OpenFile(absPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0660)
 	if err != nil {
 		return fmt.Errorf("can't secrets edit: %w", err)
@@ -125,4 +127,12 @@ func (o *SecretsEditOptions) Run() error {
 	}
 
 	return nil
+}
+
+func checkSecretFolder() {
+	secretsFolder := filepath.Join(viper.GetString("ENV_DIR"), "secrets")
+	_, err := os.Stat(secretsFolder)
+	if os.IsNotExist(err) {
+		os.MkdirAll(secretsFolder, 0775)
+	}
 }
