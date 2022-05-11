@@ -23,8 +23,8 @@ func NewCmdTunnelStatus() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "status",
-		Short: "status tunnel",
-		Long:  "Status tunnel.",
+		Short: "Tunnel status",
+		Long:  "Tunnel running status",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)
@@ -52,7 +52,7 @@ func NewCmdTunnelStatus() *cobra.Command {
 func (o *TunnelStatusOptions) Complete(cmd *cobra.Command, args []string) error {
 	cfg, err := config.GetConfig()
 	if err != nil {
-		return fmt.Errorf("can't complete options: %w", err)
+		return fmt.Errorf("can't load options for command: %w", err)
 	}
 
 	o.Config = cfg

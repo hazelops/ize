@@ -27,8 +27,8 @@ func NewCmdTunnelDown() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "down",
-		Short: "close tunnel",
-		Long:  "Close tunnel.",
+		Short: "Close tunnel",
+		Long:  "Close tunnel",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
@@ -57,7 +57,7 @@ func NewCmdTunnelDown() *cobra.Command {
 func (o *TunnelDownOptions) Complete(cmd *cobra.Command, args []string) error {
 	cfg, err := config.GetConfig()
 	if err != nil {
-		return fmt.Errorf("can't complete options: %w", err)
+		return fmt.Errorf("can't load options for a command: %w", err)
 	}
 
 	o.Config = cfg

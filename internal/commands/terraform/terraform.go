@@ -51,7 +51,7 @@ func NewCmdTerraform() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:                   "terraform [flags] <terraform command> [terraform flags]",
-		Short:                 "run terraform",
+		Short:                 "Run terraform",
 		Long:                  terraformLongDesc,
 		Example:               terraformExample,
 		DisableFlagParsing:    true,

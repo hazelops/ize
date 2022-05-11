@@ -41,7 +41,7 @@ type Infra struct {
 }
 
 var deployLongDesc = templates.LongDesc(`
-	Deploy infraftructure or sevice.
+	Deploy infrastructure or service.
     App name must be specified for a app deploy. 
 	The infrastructure for the app must be prepared in advance.
 `)
@@ -71,7 +71,7 @@ func NewCmdDeploy() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "deploy [flags] <app name>",
 		Example: deployExample,
-		Short:   "manage deployments",
+		Short:   "Manage deployments",
 		Long:    deployLongDesc,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -119,7 +119,7 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 		o.Config, err = config.GetConfig()
 		viper.BindPFlags(cmd.Flags())
 		if err != nil {
-			return fmt.Errorf("can`t complete options: %w", err)
+			return fmt.Errorf("can't deploy your stack: %w", err)
 		}
 
 		viper.UnmarshalKey("app", &o.Apps)
@@ -139,7 +139,7 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 	} else {
 		o.Config, err = config.GetConfig()
 		if err != nil {
-			return fmt.Errorf("can`t complete options: %w", err)
+			return fmt.Errorf("can't deploy your stack: %w", err)
 		}
 
 		viper.BindPFlags(cmd.Flags())

@@ -17,7 +17,7 @@ type InitOptions struct {
 }
 
 var initLongDesc = templates.LongDesc(`
-	Initialize project from git or internal examples.
+	Initialize a new ize project from a template
 `)
 
 var initExample = templates.Examples(`
@@ -40,7 +40,7 @@ func NewCmdInit() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "init",
-		Short:   "initialize project",
+		Short:   "Initialize project",
 		Long:    initLongDesc,
 		Example: initExample,
 		RunE: func(cmd *cobra.Command, args []string) error {

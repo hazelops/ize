@@ -14,7 +14,7 @@ func NewCmdGen() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "gen",
-		Short: "generates something",
+		Short: "Generate something",
 	}
 
 	cmd.AddCommand(

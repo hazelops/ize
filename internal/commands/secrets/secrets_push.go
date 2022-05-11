@@ -34,8 +34,8 @@ func NewCmdSecretsPush() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "push",
-		Short: "push secrets to a key-value storage (like SSM)",
-		Long:  "This command pushes secrets from a local file to a key-value storage (like SSM).",
+		Short: "Push secrets to a key-value storage (like SSM)",
+		Long:  "This command pushes secrets from a local file to a key-value storage (like SSM)",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true

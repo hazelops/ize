@@ -17,7 +17,7 @@ import (
 func NewDebugCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
-		Short: "show debug information",
+		Short: "Show debug information",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			sess, err := utils.GetSession(&utils.SessionConfig{
@@ -37,7 +37,7 @@ func NewDebugCmd() *cobra.Command {
 
 			cwd, err := os.Getwd()
 			if err != nil {
-				return fmt.Errorf("can`t complete options: %w", err)
+				return fmt.Errorf("can't load options for a command: %w", err)
 			}
 
 			dt := pterm.DefaultTable

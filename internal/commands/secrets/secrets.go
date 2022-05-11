@@ -8,7 +8,7 @@ func NewCmdSecrets() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:              "secrets",
-		Short:            "manage secrets",
+		Short:            "Manage secrets",
 		TraverseChildren: true,
 	}
 

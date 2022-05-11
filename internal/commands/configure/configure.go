@@ -23,7 +23,7 @@ func NewCmdConfig() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "configure",
-		Short: "generate global configuration",
+		Short: "Generate global configuration file",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := o.Run()
 			if err != nil {

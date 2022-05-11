@@ -29,7 +29,7 @@ func NewCmdDestroyInfra() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "infra",
-		Short: "destroy infra",
+		Short: "Destroy infrastructure",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)
@@ -72,7 +72,7 @@ func (o *DestroyInfraOptions) Complete(cmd *cobra.Command, args []string) error 
 
 	o.Config, err = config.GetConfig()
 	if err != nil {
-		return fmt.Errorf("can`t complete options: %w", err)
+		return fmt.Errorf("can't load options for a command: %w", err)
 	}
 
 	BindFlags(cmd.Flags())
@@ -137,14 +137,14 @@ func (o *DestroyInfraOptions) Run() error {
 		}
 	}
 
-	ui.Output("Running terraform destoy...", terminal.WithHeaderStyle())
+	ui.Output("Running terraform destroy...", terminal.WithHeaderStyle())
 
 	err = tf.RunUI(ui)
 	if err != nil {
 		return err
 	}
 
-	ui.Output("Terraform destoy completed!\n", terminal.WithSuccessStyle())
+	ui.Output("Terraform destroy completed!\n", terminal.WithSuccessStyle())
 
 	return nil
 }

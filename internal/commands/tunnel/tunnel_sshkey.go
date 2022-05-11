@@ -26,8 +26,8 @@ func NewCmdSSHKey() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "ssh-key",
-		Short: "send ssh key to remote server",
-		Long:  "Send ssh key to remote server.",
+		Short: "Send ssh key to remote server",
+		Long:  "Send ssh key to remote server",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)
@@ -57,7 +57,7 @@ func NewCmdSSHKey() *cobra.Command {
 func (o *TunnelSSHKeyOptions) Complete(cmd *cobra.Command, args []string) error {
 	cfg, err := config.GetConfig()
 	if err != nil {
-		return fmt.Errorf("can't complete options: %w", err)
+		return fmt.Errorf("can't load options for a command: %w", err)
 	}
 
 	o.Config = cfg
