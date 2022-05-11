@@ -125,11 +125,11 @@ func (o *TunnelOptions) Complete(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) != 0 {
-		return fmt.Errorf("cat't complete options: --forward-host parameter requires --bastion-instance-id")
+		return fmt.Errorf("can't load options for deploy command: --forward-host parameter requires --bastion-instance-id")
 	}
 
 	if len(o.ForwardHost) == 0 && len(o.BastionHostID) != 0 {
-		return fmt.Errorf("cat't complete options: --bastion-instance-id requires --forward-host parameter")
+		return fmt.Errorf("can't load options for deploy command: --bastion-instance-id requires --forward-host parameter")
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) == 0 {
@@ -436,17 +436,17 @@ func writeSSHConfigFromConfig(forwardHost []string) error {
 	for k, v := range forwardHost {
 		ss := strings.Split(v, ":")
 		if len(ss) < 2 || len(ss) > 3 {
-			return fmt.Errorf("can't complete options: invalid format for forward host (should be host:port:localport)")
+			return fmt.Errorf("can't load options for deploy command: invalid format for forward host (should be host:port:localport)")
 		}
 		if len(ss) == 2 {
 			p, err := getFreePort()
 			if err != nil {
-				return fmt.Errorf("can't complete options: %w", err)
+				return fmt.Errorf("can't load options for deploy command: %w", err)
 			}
 			forwardHost[k] = forwardHost[k] + ":" + strconv.Itoa(p)
 			ss = append(ss, strconv.Itoa(p))
 		} else if len(ss[2]) == 0 {
-			return fmt.Errorf("can't complete options: invalid format for forward host (should be host:port:localport)")
+			return fmt.Errorf("can't load options for deploy command: invalid format for forward host (should be host:port:localport)")
 		}
 		tmplData = append(tmplData, fmt.Sprintf("%s %s:%s", ss[2], ss[0], ss[1]))
 	}

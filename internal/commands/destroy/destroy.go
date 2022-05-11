@@ -114,7 +114,7 @@ func (o *DestroyOptions) Complete(cmd *cobra.Command, args []string) error {
 		o.Config, err = config.GetConfig()
 		viper.BindPFlags(cmd.Flags())
 		if err != nil {
-			return fmt.Errorf("can`t complete options: %w", err)
+			return fmt.Errorf("can't load options for deploy command: %w", err)
 		}
 
 		viper.UnmarshalKey("app", &o.Apps)
@@ -138,7 +138,7 @@ func (o *DestroyOptions) Complete(cmd *cobra.Command, args []string) error {
 	} else {
 		o.Config, err = config.GetConfig()
 		if err != nil {
-			return fmt.Errorf("can`t complete options: %w", err)
+			return fmt.Errorf("can't load options for deploy command: %w", err)
 		}
 
 		viper.BindPFlags(cmd.Flags())

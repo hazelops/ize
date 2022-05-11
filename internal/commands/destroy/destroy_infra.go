@@ -72,7 +72,7 @@ func (o *DestroyInfraOptions) Complete(cmd *cobra.Command, args []string) error 
 
 	o.Config, err = config.GetConfig()
 	if err != nil {
-		return fmt.Errorf("can`t complete options: %w", err)
+		return fmt.Errorf("can't load options for deploy command: %w", err)
 	}
 
 	BindFlags(cmd.Flags())
