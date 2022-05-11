@@ -10,9 +10,8 @@ import (
 )
 
 var (
-	izeBinary = GetFromEnv("IZE_BINARY", "ize")
-
-	examplesRootDir = GetFromEnv("IZE_EXAMPLES_PATH", "examples/simple-monorepo")
+	izeBinary       = GetFromEnv("IZE_BINARY", "ize")
+	examplesRootDir = GetFromEnv("IZE_EXAMPLES_PATH", "")
 )
 
 // A struct representation of the IZE binary
