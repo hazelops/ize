@@ -86,11 +86,11 @@ func (o *TunnelUpOptions) Complete(md *cobra.Command, args []string) error {
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) != 0 {
-		return fmt.Errorf("can't load options for deploy command: --forward-host parameter requires --bastion-instance-id")
+		return fmt.Errorf("can't load options for a command: --forward-host parameter requires --bastion-instance-id")
 	}
 
 	if len(o.ForwardHost) == 0 && len(o.BastionHostID) != 0 {
-		return fmt.Errorf("can't load options for deploy command: --bastion-instance-id requires --forward-host parameter")
+		return fmt.Errorf("can't load options for a command: --bastion-instance-id requires --forward-host parameter")
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) == 0 {

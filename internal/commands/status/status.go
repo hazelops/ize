@@ -37,7 +37,7 @@ func NewDebugCmd() *cobra.Command {
 
 			cwd, err := os.Getwd()
 			if err != nil {
-				return fmt.Errorf("can't load options for deploy command: %w", err)
+				return fmt.Errorf("can't load options for a command: %w", err)
 			}
 
 			dt := pterm.DefaultTable

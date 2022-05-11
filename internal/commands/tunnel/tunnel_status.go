@@ -52,7 +52,7 @@ func NewCmdTunnelStatus() *cobra.Command {
 func (o *TunnelStatusOptions) Complete(cmd *cobra.Command, args []string) error {
 	cfg, err := config.GetConfig()
 	if err != nil {
-		return fmt.Errorf("can't load options for deploy command: %w", err)
+		return fmt.Errorf("can't load options for command: %w", err)
 	}
 
 	o.Config = cfg
