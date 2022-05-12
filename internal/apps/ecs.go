@@ -321,6 +321,7 @@ func (e *ecs) deployWithDocker(cli *client.Client, sg terminal.StepGroup) error 
 
 	cmd := []string{"ecs", "deploy",
 		"--profile", e.AwsProfile,
+		"--region", e.AwsRegion,
 		e.Cluster,
 		fmt.Sprintf("%s-%s", viper.GetString("env"), e.Name),
 		"--task", e.TaskDefinitionArn,
