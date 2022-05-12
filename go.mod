@@ -22,7 +22,7 @@ require (
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/mitchellh/go-glint v0.0.0-20210722152315-6515ceb4a127
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/mitchellh/mapstructure v1.4.3
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/moby/buildkit v0.10.0 // indirect
 	github.com/moby/sys/mount v0.3.1 // indirect
 	github.com/morikuni/aec v1.0.0
