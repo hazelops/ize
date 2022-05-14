@@ -43,9 +43,9 @@ ize tunnel down
 ```
 
 ### 6. Run application inside ECS container
-_If you need to manually run application in a ECS hosted docker container you can use the following command:
+_If you need to manually run application an ECS-hosted docker container you can use the following command:
 ```shell
-ize exec goblin -- bash --ecs-cluster testnut
+ize exec goblin -- ps aux
 ```
 
 ## Installation
