@@ -1,3 +1,6 @@
+//go:build e2e
+// +build e2e
+
 package test
 
 import (
@@ -185,6 +188,28 @@ func TestIzeDeployAll(t *testing.T) {
 	}
 }
 
+func TestIzeExecGoblin(t *testing.T) {
+	if examplesRootDir == "" {
+		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
+	}
+
+	ize := NewBinary(t, izeBinary, examplesRootDir)
+
+	stdout, stderr, err := ize.RunRaw("exec", "goblin", "--", "sh -c \"echo $APP_NAME\"")
+
+	if err != nil {
+		t.Errorf("error: %s", err)
+	}
+
+	if stderr != "" {
+		t.Errorf("unexpected stderr output ize deploy all: %s", err)
+	}
+
+	if !strings.Contains(stdout, "goblin") {
+		t.Errorf("No success message detected after all deploy:\n%s", stdout)
+	}
+}
+
 func TestCheckSecrets(t *testing.T) {
 	resp, err := http.Get("http://squibby.testnut.examples.ize.sh/")
 	if err != nil {
@@ -212,28 +237,6 @@ func TestCheckSecrets(t *testing.T) {
 
 	if !strings.Contains(string(body), exampleGoblinSecret) {
 		t.Errorf("The installed env variable is not detected: %s", string(body))
-	}
-}
-
-func TestIzeExecGoblin(t *testing.T) {
-	if examplesRootDir == "" {
-		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
-	}
-
-	ize := NewBinary(t, izeBinary, examplesRootDir)
-
-	stdout, stderr, err := ize.RunRaw("exec", "goblin", "--", "sh -c \"echo $APP_NAME\"")
-
-	if err != nil {
-		t.Errorf("error: %s", err)
-	}
-
-	if stderr != "" {
-		t.Errorf("unexpected stderr output ize deploy all: %s", err)
-	}
-
-	if !strings.Contains(stdout, "goblin") {
-		t.Errorf("No success message detected after all deploy:\n%s", stdout)
 	}
 }
 
