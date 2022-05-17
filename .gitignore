@@ -2,6 +2,7 @@ bin/
 ize
 
 .infra
+.ize
 *.hcl
 
 # Vscode files
