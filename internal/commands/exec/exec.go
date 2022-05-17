@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/ssmsession"
+	"github.com/hazelops/ize/pkg/templates"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -21,6 +22,11 @@ type ExecOptions struct {
 	Task       string
 }
 
+var execExample = templates.Examples(`
+	# Connect to a container in the ECS via AWS SSM and run command.
+	ize exec goblin ps aux
+`)
+
 func NewExecFlags() *ExecOptions {
 	return &ExecOptions{}
 }
@@ -29,10 +35,12 @@ func NewCmdExec() *cobra.Command {
 	o := NewExecFlags()
 
 	cmd := &cobra.Command{
-		Use:   "exec [app-name] -- [commands]",
-		Short: "Execute command in ECS container",
-		Long:  "Connect to a container in the ECS via AWS SSM and run command.\nIt uses app name as an argument.\nExample usage: ize exec goblin -- ps aux",
-		Args:  cobra.MinimumNArgs(1),
+		Use:     "exec [app-name] -- [commands]",
+		Example: execExample,
+		Short:   "Execute command in ECS container",
+		Long:    "Connect to a container in the ECS via AWS SSM and run command.\nIt uses app name as an argument.",
+
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			argsLenAtDash := cmd.ArgsLenAtDash()
