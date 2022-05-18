@@ -42,6 +42,11 @@ ize tunnel up
 ize tunnel down
 ```
 
+### 6. Run application inside ECS container
+_If you need to manually run application an ECS-hosted docker container you can use the following command:
+```shell
+ize exec goblin -- ps aux
+```
 
 ## Installation
 ### To install the latest version via homebrew on MacOS:
