@@ -186,8 +186,10 @@ func (o *DeployInfraOptions) Run() error {
 
 	ui.Output("Execution terraform plan...", terminal.WithHeaderStyle())
 
+	outPath := fmt.Sprintf("%s/.terraform/tfplan", viper.GetString("ENV_DIR"))
+
 	//terraform plan run options
-	tf.NewCmd([]string{"plan"})
+	tf.NewCmd([]string{"plan", fmt.Sprintf("-out=%s", outPath)})
 
 	err = tf.RunUI(ui)
 	if err != nil {
@@ -195,7 +197,7 @@ func (o *DeployInfraOptions) Run() error {
 	}
 
 	//terraform apply run options
-	tf.NewCmd([]string{"apply", "-auto-approve"})
+	tf.NewCmd([]string{"apply", "-auto-approve", outPath})
 
 	ui.Output("Execution terraform apply...", terminal.WithHeaderStyle())
 
