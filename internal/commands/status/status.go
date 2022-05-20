@@ -5,6 +5,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hazelops/ize/internal/aws/utils"
@@ -19,6 +20,7 @@ func NewDebugCmd() *cobra.Command {
 		Use:   "status",
 		Short: "Show debug information",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			sess, err := utils.GetSession(&utils.SessionConfig{
 				Region:  viper.GetString("aws_region"),
@@ -62,15 +64,25 @@ func NewDebugCmd() *cobra.Command {
 			}).WithLeftAlignment().Render()
 
 			guo, err := iam.New(sess).GetUser(&iam.GetUserInput{})
-			if err != nil {
-				return err
+			if aerr, ok := err.(awserr.Error); ok {
+				switch aerr.Code() {
+				case "NoSuchEntity":
+					return fmt.Errorf("error obtaining AWS user with %s aws profile: %s is not found in account %s", viper.GetString("aws_profile"), *guo.User.UserName, *resp.Account)
+				default:
+					return err
+				}
 			}
 
 			luto, err := iam.New(sess).ListUserTags(&iam.ListUserTagsInput{
 				UserName: guo.User.UserName,
 			})
-			if err != nil {
-				return err
+			if aerr, ok := err.(awserr.Error); ok {
+				switch aerr.Code() {
+				case "NoSuchEntity":
+					return fmt.Errorf("error obtaining AWS user with %s aws profile: %s is not found in account %s", viper.GetString("aws_profile"), *guo.User.UserName, *resp.Account)
+				default:
+					return err
+				}
 			}
 
 			devEnvName := ""
