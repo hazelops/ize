@@ -161,6 +161,7 @@ func (o *EnvOptions) Run() error {
 		AWS_PROFILE:       o.Config.AwsProfile,
 		AWS_REGION:        o.Config.AwsRegion,
 		EC2_KEY_PAIR_NAME: fmt.Sprintf("%v-%v", o.Config.Env, o.Config.Namespace),
+		ROOT_DOMAIN_NAME:  viper.GetString("infra.terraform.root_domain_name"),
 		TAG:               o.Config.Env,
 		SSH_PUBLIC_KEY:    string(key)[:len(string(key))-1],
 		DOCKER_REGISTRY:   viper.GetString("DOCKER_REGISTRY"),

@@ -32,6 +32,9 @@ func GenerateVarsTf(opts VarsOpts, path string) error {
 	rootBody.SetAttributeValue("ssh_public_key", cty.StringVal(opts.SSH_PUBLIC_KEY))
 	rootBody.SetAttributeValue("docker_registry", cty.StringVal(opts.DOCKER_REGISTRY))
 	rootBody.SetAttributeValue("namespace", cty.StringVal(opts.NAMESPACE))
+	if len(opts.ROOT_DOMAIN_NAME) > 0 {
+		rootBody.SetAttributeValue("root_domain_name", cty.StringVal(opts.ROOT_DOMAIN_NAME))
+	}
 
 	file, err := os.Create(fmt.Sprintf("%s/%s", path, vars))
 	if err != nil {
@@ -213,6 +216,7 @@ type VarsOpts struct {
 	AWS_PROFILE       string
 	AWS_REGION        string
 	EC2_KEY_PAIR_NAME string
+	ROOT_DOMAIN_NAME  string
 	TAG               string
 	SSH_PUBLIC_KEY    string
 	DOCKER_REGISTRY   string
