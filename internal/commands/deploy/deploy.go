@@ -4,12 +4,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/apps"
+	"github.com/hazelops/ize/internal/commands/gen"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/terraform"
 	"github.com/hazelops/ize/pkg/templates"
@@ -223,96 +227,10 @@ func validateAll(o *DeployOptions) error {
 }
 
 func deployAll(ui terminal.UI, o *DeployOptions) error {
-	var tf terraform.Terraform
-
-	logrus.Infof("infra: %s", o.Infra)
-
-	v, err := o.Config.Session.Config.Credentials.Get()
-	if err != nil {
-		return fmt.Errorf("can't set AWS credentials: %w", err)
-	}
-
-	env := []string{
-		fmt.Sprintf("ENV=%v", o.Config.Env),
-		fmt.Sprintf("AWS_PROFILE=%v", o.Infra.Profile),
-		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		fmt.Sprintf("AWS_ACCESS_KEY_ID=%v", v.AccessKeyID),
-		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%v", v.SecretAccessKey),
-		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
-	}
-
-	if o.Config.IsDockerRuntime {
-		tf = terraform.NewDockerTerraform(o.Infra.Version, []string{"init", "-input=true"}, env, nil)
-	} else {
-		tf = terraform.NewLocalTerraform(o.Infra.Version, []string{"init", "-input=true"}, env, nil)
-		err = tf.Prepare()
-		if err != nil {
-			return fmt.Errorf("can't deploy all: %w", err)
-		}
-	}
-
-	ui.Output(fmt.Sprintf("[%s] Running deploy infra...", viper.Get("ENV")), terminal.WithHeaderStyle())
-	ui.Output("Execution terraform init...", terminal.WithHeaderStyle())
-
-	err = tf.RunUI(ui)
-	if err != nil {
-		return fmt.Errorf("can't deploy all: %w", err)
-	}
-
-	ui.Output("Execution terraform plan...", terminal.WithHeaderStyle())
-
-	outPath := fmt.Sprintf("%s/.terraform/tfplan", viper.GetString("ENV_DIR"))
-
-	//terraform plan run options
-	tf.NewCmd([]string{"plan", fmt.Sprintf("-out=%s", outPath)})
-
-	err = tf.RunUI(ui)
+	err := deployInfra(ui, o.Infra, *o.Config)
 	if err != nil {
 		return err
 	}
-
-	//terraform apply run options
-	tf.NewCmd([]string{"apply", "-auto-approve", outPath})
-
-	ui.Output("Execution terraform apply...", terminal.WithHeaderStyle())
-
-	err = tf.RunUI(ui)
-	if err != nil {
-		return err
-	}
-
-	//terraform output run options
-
-	tf.NewCmd([]string{"output", "-json"})
-
-	var output bytes.Buffer
-
-	tf.SetOut(&output)
-
-	ui.Output("Execution terraform output...", terminal.WithHeaderStyle())
-
-	err = tf.RunUI(ui)
-	if err != nil {
-		return err
-	}
-
-	name := fmt.Sprintf("/%s/terraform-output", o.Config.Env)
-
-	byteValue, _ := ioutil.ReadAll(&output)
-	sDec := base64.StdEncoding.EncodeToString(byteValue)
-	if err != nil {
-		return err
-	}
-
-	ssm.New(o.Config.Session).PutParameter(&ssm.PutParameterInput{
-		Name:      &name,
-		Value:     aws.String(string(sDec)),
-		Type:      aws.String(ssm.ParameterTypeSecureString),
-		Overwrite: aws.Bool(true),
-		Tier:      aws.String("Intelligent-Tiering"),
-		DataType:  aws.String("text"),
-	})
 
 	logrus.Debug(o.Apps)
 
@@ -392,4 +310,110 @@ func deployApp(ui terminal.UI, o *DeployOptions) error {
 	ui.Output("Deploy app %s completed\n", o.AppName, terminal.WithSuccessStyle())
 
 	return nil
+}
+
+func deployInfra(ui terminal.UI, infra Infra, config config.Config) error {
+	var tf terraform.Terraform
+
+	logrus.Infof("infra: %s", infra)
+
+	v, err := config.Session.Config.Credentials.Get()
+	if err != nil {
+		return fmt.Errorf("can't set AWS credentials: %w", err)
+	}
+
+	if !checkFileExists(filepath.Join(viper.GetString("ENV_DIR"), "backend.tf")) || !checkFileExists(filepath.Join(viper.GetString("ENV_DIR"), "terraform.tfvars")) {
+		gen.NewCmdEnv().Execute()
+	}
+
+	env := []string{
+		fmt.Sprintf("ENV=%v", config.Env),
+		fmt.Sprintf("AWS_PROFILE=%v", infra.Profile),
+		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
+		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
+		fmt.Sprintf("AWS_ACCESS_KEY_ID=%v", v.AccessKeyID),
+		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%v", v.SecretAccessKey),
+		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
+	}
+
+	if config.IsDockerRuntime {
+		tf = terraform.NewDockerTerraform(infra.Version, []string{"init", "-input=true"}, env, nil)
+	} else {
+		tf = terraform.NewLocalTerraform(infra.Version, []string{"init", "-input=true"}, env, nil)
+		err = tf.Prepare()
+		if err != nil {
+			return fmt.Errorf("can't deploy all: %w", err)
+		}
+	}
+
+	ui.Output(fmt.Sprintf("[%s] Running deploy infra...", viper.Get("ENV")), terminal.WithHeaderStyle())
+	ui.Output("Execution terraform init...", terminal.WithHeaderStyle())
+
+	err = tf.RunUI(ui)
+	if err != nil {
+		return fmt.Errorf("can't deploy all: %w", err)
+	}
+
+	ui.Output("Execution terraform plan...", terminal.WithHeaderStyle())
+
+	outPath := fmt.Sprintf("%s/.terraform/tfplan", viper.GetString("ENV_DIR"))
+
+	//terraform plan run options
+	tf.NewCmd([]string{"plan", fmt.Sprintf("-out=%s", outPath)})
+
+	err = tf.RunUI(ui)
+	if err != nil {
+		return err
+	}
+
+	//terraform apply run options
+	tf.NewCmd([]string{"apply", "-auto-approve", outPath})
+
+	ui.Output("Execution terraform apply...", terminal.WithHeaderStyle())
+
+	err = tf.RunUI(ui)
+	if err != nil {
+		return err
+	}
+
+	//terraform output run options
+
+	tf.NewCmd([]string{"output", "-json"})
+
+	var output bytes.Buffer
+
+	tf.SetOut(&output)
+
+	ui.Output("Execution terraform output...", terminal.WithHeaderStyle())
+
+	err = tf.RunUI(ui)
+	if err != nil {
+		return err
+	}
+
+	name := fmt.Sprintf("/%s/terraform-output", config.Env)
+
+	byteValue, _ := ioutil.ReadAll(&output)
+	sDec := base64.StdEncoding.EncodeToString(byteValue)
+	if err != nil {
+		return err
+	}
+
+	ssm.New(config.Session).PutParameter(&ssm.PutParameterInput{
+		Name:      &name,
+		Value:     aws.String(string(sDec)),
+		Type:      aws.String(ssm.ParameterTypeSecureString),
+		Overwrite: aws.Bool(true),
+		Tier:      aws.String("Intelligent-Tiering"),
+		DataType:  aws.String("text"),
+	})
+
+	ui.Output("Deploy infra completed!\n", terminal.WithSuccessStyle())
+
+	return nil
+}
+
+func checkFileExists(path string) bool {
+	_, err := os.Stat(path)
+	return !errors.Is(err, os.ErrNotExist)
 }
