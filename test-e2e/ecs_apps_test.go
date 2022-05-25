@@ -210,34 +210,52 @@ func TestIzeExecGoblin(t *testing.T) {
 	}
 }
 
-func TestCheckSecrets(t *testing.T) {
-	resp, err := http.Get("http://squibby.testnut.examples.ize.sh/")
-	if err != nil {
-		t.Error(err)
+func TestCheckSecretsSquibby(t *testing.T) {
+	url := "http://squibby.testnut.examples.ize.sh/"
+
+	for i := 0; i < 10; i++ {
+		resp, err := http.Get(url)
+		if err != nil {
+			t.Error(err)
+		}
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			t.Error(err)
+		}
+
+		if strings.Contains(string(body), exampleSquibbySecret) {
+			return
+		}
+
+		time.Sleep(time.Second * 5)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Error(err)
+	t.Errorf("The expected string was not found in the response: %s", url)
+}
+
+func TestCheckSecretsGoblin(t *testing.T) {
+	url := "http://goblin.testnut.examples.ize.sh/"
+
+	for i := 0; i < 10; i++ {
+		resp, err := http.Get(url)
+		if err != nil {
+			t.Error(err)
+		}
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			t.Error(err)
+		}
+
+		if strings.Contains(string(body), exampleGoblinSecret) {
+			return
+		}
+
+		time.Sleep(time.Second * 5)
 	}
 
-	if !strings.Contains(string(body), exampleSquibbySecret) {
-		t.Errorf("The installed env variable is not detected: %s", string(body))
-	}
-
-	resp, err = http.Get("http://goblin.testnut.examples.ize.sh/")
-	if err != nil {
-		t.Error(err)
-	}
-
-	body, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if !strings.Contains(string(body), exampleGoblinSecret) {
-		t.Errorf("The installed env variable is not detected: %s", string(body))
-	}
+	t.Errorf("The expected string was not found in the response: %s", url)
 }
 
 func randInt(min int, max int) int {
