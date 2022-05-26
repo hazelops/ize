@@ -1,31 +1,23 @@
 package deploy
 
 import (
-	"bytes"
 	"context"
-	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/internal/terraform"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
 type DeployInfraOptions struct {
-	Config    *config.Config
-	Type      string
-	Terraform terraformInfraConfig
-	Local     bool
-	UI        terminal.UI
+	Config *config.Config
+	Type   string
+	Infra  Infra
+	UI     terminal.UI
 }
 
 var deployInfraLongDesc = templates.LongDesc(`
@@ -68,7 +60,7 @@ func NewCmdDeployInfra() *cobra.Command {
 				return err
 			}
 
-			err = o.Run()
+			err = o.Run(cmd)
 			if err != nil {
 				return err
 			}
@@ -77,9 +69,9 @@ func NewCmdDeployInfra() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&o.Terraform.Version, "infra.terraform.version", "", "set terraform version")
-	cmd.Flags().StringVar(&o.Terraform.Region, "infra.terraform.aws-region", "", "set aws region")
-	cmd.Flags().StringVar(&o.Terraform.Profile, "infra.terraform.aws-profile", "", "set aws profile")
+	cmd.Flags().StringVar(&o.Infra.Version, "infra.terraform.version", "", "set terraform version")
+	cmd.Flags().StringVar(&o.Infra.Region, "infra.terraform.aws-region", "", "set aws region")
+	cmd.Flags().StringVar(&o.Infra.Profile, "infra.terraform.aws-profile", "", "set aws profile")
 
 	return cmd
 }
@@ -104,28 +96,28 @@ func (o *DeployInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 
 	BindFlags(cmd.Flags())
 
-	if len(o.Terraform.Profile) == 0 {
-		o.Terraform.Profile = viper.GetString("infra.terraform.aws_profile")
+	if len(o.Infra.Profile) == 0 {
+		o.Infra.Profile = viper.GetString("infra.terraform.aws_profile")
 	}
 
-	if len(o.Terraform.Profile) == 0 {
-		o.Terraform.Profile = o.Config.AwsProfile
+	if len(o.Infra.Profile) == 0 {
+		o.Infra.Profile = o.Config.AwsProfile
 	}
 
-	if len(o.Terraform.Region) == 0 {
-		o.Terraform.Region = viper.GetString("infra.terraform.aws_region")
+	if len(o.Infra.Region) == 0 {
+		o.Infra.Region = viper.GetString("infra.terraform.aws_region")
 	}
 
-	if len(o.Terraform.Region) == 0 {
-		o.Terraform.Region = o.Config.AwsRegion
+	if len(o.Infra.Region) == 0 {
+		o.Infra.Region = o.Config.AwsRegion
 	}
 
-	if len(o.Terraform.Version) == 0 {
-		o.Terraform.Version = viper.GetString("infra.terraform.terraform_version")
+	if len(o.Infra.Version) == 0 {
+		o.Infra.Version = viper.GetString("infra.terraform.terraform_version")
 	}
 
-	if len(o.Terraform.Version) == 0 {
-		o.Terraform.Version = viper.GetString("terraform_version")
+	if len(o.Infra.Version) == 0 {
+		o.Infra.Version = viper.GetString("terraform_version")
 	}
 
 	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
@@ -145,104 +137,8 @@ func (o *DeployInfraOptions) Validate() error {
 	return nil
 }
 
-func (o *DeployInfraOptions) Run() error {
+func (o *DeployInfraOptions) Run(cmd *cobra.Command) error {
 	ui := o.UI
-	var tf terraform.Terraform
 
-	v, err := o.Config.Session.Config.Credentials.Get()
-	if err != nil {
-		return fmt.Errorf("can't set AWS credentials: %w", err)
-	}
-
-	logrus.Infof("infra: %s", o.Terraform)
-
-	env := []string{
-		fmt.Sprintf("ENV=%v", o.Config.Env),
-		fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
-		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		fmt.Sprintf("AWS_ACCESS_KEY_ID=%v", v.AccessKeyID),
-		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%v", v.SecretAccessKey),
-		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
-	}
-
-	if o.Config.IsDockerRuntime {
-		tf = terraform.NewDockerTerraform(o.Terraform.Version, []string{"init", "-input=true"}, env, nil)
-	} else {
-		tf = terraform.NewLocalTerraform(o.Terraform.Version, []string{"init", "-input=true"}, env, nil)
-		err = tf.Prepare()
-		if err != nil {
-			return fmt.Errorf("can't deploy infra: %w", err)
-		}
-	}
-
-	ui.Output(fmt.Sprintf("[%s] Running deploy infra...", viper.Get("ENV")), terminal.WithHeaderStyle())
-	ui.Output("Execution terraform init...", terminal.WithHeaderStyle())
-
-	err = tf.RunUI(ui)
-	if err != nil {
-		return fmt.Errorf("can't deploy infra: %w", err)
-	}
-
-	ui.Output("Execution terraform plan...", terminal.WithHeaderStyle())
-
-	outPath := fmt.Sprintf("%s/.terraform/tfplan", viper.GetString("ENV_DIR"))
-
-	//terraform plan run options
-	tf.NewCmd([]string{"plan", fmt.Sprintf("-out=%s", outPath)})
-
-	err = tf.RunUI(ui)
-	if err != nil {
-		return err
-	}
-
-	//terraform apply run options
-	tf.NewCmd([]string{"apply", "-auto-approve", outPath})
-
-	ui.Output("Execution terraform apply...", terminal.WithHeaderStyle())
-
-	err = tf.RunUI(ui)
-	if err != nil {
-		return err
-	}
-
-	tf.NewCmd([]string{"output", "-json"})
-
-	var output bytes.Buffer
-
-	tf.SetOut(&output)
-
-	ui.Output("Execution terraform output...", terminal.WithHeaderStyle())
-
-	err = tf.RunUI(ui)
-	if err != nil {
-		return err
-	}
-
-	name := fmt.Sprintf("/%s/terraform-output", o.Config.Env)
-
-	byteValue, _ := ioutil.ReadAll(&output)
-	sDec := base64.StdEncoding.EncodeToString(byteValue)
-	if err != nil {
-		return err
-	}
-
-	ssm.New(o.Config.Session).PutParameter(&ssm.PutParameterInput{
-		Name:      &name,
-		Value:     aws.String(string(sDec)),
-		Type:      aws.String(ssm.ParameterTypeSecureString),
-		Overwrite: aws.Bool(true),
-		Tier:      aws.String("Intelligent-Tiering"),
-		DataType:  aws.String("text"),
-	})
-
-	ui.Output("Deploy infra completed!\n", terminal.WithSuccessStyle())
-
-	return nil
-}
-
-type terraformInfraConfig struct {
-	Version string `mapstructure:"terraform_version,optional"`
-	Region  string `mapstructure:"aws_region,optional"`
-	Profile string `mapstructure:"aws_profile,optional"`
+	return deployInfra(ui, o.Infra, *o.Config)
 }
