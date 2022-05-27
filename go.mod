@@ -16,7 +16,6 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/hashicorp/go-version v1.5.0
 	github.com/hashicorp/hcl/v2 v2.12.0
-	github.com/kr/pretty v0.3.0 // indirect
 	github.com/lab47/vterm v0.0.0-20211107042118-80c3d2849f9c
 	github.com/mattn/go-isatty v0.0.14
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
@@ -33,12 +32,12 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.11.0
+	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.7.1
 	github.com/zclconf/go-cty v1.10.0
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad
+	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a
 	golang.org/x/time v0.0.0-20220224211638-0e9765cccd65 // indirect
 	gopkg.in/ini.v1 v1.66.4
 )
