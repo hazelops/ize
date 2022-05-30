@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/hazelops/ize/internal/commands/build"
 	"github.com/hazelops/ize/internal/commands/configure"
 	"github.com/hazelops/ize/internal/commands/console"
 	"github.com/hazelops/ize/internal/commands/deploy"
@@ -95,6 +96,7 @@ func init() {
 
 func addCommands() {
 	rootCmd.AddCommand(
+		build.NewCmdBuild(),
 		deploy.NewCmdDeploy(),
 		destroy.NewCmdDestroy(),
 		console.NewCmdConsole(),
