@@ -1,4 +1,4 @@
-name: "[Ubuntu]Test IZE"
+name: "Tests"
 defaults:
   run:
     shell: bash
@@ -7,16 +7,45 @@ env:
   ENV: testnut
   NAMESPACE: nutcorp
   AWS_PROFILE: default
+  SSH_PUBLIC_KEY: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDZqPTy/u82UzDtTY8GUdtGBrQQ1HoyMxZcv/Sc2FeSJTrcLh3i/Mo8pf/MrTO3G7LxJ8syDrptRFIVUheVY7a38UQvay94rJdYtSy6Z/0wLQbnDhJdhzzaPwXrUpBkZO7pcx2HNaC68D/40gTLEHVygJ09VEx8WS7d5QdS8YI6SnXF8ocLF6Nv1WV73aE8Cvz4aUgJJos7pvyX+/WoGzEwpj1aKVPOswRixf18Eg0G6H6WWDfK6zgqEUxsiiP7TB+yXp6VtbDRoS881PK7Cj3+X+lxMBAAuG/PslM6B6koiulCNWyauBZAuay3WR74dYWblYOpD54x1fzrELe2Q4v/1zTi669VqpVfPlH1cnpYiOXaP1aijCA9GFO/dWjxyAAkw2BVeEcbcDaIWhCToMYTHeq2f8Zzi9pxhZyJVO9qg4bXN3EeDGYrbFiWLdWxF9ITKmoSUYG5v8XhXzVTbAyBzDosDiBaa1pMsqFydgc4uZkKAF9govNw1KhRitovz9s= testnut"
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
-
 jobs:
   Build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, macos-latest ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.x
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Build
+        run: |
+          go mod download
+          make bin
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ize-${{ matrix.os }}
+          path: ${{ github.workspace }}/ize
+
+  ecs-apps-monorepo:
+    name: ECS Apps
+    needs: Build
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+    runs-on: ${{ matrix.os }}
+    env:
+      ENV: test-ecs-apps
     steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -33,12 +62,152 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Ize build
-        run: go build -o ./ize ./cmd
+      - name: Prepare Test Environment
+        run: mv ${{ github.workspace }}/examples/${{ github.job }}/.ize/env/testnut ${{ github.workspace }}/examples/${{ github.job }}/.ize/env/${{ env.ENV }}
 
-      - name: Run builded ize
+      - uses: actions/download-artifact@v3
+        with:
+          name: ize-${{ matrix.os }}
+          path: bin
+
+      - name: Make Executable
         run: |
-          mkdir -p ~/.aws && echo -e "[${AWS_PROFILE}]\naws_access_key_id = ${AWS_ACCESS_KEY_ID}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\nregion = ${AWS_REGION}" >> ~/.aws/credentials
-          cat ~/.aws/credentials
-          cd examples/simple-monorepo
-          ${GITHUB_WORKSPACE}/ize --log-level=debug terraform init
+          chmod +rx ${{ github.workspace }}/bin/ize
+          ${{ github.workspace }}/bin/ize  --version
+
+      - name: Create AWS Profile
+        run: mkdir -p ~/.aws && echo -e "[${AWS_PROFILE}]\naws_access_key_id = ${AWS_ACCESS_KEY_ID}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\nregion = ${AWS_REGION}" >> ~/.aws/credentials
+        shell: bash
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ env.SSH_PUBLIC_KEY }}
+          name: id_rsa.pub
+          known_hosts: unnecessary
+          if_key_exists: replace
+
+      - name: Run Tests
+        run: |
+          go test --timeout 0 --tags="e2e ecs_apps" ./...
+        env:
+          IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/${{ github.job }}
+          IZE_BINARY: ${{ github.workspace }}/bin/ize
+        continue-on-error: true
+
+  bastion-tunnel-monorepo:
+    name: Tunnel
+    needs: Build
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+    runs-on: ${{ matrix.os }}
+    env:
+      ENV: bastion-tunnel
+    steps:
+      - name: Configure AWS Credentials
+
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.x
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Prepare Test Environment
+        run: mv ${{ github.workspace }}/examples/${{ github.job }}/.ize/env/testnut ${{ github.workspace }}/examples/${{ github.job }}/.ize/env/${{ env.ENV }}
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ize-${{ matrix.os }}
+          path: bin
+
+      - name: Make Executable
+        run: |
+          chmod +rx ${{ github.workspace }}/bin/ize
+          ${{ github.workspace }}/bin/ize  --version
+
+      - name: Create AWS Profile
+        run: mkdir -p ~/.aws && echo -e "[${AWS_PROFILE}]\naws_access_key_id = ${AWS_ACCESS_KEY_ID}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\nregion = ${AWS_REGION}" >> ~/.aws/credentials
+        shell: bash
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ env.SSH_PUBLIC_KEY }}
+          name: id_rsa.pub
+          known_hosts: unnecessary
+          if_key_exists: replace
+
+      - name: Run Tests
+        run: |
+          go test --timeout 0 --tags="e2e bastion_tunnel" ./...
+        env:
+          IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/bastion-tunnel-monorepo
+          IZE_BINARY: ${{ github.workspace }}/bin/ize
+        continue-on-error: true
+
+  test-terraform:
+    name: Terraform
+    needs: Build
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, macos-latest ]
+    runs-on: ${{ matrix.os }}
+    env:
+      ENV: test-terraform
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.x
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Prepare Test Environment
+        run: mv ${{ github.workspace }}/examples/ecs-apps-monorepo/.ize/env/testnut ${{ github.workspace }}/examples/ecs-apps-monorepo/.ize/env/${{ env.ENV }}
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ize-${{ matrix.os }}
+          path: bin
+
+      - name: Make Executable
+        run: |
+          chmod +rx ${{ github.workspace }}/bin/ize
+          ${{ github.workspace }}/bin/ize  --version
+
+      - name: Create AWS Profile
+        run: mkdir -p ~/.aws && echo -e "[${AWS_PROFILE}]\naws_access_key_id = ${AWS_ACCESS_KEY_ID}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\nregion = ${AWS_REGION}" >> ~/.aws/credentials
+        shell: bash
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ env.SSH_PUBLIC_KEY }}
+          name: id_rsa.pub
+          known_hosts: unnecessary
+          if_key_exists: replace
+
+      - name: Run Tests
+        run: |
+          go test --timeout 0 --tags="e2e terraform" ./...
+        env:
+          IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/ecs-apps-monorepo
+          IZE_BINARY: ${{ github.workspace }}/bin/ize
+        continue-on-error: true
