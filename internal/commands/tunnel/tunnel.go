@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/fs"
 	"log"
 	"net"
 	"os"
@@ -16,6 +15,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"text/template"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -187,22 +187,18 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 	}
 
 	c := exec.Command(
-		"ssh", "-M", "-S", "bastion.sock", "-fNT",
+		"ssh", "-M", "-t", "-S", "bastion.sock", "-fN",
+		"-o", "StrictHostKeyChecking=no",
 		fmt.Sprintf("ubuntu@%s", o.BastionHostID),
 		"-F", sshConfigPath,
 		"-i", getPrivateKey(o.PrivateKeyFile),
 	)
 
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stdout
-	c.Stdin = os.Stdin
 	c.Dir = viper.GetString("ENV_DIR")
-	if err := c.Run(); err != nil {
-		patherr, ok := err.(*fs.PathError)
-		if ok {
-			return fmt.Errorf("unable to access folder '%s': %w", c.Dir, patherr.Err)
-		}
-		return fmt.Errorf("can't run tunnel up: %w", err)
+
+	_, _, _, err = runCommand(c)
+	if err != nil {
+		return err
 	}
 
 	pterm.Success.Println("Tunnel is up! Forwarded ports:")
@@ -377,11 +373,13 @@ func checkPort(port int) error {
 		return fmt.Errorf("can't check address %s: %w", fmt.Sprintf("127.0.0.1:%d", port), err)
 	}
 
-	_, err = net.ListenTCP("tcp", addr)
+	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
 		logrus.Error(err)
 		return fmt.Errorf("port %d is not available. Please make sure there is no other process that is using the port %d", port, port)
 	}
+
+	l.Close()
 
 	return nil
 }
@@ -508,4 +506,48 @@ func setAWSCredentials(sess *session.Session) error {
 	os.Setenv("AWS_SESSION_TOKEN", v.SessionToken)
 
 	return nil
+}
+
+func printOutputWithHeader(header string, r io.Reader) {
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		fmt.Printf("%s%s\n", header, scanner.Text())
+	}
+}
+
+func runCommand(cmd *exec.Cmd) (stdout, stderr string, exitCode int, err error) {
+	outReader, err := cmd.StdoutPipe()
+	if err != nil {
+		return
+	}
+	errReader, err := cmd.StderrPipe()
+	if err != nil {
+		return
+	}
+
+	var bufout, buferr bytes.Buffer
+	outReader2 := io.TeeReader(outReader, &bufout)
+	errReader2 := io.TeeReader(errReader, &buferr)
+
+	if err = cmd.Start(); err != nil {
+		return
+	}
+
+	go printOutputWithHeader("", outReader2)
+	go printOutputWithHeader("", errReader2)
+
+	err = cmd.Wait()
+
+	stdout = bufout.String()
+	stderr = buferr.String()
+
+	if err != nil {
+		if err2, ok := err.(*exec.ExitError); ok {
+			if s, ok := err2.Sys().(syscall.WaitStatus); ok {
+				err = nil
+				exitCode = s.ExitStatus()
+			}
+		}
+	}
+	return
 }

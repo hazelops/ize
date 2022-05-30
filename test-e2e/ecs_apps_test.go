@@ -1,5 +1,4 @@
-//go:build e2e
-// +build e2e
+//go:build e2e && ecs_apps
 
 package test
 
@@ -25,7 +24,7 @@ var (
 	exampleSquibbyApiKey = ""
 )
 
-func TestIzeGenEnv(t *testing.T) {
+func TestIzeGenEnv_ecs_apps(t *testing.T) {
 	if examplesRootDir == "" {
 		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
 	}
@@ -146,7 +145,7 @@ func TestIzeSecretsPushSquibby(t *testing.T) {
 	}
 }
 
-func TestIzeDeployAll(t *testing.T) {
+func TestIzeDeployAll_ecs_apps(t *testing.T) {
 	if examplesRootDir == "" {
 		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
 	}
@@ -262,7 +261,7 @@ func randInt(min int, max int) int {
 	return min + rand.Intn(max-min)
 }
 
-func TestIzeDestroyAll(t *testing.T) {
+func TestIzeDestroyAll_ecs_apps(t *testing.T) {
 	if examplesRootDir == "" {
 		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
 	}

@@ -2,7 +2,6 @@ package tunnel
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"os/exec"
 	"strconv"
@@ -15,10 +14,11 @@ import (
 )
 
 type TunnelUpOptions struct {
-	Config         *config.Config
-	PrivateKeyFile string
-	BastionHostID  string
-	ForwardHost    []string
+	Config                *config.Config
+	PrivateKeyFile        string
+	BastionHostID         string
+	ForwardHost           []string
+	StrictHostKeyChecking bool
 }
 
 func NewTunnelUpFlags() *TunnelUpOptions {
@@ -57,6 +57,7 @@ func NewCmdTunnelUp() *cobra.Command {
 	cmd.Flags().StringVar(&o.BastionHostID, "bastion-instance-id", "", "set bastion host instance id (i-xxxxxxxxxxxxxxxxx)")
 	cmd.Flags().StringSliceVar(&o.ForwardHost, "forward-host", nil, "set forward host for redirect with next format: <remote-host>:<remote-port>. In this case a free local port will be selected automatically.  It's possible to set local manually using <remote-host>:<remote-port>:<local-port>")
 	cmd.Flags().StringVar(&o.PrivateKeyFile, "ssh-private-key", "", "set ssh key private path")
+	cmd.PersistentFlags().BoolVar(&o.StrictHostKeyChecking, "strict-host-key-checking", true, "set strict host key checking")
 
 	return cmd
 }
@@ -141,20 +142,18 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 	}
 
 	c := exec.Command(
-		"ssh", "-M", "-S", "bastion.sock", "-fNT",
+		"ssh", "-M", "-t", "-S", "bastion.sock", "-fNT",
+		"-o", "StrictHostKeyChecking=no",
 		fmt.Sprintf("ubuntu@%s", o.BastionHostID),
 		"-F", sshConfigPath,
 		"-i", getPrivateKey(o.PrivateKeyFile),
 	)
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
+
 	c.Dir = viper.GetString("ENV_DIR")
-	if err := c.Run(); err != nil {
-		patherr, ok := err.(*fs.PathError)
-		if ok {
-			return fmt.Errorf("unable to access folder '%s': %w", c.Dir, patherr.Err)
-		}
-		return fmt.Errorf("can't run tunnel up: %w", err)
+
+	_, _, _, err := runCommand(c)
+	if err != nil {
+		return err
 	}
 
 	pterm.Success.Println("Tunnel is up! Forwarded ports:")
