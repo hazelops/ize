@@ -16,6 +16,7 @@ import (
 	"github.com/hazelops/ize/internal/commands/gen"
 	"github.com/hazelops/ize/internal/commands/initialize"
 	"github.com/hazelops/ize/internal/commands/logs"
+	"github.com/hazelops/ize/internal/commands/push"
 	"github.com/hazelops/ize/internal/commands/secrets"
 	"github.com/hazelops/ize/internal/commands/status"
 	"github.com/hazelops/ize/internal/commands/terraform"
@@ -109,6 +110,7 @@ func addCommands() {
 		logs.NewCmdLogs(),
 		status.NewDebugCmd(),
 		gen.NewCmdGen(),
+		push.NewCmdPush(),
 		NewVersionCmd(),
 	)
 }
