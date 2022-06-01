@@ -9,6 +9,9 @@ on:
 jobs:
   create_on_push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
 
     steps:
     - name: Check Out Repo
@@ -21,7 +24,7 @@ jobs:
         tag_name: 0.0.0-dev # tag name to delete
         repo: hazelops/ize # target repo (optional). defaults to repo running this action
       env:
-        GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: install gemfury
       run: |
