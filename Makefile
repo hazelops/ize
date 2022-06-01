@@ -6,7 +6,7 @@ CGO_ENABLED?=0
 
 .PHONY: install
 install: bin
-		cp ./ize $(GOPATH)/bin/ize
+		mv ./ize $(GOPATH)/bin/ize
 
 .PHONY: bin
 bin: 

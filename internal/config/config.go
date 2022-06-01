@@ -149,7 +149,7 @@ func GetConfig() (*Config, error) {
 
 	cfg.IsPlainText = plainText
 
-	if viper.GetString("prefer-runtime") == "docker" {
+	if viper.GetString("PREFER_RUNTIME") == "docker" {
 		cfg.IsDockerRuntime = true
 	}
 
@@ -167,6 +167,7 @@ func InitConfig() {
 	viper.SetDefault("NAMESPACE", os.Getenv("NAMESPACE"))
 	// TODO: those static defaults should probably go to a separate package and/or function. Also would include image names and such.
 	viper.SetDefault("TERRAFORM_VERSION", "1.1.3")
+	viper.SetDefault("PREFER_RUNTIME", "docker")
 
 	home, err := os.UserHomeDir()
 	if err != nil {
