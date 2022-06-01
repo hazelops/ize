@@ -22,21 +22,20 @@ type BuildOptions struct {
 }
 
 var buildLongDesc = templates.LongDesc(`
-	Build infraftructure or sevice.
-    App name must be specified for a app deploy. 
-	The infrastructure for the app must be prepared in advance.
+	Build sevice.
+    App name must be specified for a app build. 
 `)
 
 var buildExample = templates.Examples(`
-	# Deploy app (config file required)
-	ize deploy <app name>
+	# Build app (config file required)
+	ize build <app name>
 
-	# Deploy app via config file
-	ize --config-file (or -c) /path/to/config deploy <app name>
+	# Build app via config file
+	ize --config-file (or -c) /path/to/config build <app name>
 
-	# Deploy app via config file installed from env
+	# Build app via config file installed from env
 	export IZE_CONFIG_FILE=/path/to/config
-	ize deploy <app name>
+	ize build <app name>
 `)
 
 func NewBuildFlags() *BuildOptions {
@@ -111,11 +110,9 @@ func (o *BuildOptions) Run() error {
 		return fmt.Errorf("can't build image: path is not specifed")
 	}
 
-	tag := viper.GetString("tag")
-
-	dockerRegistry := viper.GetString("DOCKER_REGISTRY")
-	dockerImageName := fmt.Sprintf("%s-%s", viper.GetString("namespace"), o.AppName)
-	imageUri := fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, viper.GetString("tag"))
+	registry := viper.GetString("DOCKER_REGISTRY")
+	image := fmt.Sprintf("%s-%s", viper.GetString("namespace"), o.AppName)
+	imageUri := fmt.Sprintf("%s/%s", registry, image)
 
 	buildArgs := map[string]*string{
 		"PROJECT_PATH": &projectPath,
@@ -123,14 +120,14 @@ func (o *BuildOptions) Run() error {
 	}
 
 	tags := []string{
-		dockerImageName,
-		imageUri,
-		fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, fmt.Sprintf("%s-latest", tag)),
+		image,
+		fmt.Sprintf("%s:%s", imageUri, o.Tag),
+		fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", viper.GetString("ENV"))),
 	}
 
 	dockerfile := path.Join(projectPath, "Dockerfile")
 
-	cache := []string{fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, fmt.Sprintf("%s-latest", tag))}
+	cache := []string{fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", viper.GetString("ENV")))}
 
 	b := docker.NewBuilder(
 		buildArgs,
