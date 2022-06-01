@@ -159,7 +159,7 @@ func (o *PushOptions) Run() error {
 
 	token := base64.URLEncoding.EncodeToString(authBytes)
 
-	s := sg.Add("%s: building app container...", o.AppName)
+	s := sg.Add("%s: push app image...", o.AppName)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	tagLatest := fmt.Sprintf("%s-latest", o.Config.Env)
@@ -168,7 +168,8 @@ func (o *PushOptions) Run() error {
 	imageUri := fmt.Sprintf("%s/%s", dockerRegistry, image)
 
 	r := docker.NewRegistry(*repository.RepositoryUri, token)
-	err = r.Push(context.Background(), ui, imageUri, []string{o.Tag, tagLatest})
+
+	err = r.Push(context.Background(), s.TermOutput(), imageUri, []string{o.Tag, tagLatest})
 	if err != nil {
 		return fmt.Errorf("can't push image: %w", err)
 	}

@@ -3,12 +3,12 @@ package docker
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/hazelops/ize/pkg/terminal"
 )
 
 type Registry struct {
@@ -23,15 +23,10 @@ func NewRegistry(registry, token string) Registry {
 	}
 }
 
-func (r *Registry) Push(ctx context.Context, ui terminal.UI, image string, tags []string) error {
+func (r *Registry) Push(ctx context.Context, w io.Writer, image string, tags []string) error {
 	if len(tags) == 0 {
 		tags = []string{"latest"}
 	}
-
-	sg := ui.StepGroup()
-	defer sg.Wait()
-	s := sg.Add("%s: pushing image...", image)
-	defer func() { s.Abort() }()
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
@@ -55,19 +50,14 @@ func (r *Registry) Push(ctx context.Context, ui terminal.UI, image string, tags 
 		return fmt.Errorf("unable to push image: %s", err)
 	}
 
-	stdout, _, err := ui.OutputWriters()
-	if err != nil {
-		return err
-	}
-
 	var termFd uintptr
-	if f, ok := stdout.(*os.File); ok {
+	if f, ok := w.(*os.File); ok {
 		termFd = f.Fd()
 	}
 
 	err = jsonmessage.DisplayJSONMessagesStream(
 		resp,
-		s.TermOutput(),
+		w,
 		termFd,
 		true,
 		nil,
@@ -75,8 +65,6 @@ func (r *Registry) Push(ctx context.Context, ui terminal.UI, image string, tags 
 	if err != nil {
 		return fmt.Errorf("unable to stream push logs to the terminal: %s", err)
 	}
-
-	s.Done()
 
 	return nil
 }
