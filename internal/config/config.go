@@ -167,7 +167,7 @@ func InitConfig() {
 	viper.SetDefault("NAMESPACE", os.Getenv("NAMESPACE"))
 	// TODO: those static defaults should probably go to a separate package and/or function. Also would include image names and such.
 	viper.SetDefault("TERRAFORM_VERSION", "1.1.3")
-	viper.SetDefault("PREFER_RUNTIME", "docker")
+	viper.SetDefault("PREFER_RUNTIME", "native")
 
 	home, err := os.UserHomeDir()
 	if err != nil {
