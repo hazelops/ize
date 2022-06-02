@@ -43,17 +43,17 @@ var downLongDesc = templates.LongDesc(`
 
 var downExample = templates.Examples(`
 	# Destroy all (config file required)
-	ize destroy
+	ize down
 
 	# Destroy app (config file required)
-	ize destroy <app name>
+	ize down <app name>
 
-	# Destroy app via config file
-	ize --config-file (or -c) /path/to/config destroy <app name>
+	# Destroy app with explicitly specified config file
+	ize --config-file (or -c) /path/to/config down <app name>
 
-	# Destroy app using config file installed from env
+	# Destroy app with explicitly specified config file passed via environment variable.
 	export IZE_CONFIG_FILE=/path/to/config
-	ize destroy <app name>
+	ize down <app name>
 `)
 
 func NewDownFlags() *DownOptions {
@@ -244,7 +244,7 @@ func destroyAll(ui terminal.UI, o *DownOptions) error {
 		case "alias":
 			deployment = apps.NewAliasApp(name)
 		default:
-			return fmt.Errorf("apps type of %s not supported", at)
+			return fmt.Errorf("%s apps are not supported in this command", at)
 		}
 
 		err := deployment.Destroy(ui)
@@ -327,12 +327,12 @@ func destroyApp(ui terminal.UI, o *DownOptions) error {
 	case "alias":
 		deployment = apps.NewAliasApp(o.AppName)
 	default:
-		return fmt.Errorf("apps type of %s not supported", appType)
+		return fmt.Errorf("%s apps are not supported in this command", appType)
 	}
 
 	err := deployment.Destroy(ui)
 	if err != nil {
-		return fmt.Errorf("can't destroy: %w", err)
+		return fmt.Errorf("can't down: %w", err)
 	}
 
 	ui.Output("Destroy app %s completed\n", o.AppName, terminal.WithSuccessStyle())
