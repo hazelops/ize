@@ -123,5 +123,5 @@ func (o *BuildOptions) Run() error {
 		return fmt.Errorf("%s apps are not supported in this command", appType)
 	}
 
-	return app.Push(ui)
+	return app.Build(ui)
 }
