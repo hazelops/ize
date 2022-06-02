@@ -25,15 +25,15 @@ var upInfraLongDesc = templates.LongDesc(`
 `)
 
 var upInfraExample = templates.Examples(`
-	# Deploy infra via flags
-	ize deploy infra --infra.terraform.version <version> --infra.terraform.aws-region <region> --infra.terraform.aws-profile <profile>
+	# Deploy infra with flags
+	ize up infra --infra.terraform.version <version> --infra.terraform.aws-region <region> --infra.terraform.aws-profile <profile>
 
-	# Deploy infra via config file
-	ize --config-file /path/to/config deploy infra
+	# Deploy infra with explicitly specified config file
+	ize --config-file /path/to/config up infra
 
-	# Deploy infra via config file installed from env
+	# Deploy infra with explicitly specified config file passed via environment variable
 	export IZE_CONFIG_FILE=/path/to/config
-	ize deploy infra
+	ize up infra
 `)
 
 func NewUpInfraFlags() *UpInfraOptions {

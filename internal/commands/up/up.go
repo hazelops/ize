@@ -46,23 +46,24 @@ type Infra struct {
 
 var upLongDesc = templates.LongDesc(`
 	Deploy infrastructure or service.
-    App name must be specified for a app deploy. 
-	The infrastructure for the app must be prepared in advance.
+    App name must be specified for a bringing it up.  
+	The infrastructure for the app must be ready to 
+	receive the deployment (generally created via ize infra up in CI/CD).
 `)
 
 var upExample = templates.Examples(`
 	# Deploy all (config file required)
-	ize deploy
+	ize up
 
 	# Deploy app (config file required)
-	ize deploy <app name>
+	ize up <app name>
 
-	# Deploy app via config file
-	ize --config-file (or -c) /path/to/config deploy <app name>
+	# Deploy app with explicitly specified config file
+	ize --config-file (or -c) /path/to/config up <app name>
 
-	# Deploy app via config file installed from env
+	# Deploy app with explicitly specified config file passed via environment variable
 	export IZE_CONFIG_FILE=/path/to/config
-	ize deploy <app name>
+	ize up <app name>
 `)
 
 func NewUpFlags() *UpOptions {
@@ -75,7 +76,7 @@ func NewCmdUp() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "up [flags] <app name>",
 		Example: upExample,
-		Short:   "Manage deployments",
+		Short:   "Bring full application up from the bottom to the top.",
 		Long:    upLongDesc,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -251,7 +252,7 @@ func deployAll(ui terminal.UI, o *UpOptions) error {
 		case "alias":
 			app = apps.NewAliasApp(name)
 		default:
-			return fmt.Errorf("apps type of %s not supported", at)
+			return fmt.Errorf("%s apps are not supported in this command", at)
 		}
 
 		// build app container
@@ -310,7 +311,7 @@ func deployApp(ui terminal.UI, o *UpOptions) error {
 	case "alias":
 		app = apps.NewAliasApp(o.AppName)
 	default:
-		return fmt.Errorf("apps type of %s not supported", appType)
+		return fmt.Errorf("%s apps are not supported in this command", appType)
 	}
 
 	// build app container
@@ -343,7 +344,7 @@ func deployInfra(ui terminal.UI, infra Infra, config config.Config) error {
 
 	v, err := config.Session.Config.Credentials.Get()
 	if err != nil {
-		return fmt.Errorf("can't set AWS credentials: %w", err)
+		return fmt.Errorf("can't get AWS credentials: %w", err)
 	}
 
 	if !checkFileExists(filepath.Join(viper.GetString("ENV_DIR"), "backend.tf")) || !checkFileExists(filepath.Join(viper.GetString("ENV_DIR"), "terraform.tfvars")) {
