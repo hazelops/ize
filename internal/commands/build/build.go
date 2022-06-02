@@ -28,10 +28,10 @@ var buildExample = templates.Examples(`
 	# Build app (config file required)
 	ize build <app name>
 
-	# Build app via config file
+	# Build app with explicitly specified config file
 	ize --config-file (or -c) /path/to/config build <app name>
 
-	# Build app via config file installed from env
+	#  Build app with explicitly specified config file passed via environment variable.
 	export IZE_CONFIG_FILE=/path/to/config
 	ize build <app name>
 `)
@@ -46,7 +46,7 @@ func NewCmdBuild() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "build [flags] <app name>",
 		Example: buildExample,
-		Short:   "manage builds",
+		Short:   "build apps",
 		Long:    buildLongDesc,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -78,7 +78,7 @@ func (o *BuildOptions) Complete(cmd *cobra.Command, args []string) error {
 	var err error
 	o.Config, err = config.GetConfig()
 	if err != nil {
-		return fmt.Errorf("can`t complete options: %w", err)
+		return fmt.Errorf("can't load options for a command: %w", err)
 	}
 
 	viper.BindPFlags(cmd.Flags())
@@ -120,7 +120,7 @@ func (o *BuildOptions) Run() error {
 	case "alias":
 		app = apps.NewAliasApp(o.AppName)
 	default:
-		return fmt.Errorf("apps type of %s not supported", appType)
+		return fmt.Errorf("%s apps are not supported in this command", appType)
 	}
 
 	return app.Push(ui)
