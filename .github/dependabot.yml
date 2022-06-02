@@ -14,4 +14,4 @@ updates:
     reviewers:
       - "kobrikx"
       - "psihachina"
-    open-pull-requests-limit: 30
+    open-pull-requests-limit: 2
