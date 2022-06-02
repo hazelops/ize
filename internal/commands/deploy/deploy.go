@@ -141,7 +141,7 @@ func (o *DeployOptions) Run() error {
 	case "alias":
 		deployment = apps.NewAliasApp(o.AppName)
 	default:
-		return fmt.Errorf("apps type of %s not supported", appType)
+		return fmt.Errorf("%s apps are not supported in this command", appType)
 	}
 
 	err := deployment.Deploy(ui)
