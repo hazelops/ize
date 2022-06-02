@@ -2,19 +2,12 @@ package push
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/docker/docker/api/types"
+	"github.com/hazelops/ize/internal/apps"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/internal/docker"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -104,77 +97,31 @@ func (o *PushOptions) Validate() error {
 
 func (o *PushOptions) Run() error {
 	ui := terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
-	sg := ui.StepGroup()
-	defer sg.Wait()
 
-	image := fmt.Sprintf("%s-%s", viper.GetString("namespace"), o.AppName)
+	var appType string
 
-	svc := ecr.New(o.Config.Session)
-
-	var repository *ecr.Repository
-
-	dro, err := svc.DescribeRepositories(&ecr.DescribeRepositoriesInput{
-		RepositoryNames: []*string{aws.String(image)},
-	})
-	if err != nil {
-		return fmt.Errorf("can't describe repositories: %w", err)
-	}
-
-	if dro == nil || len(dro.Repositories) == 0 {
-		logrus.Info("no ECR repository detected, creating", "name", image)
-
-		out, err := svc.CreateRepository(&ecr.CreateRepositoryInput{
-			RepositoryName: aws.String(image),
-		})
-		if err != nil {
-			return fmt.Errorf("unable to create repository: %w", err)
-		}
-
-		repository = out.Repository
+	a, ok := o.App.(map[string]interface{})
+	if !ok {
+		appType = "ecs"
 	} else {
-		repository = dro.Repositories[0]
+		appType, ok = a["type"].(string)
+		if !ok {
+			appType = "ecs"
+		}
 	}
 
-	gat, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
-	if err != nil {
-		return fmt.Errorf("unable to get authorization token: %w", err)
+	var app apps.App
+
+	switch appType {
+	case "ecs":
+		app = apps.NewECSApp(o.AppName, o.App)
+	case "serverless":
+		app = apps.NewServerlessApp(o.AppName, o.App)
+	case "alias":
+		app = apps.NewAliasApp(o.AppName)
+	default:
+		return fmt.Errorf("apps type of %s not supported", appType)
 	}
 
-	if len(gat.AuthorizationData) == 0 {
-		return fmt.Errorf("no authorization tokens provided")
-	}
-
-	uptoken := *gat.AuthorizationData[0].AuthorizationToken
-	data, err := base64.StdEncoding.DecodeString(uptoken)
-	if err != nil {
-		return fmt.Errorf("unable to decode authorization token: %w", err)
-	}
-
-	auth := types.AuthConfig{
-		Username: "AWS",
-		Password: string(data[4:]),
-	}
-
-	authBytes, _ := json.Marshal(auth)
-
-	token := base64.URLEncoding.EncodeToString(authBytes)
-
-	s := sg.Add("%s: push app image...", o.AppName)
-	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
-
-	tagLatest := fmt.Sprintf("%s-latest", o.Config.Env)
-
-	dockerRegistry := viper.GetString("DOCKER_REGISTRY")
-	imageUri := fmt.Sprintf("%s/%s", dockerRegistry, image)
-
-	r := docker.NewRegistry(*repository.RepositoryUri, token)
-
-	err = r.Push(context.Background(), s.TermOutput(), imageUri, []string{o.Tag, tagLatest})
-	if err != nil {
-		return fmt.Errorf("can't push image: %w", err)
-	}
-
-	s.Done()
-
-	return nil
+	return app.Push(ui)
 }

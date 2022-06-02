@@ -3,11 +3,9 @@ package build
 import (
 	"context"
 	"fmt"
-	"path"
-	"time"
 
+	"github.com/hazelops/ize/internal/apps"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/internal/docker"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
@@ -99,46 +97,31 @@ func (o *BuildOptions) Validate() error {
 
 func (o *BuildOptions) Run() error {
 	ui := terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
-	sg := ui.StepGroup()
-	defer sg.Wait()
 
-	s := sg.Add("%s: building app container...", o.AppName)
-	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
+	var appType string
 
-	projectPath := o.App.(map[string]interface{})["path"].(string)
-	if projectPath == "" {
-		return fmt.Errorf("can't build image: path is not specifed")
+	a, ok := o.App.(map[string]interface{})
+	if !ok {
+		appType = "ecs"
+	} else {
+		appType, ok = a["type"].(string)
+		if !ok {
+			appType = "ecs"
+		}
 	}
 
-	registry := viper.GetString("DOCKER_REGISTRY")
-	image := fmt.Sprintf("%s-%s", viper.GetString("namespace"), o.AppName)
-	imageUri := fmt.Sprintf("%s/%s", registry, image)
+	var app apps.App
 
-	buildArgs := map[string]*string{
-		"PROJECT_PATH": &projectPath,
-		"APP_NAME":     &o.AppName,
+	switch appType {
+	case "ecs":
+		app = apps.NewECSApp(o.AppName, o.App)
+	case "serverless":
+		app = apps.NewServerlessApp(o.AppName, o.App)
+	case "alias":
+		app = apps.NewAliasApp(o.AppName)
+	default:
+		return fmt.Errorf("apps type of %s not supported", appType)
 	}
 
-	tags := []string{
-		image,
-		fmt.Sprintf("%s:%s", imageUri, o.Tag),
-		fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", viper.GetString("ENV"))),
-	}
-
-	dockerfile := path.Join(projectPath, "Dockerfile")
-
-	cache := []string{fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", viper.GetString("ENV")))}
-
-	b := docker.NewBuilder(
-		buildArgs,
-		tags,
-		dockerfile,
-		cache,
-	)
-
-	b.Build(ui, s)
-
-	s.Done()
-
-	return nil
+	return app.Push(ui)
 }
