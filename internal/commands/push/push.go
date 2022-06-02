@@ -25,13 +25,13 @@ var pushLongDesc = templates.LongDesc(`
 `)
 
 var pushExample = templates.Examples(`
-	# Push image app (config file required)
+	# Push app's artifact (Docker image to ECR, for example).
 	ize push <app name>
 
-	# Push image app via config file
+	# Push app's artifact with explicitly specified config file
 	ize --config-file (or -c) /path/to/config push <app name>
 
-	# Push image app via config file installed from env
+	# Push app's artifact with explicitly specified config file passed via environment variable.
 	export IZE_CONFIG_FILE=/path/to/config
 	ize push <app name>
 `)
@@ -46,7 +46,7 @@ func NewCmdPush() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "push [flags] <app name>",
 		Example: pushExample,
-		Short:   "push app image",
+		Short:   "push app's image",
 		Long:    pushLongDesc,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -120,7 +120,7 @@ func (o *PushOptions) Run() error {
 	case "alias":
 		app = apps.NewAliasApp(o.AppName)
 	default:
-		return fmt.Errorf("apps type of %s not supported", appType)
+		return fmt.Errorf("%s apps are not supported in this command", appType)
 	}
 
 	return app.Push(ui)
