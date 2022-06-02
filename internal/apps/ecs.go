@@ -264,7 +264,10 @@ func (e *ecs) Build(ui terminal.UI) error {
 		cache,
 	)
 
-	b.Build(ui, s)
+	err := b.Build(ui, s)
+	if err != nil {
+		return fmt.Errorf("unable to build image: %w", err)
+	}
 
 	s.Done()
 
