@@ -1,4 +1,4 @@
-package destroy
+package down
 
 import (
 	"context"
@@ -14,18 +14,18 @@ import (
 	"github.com/spf13/viper"
 )
 
-type DestroyInfraOptions struct {
+type DownInfraOptions struct {
 	Config    *config.Config
 	Terraform terraformInfraConfig
 	ui        terminal.UI
 }
 
-func NewDestroyInfraFlags() *DestroyInfraOptions {
-	return &DestroyInfraOptions{}
+func NewDownInfraFlags() *DownInfraOptions {
+	return &DownInfraOptions{}
 }
 
-func NewCmdDestroyInfra() *cobra.Command {
-	o := NewDestroyInfraFlags()
+func NewCmdDownInfra() *cobra.Command {
+	o := NewDownInfraFlags()
 
 	cmd := &cobra.Command{
 		Use:   "infra",
@@ -67,7 +67,7 @@ func BindFlags(flags *pflag.FlagSet) {
 	})
 }
 
-func (o *DestroyInfraOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *DownInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 	var err error
 
 	o.Config, err = config.GetConfig()
@@ -98,7 +98,7 @@ func (o *DestroyInfraOptions) Complete(cmd *cobra.Command, args []string) error 
 	return nil
 }
 
-func (o *DestroyInfraOptions) Validate() error {
+func (o *DownInfraOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("env must be specified")
 	}
@@ -106,7 +106,7 @@ func (o *DestroyInfraOptions) Validate() error {
 	return nil
 }
 
-func (o *DestroyInfraOptions) Run() error {
+func (o *DownInfraOptions) Run() error {
 	ui := o.ui
 	var tf terraform.Terraform
 

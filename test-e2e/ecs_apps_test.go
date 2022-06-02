@@ -172,7 +172,7 @@ func TestIzeDeployAll_ecs_apps(t *testing.T) {
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
-	stdout, stderr, err := ize.RunRaw("deploy", "--auto-approve", "--prefer-runtime=docker")
+	stdout, stderr, err := ize.RunRaw("up", "--auto-approve", "--prefer-runtime=docker")
 
 	if err != nil {
 		t.Errorf("error: %s", err)

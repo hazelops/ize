@@ -28,7 +28,7 @@ type serverless struct {
 	CreateDomain            bool `mapstructure:"creare_domain"`
 }
 
-func NewServerlessDeployment(name string, app interface{}) *serverless {
+func NewServerlessApp(name string, app interface{}) *serverless {
 	slsConfig := serverless{}
 
 	raw, ok := app.(map[string]interface{})
@@ -54,7 +54,10 @@ func NewServerlessDeployment(name string, app interface{}) *serverless {
 	return &slsConfig
 }
 
-func (sls *serverless) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
+func (sls *serverless) Deploy(ui terminal.UI) error {
+	sg := ui.StepGroup()
+	defer sg.Wait()
+
 	s := sg.Add("%s: initializing Docker client...", sls.Name)
 	defer func() { s.Abort() }()
 
@@ -158,7 +161,10 @@ func (sls *serverless) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 	return nil
 }
 
-func (sls *serverless) Destroy(sg terminal.StepGroup, ui terminal.UI) error {
+func (sls *serverless) Destroy(ui terminal.UI) error {
+	sg := ui.StepGroup()
+	defer sg.Wait()
+
 	s := sg.Add("%s: initializing Docker client...", sls.Name)
 	defer func() { s.Abort() }()
 
@@ -422,4 +428,12 @@ func (sls *serverless) getHostConfig() *container.HostConfig {
 			},
 		},
 	}
+}
+
+func (sls *serverless) Push(ui terminal.UI) error {
+	return nil
+}
+
+func (sls *serverless) Build(ui terminal.UI) error {
+	return nil
 }

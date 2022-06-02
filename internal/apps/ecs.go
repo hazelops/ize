@@ -47,7 +47,7 @@ type ecs struct {
 	Tag               string
 }
 
-func NewECSDeployment(name string, app interface{}) *ecs {
+func NewECSApp(name string, app interface{}) *ecs {
 	ecsConfig := ecs{}
 
 	raw, ok := app.(map[string]interface{})
@@ -77,79 +77,16 @@ func NewECSDeployment(name string, app interface{}) *ecs {
 }
 
 // Deploy deploys app container to ECS via ECS deploy
-func (e *ecs) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
-	s := sg.Add("%s: initializing Docker client...", e.Name)
-	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
+func (e *ecs) Deploy(ui terminal.UI) error {
+	sg := ui.StepGroup()
+	defer sg.Wait()
 
-	skipBuildAndPush := true
-	env := viper.GetString("env")
-	tagLatest := fmt.Sprintf("%s-latest", env)
+	s := sg.Add("%s: deploying app container...", e.Name)
+	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return err
-	}
-
-	if len(e.Image) == 0 {
-		skipBuildAndPush = false
-	}
-
-	if !skipBuildAndPush {
-		s.Update("%s: building app container...", e.Name)
-		dockerImageName := fmt.Sprintf("%s-%s", viper.GetString("namespace"), e.Name)
-		dockerRegistry := viper.GetString("DOCKER_REGISTRY")
-
-		e.Image = fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, strings.Trim(e.Tag, "\n"))
-		b := docker.NewBuilder(
-			map[string]*string{
-				"DOCKER_REGISTRY":   &dockerRegistry,
-				"DOCKER_IMAGE_NAME": &dockerImageName,
-				"ENV":               &env,
-				"PROJECT_PATH":      &e.Path,
-			},
-			[]string{
-				dockerImageName,
-				e.Image,
-				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
-			},
-			path.Join(e.Path, "Dockerfile"),
-			[]string{
-				fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
-			},
-		)
-
-		err = b.Build(ui, s)
-		if err != nil {
-			return fmt.Errorf("can't deploy app %s: %w", e.Name, err)
-		}
-
-		s.Done()
-
-		s = sg.Add("%s: push app container...", e.Name)
-
-		repo, token, err := setupRepo(dockerImageName, e.AwsRegion, e.AwsProfile)
-		if err != nil {
-			return err
-		}
-
-		err = cli.ImageTag(context.Background(), e.Image, fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest))
-		if err != nil {
-			return err
-		}
-
-		err = push(
-			cli,
-			ui,
-			s,
-			fmt.Sprintf("%s/%s:%s", dockerRegistry, dockerImageName, tagLatest),
-			token,
-			repo,
-		)
-		if err != nil {
-			return fmt.Errorf("can't deploy app %s: %w", e.Name, err)
-		}
-	} else {
-		e.Tag = strings.Split(e.Image, ":")[1]
 	}
 
 	imageRef, err := reference.ParseNormalizedNamed(ecsDeployImage)
@@ -184,24 +121,163 @@ func (e *ecs) Deploy(sg terminal.StepGroup, ui terminal.UI) error {
 		}
 	}
 
-	s.Done()
+	if e.Image == "" {
+		e.Image = fmt.Sprintf("%s/%s:%s",
+			viper.GetString("DOCKER_REGISTRY"),
+			fmt.Sprintf("%s-%s", viper.GetString("namespace"), e.Name),
+			fmt.Sprintf("%s-%s", viper.GetString("env"), "latest"))
+	}
 
 	if viper.GetString("prefer-runtime") == "native" {
-		err := e.deployLocal(sg)
+		err := e.deployLocal(s.TermOutput())
 		if err != nil {
 			return err
 		}
 	} else {
-		err := e.deployWithDocker(cli, sg)
+		err := e.deployWithDocker(cli, s.TermOutput())
 		if err != nil {
 			return err
 		}
 	}
 
+	s.Done()
+	s = sg.Add("%s: deployment completed!", e.Name)
+	s.Done()
+
 	return nil
 }
 
-func (e *ecs) Destroy(sg terminal.StepGroup, ui terminal.UI) error {
+func (e *ecs) Push(ui terminal.UI) error {
+	sg := ui.StepGroup()
+	defer sg.Wait()
+
+	s := sg.Add("%s: push app image...", e.Name)
+	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
+
+	image := fmt.Sprintf("%s-%s", viper.GetString("namespace"), e.Name)
+
+	sess, err := utils.GetSession(&utils.SessionConfig{
+		Region:  e.AwsRegion,
+		Profile: e.AwsProfile,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to get aws session: %w", err)
+	}
+
+	svc := ecr.New(sess)
+
+	var repository *ecr.Repository
+
+	dro, err := svc.DescribeRepositories(&ecr.DescribeRepositoriesInput{
+		RepositoryNames: []*string{aws.String(image)},
+	})
+	if err != nil {
+		return fmt.Errorf("can't describe repositories: %w", err)
+	}
+
+	if dro == nil || len(dro.Repositories) == 0 {
+		logrus.Info("no ECR repository detected, creating", "name", image)
+
+		out, err := svc.CreateRepository(&ecr.CreateRepositoryInput{
+			RepositoryName: aws.String(image),
+		})
+		if err != nil {
+			return fmt.Errorf("unable to create repository: %w", err)
+		}
+
+		repository = out.Repository
+	} else {
+		repository = dro.Repositories[0]
+	}
+
+	gat, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
+	if err != nil {
+		return fmt.Errorf("unable to get authorization token: %w", err)
+	}
+
+	if len(gat.AuthorizationData) == 0 {
+		return fmt.Errorf("no authorization tokens provided")
+	}
+
+	uptoken := *gat.AuthorizationData[0].AuthorizationToken
+	data, err := base64.StdEncoding.DecodeString(uptoken)
+	if err != nil {
+		return fmt.Errorf("unable to decode authorization token: %w", err)
+	}
+
+	auth := types.AuthConfig{
+		Username: "AWS",
+		Password: string(data[4:]),
+	}
+
+	authBytes, _ := json.Marshal(auth)
+
+	token := base64.URLEncoding.EncodeToString(authBytes)
+
+	tagLatest := fmt.Sprintf("%s-latest", viper.GetString("env"))
+
+	dockerRegistry := viper.GetString("DOCKER_REGISTRY")
+	imageUri := fmt.Sprintf("%s/%s", dockerRegistry, image)
+
+	r := docker.NewRegistry(*repository.RepositoryUri, token)
+
+	err = r.Push(context.Background(), s.TermOutput(), imageUri, []string{viper.GetString("tag"), tagLatest})
+	if err != nil {
+		return fmt.Errorf("can't push image: %w", err)
+	}
+
+	s.Done()
+
+	return nil
+}
+
+func (e *ecs) Build(ui terminal.UI) error {
+	sg := ui.StepGroup()
+	defer sg.Wait()
+
+	s := sg.Add("%s: building app container...", e.Name)
+	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
+
+	registry := viper.GetString("DOCKER_REGISTRY")
+	image := fmt.Sprintf("%s-%s", viper.GetString("namespace"), e.Name)
+	imageUri := fmt.Sprintf("%s/%s", registry, image)
+
+	buildArgs := map[string]*string{
+		"PROJECT_PATH": &e.Path,
+		"APP_NAME":     &e.Name,
+	}
+
+	tags := []string{
+		image,
+		fmt.Sprintf("%s:%s", imageUri, e.Tag),
+		fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", viper.GetString("ENV"))),
+	}
+
+	dockerfile := path.Join(e.Path, "Dockerfile")
+
+	cache := []string{fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", viper.GetString("ENV")))}
+
+	b := docker.NewBuilder(
+		buildArgs,
+		tags,
+		dockerfile,
+		cache,
+	)
+
+	err := b.Build(ui, s)
+	if err != nil {
+		return fmt.Errorf("unable to build image: %w", err)
+	}
+
+	s.Done()
+
+	return nil
+}
+
+func (e *ecs) Destroy(ui terminal.UI) error {
+	sg := ui.StepGroup()
+	defer sg.Wait()
+
 	ui.Output("Destroying ECS applications requires destroying the infrastructure.", terminal.WithWarningStyle())
 	time.Sleep(time.Millisecond * 100)
 
@@ -212,113 +288,7 @@ func (e *ecs) Destroy(sg terminal.StepGroup, ui terminal.UI) error {
 	return nil
 }
 
-// TODO: refactor
-func push(cli *client.Client, ui terminal.UI, s terminal.Step, image string, ecrToken string, registry string) error {
-	authBase64, err := getAuthToken(ecrToken)
-	if err != nil {
-		return err
-	}
-
-	resp, err := cli.ImagePush(context.Background(), image, types.ImagePushOptions{
-		All:          true,
-		RegistryAuth: authBase64,
-	})
-	if err != nil {
-		return fmt.Errorf("can't push image %s: %w", image, err)
-	}
-
-	stdout, _, err := ui.OutputWriters()
-	if err != nil {
-		return err
-	}
-
-	var termFd uintptr
-	if f, ok := stdout.(*os.File); ok {
-		termFd = f.Fd()
-	}
-
-	err = jsonmessage.DisplayJSONMessagesStream(
-		resp,
-		s.TermOutput(),
-		termFd,
-		true,
-		nil,
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func getAuthToken(ecrToken string) (string, error) {
-	auth := types.AuthConfig{
-		Username: "AWS",
-		Password: ecrToken,
-	}
-
-	authBytes, _ := json.Marshal(auth)
-
-	return base64.URLEncoding.EncodeToString(authBytes), nil
-}
-
-func setupRepo(repoName string, region string, profile string) (string, string, error) {
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  region,
-		Profile: profile,
-	})
-	if err != nil {
-		return "", "", err
-	}
-	svc := ecr.New(sess)
-
-	gat, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
-	if err != nil {
-		return "", "", err
-	}
-	if len(gat.AuthorizationData) == 0 {
-		return "", "", fmt.Errorf("no authorization tokens provided")
-	}
-
-	repOut, err := svc.DescribeRepositories(&ecr.DescribeRepositoriesInput{
-		RepositoryNames: []*string{aws.String(repoName)},
-	})
-	if err != nil {
-		_, ok := err.(*ecr.RepositoryNotFoundException)
-		if !ok {
-			return "", "", err
-		}
-	}
-
-	var repo *ecr.Repository
-	if repOut == nil || len(repOut.Repositories) == 0 {
-		logrus.Info("no ECR repository detected, creating", "name", repoName)
-
-		out, err := svc.CreateRepository(&ecr.CreateRepositoryInput{
-			RepositoryName: aws.String(repoName),
-		})
-		if err != nil {
-			return "", "", fmt.Errorf("unable to create repository: %w", err)
-		}
-
-		repo = out.Repository
-	} else {
-		repo = repOut.Repositories[0]
-	}
-
-	uptoken := *gat.AuthorizationData[0].AuthorizationToken
-	data, err := base64.StdEncoding.DecodeString(uptoken)
-	if err != nil {
-		return "", "", err
-	}
-
-	return *repo.RepositoryUri, string(data[4:]), nil
-}
-
-func (e *ecs) deployWithDocker(cli *client.Client, sg terminal.StepGroup) error {
-	s := sg.Add("%s: deploying app container...", e.Name)
-	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
-
+func (e *ecs) deployWithDocker(cli *client.Client, w io.Writer) error {
 	cmd := []string{"ecs", "deploy",
 		"--profile", e.AwsProfile,
 		"--region", e.AwsRegion,
@@ -382,31 +352,23 @@ func (e *ecs) deployWithDocker(cli *client.Client, sg terminal.StepGroup) error 
 
 	defer out.Close()
 
-	io.Copy(s.TermOutput(), out)
+	io.Copy(w, out)
 
 	wait, errC := cli.ContainerWait(context.Background(), cr.ID, container.WaitConditionRemoved)
 
 	select {
 	case status := <-wait:
 		if status.StatusCode == 0 {
-			s.Done()
-			s = sg.Add("%s: deployment completed!", e.Name)
-			s.Done()
 			return nil
 		}
-		s.Status(terminal.ErrorStyle)
 		return fmt.Errorf("container exit status code %d", status.StatusCode)
 	case err := <-errC:
 		return err
 	}
-
-	return nil
 }
 
-func (e *ecs) deployLocal(sg terminal.StepGroup) error {
-	s := sg.Add("%s: deploying app container...", e.Name)
-	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
-	pterm.SetDefaultOutput(s.TermOutput())
+func (e *ecs) deployLocal(w io.Writer) error {
+	pterm.SetDefaultOutput(w)
 
 	sess, err := utils.GetSession(&utils.SessionConfig{
 		Region:  e.AwsRegion,
@@ -483,7 +445,7 @@ func (e *ecs) deployLocal(sg terminal.StepGroup) error {
 		pterm.Printfln("Rolling back to old task definition: %s:%d", *oldTaskDef.Family, *oldTaskDef.Revision)
 		e.Timeout = 600
 		if err = e.updateTaskDefinition(svc, &oldTaskDef, name, "Deploying previous task definition"); err != nil {
-			s.TermOutput().Write([]byte(err.Error() + " - try rollback\n"))
+			w.Write([]byte(err.Error() + " - try rollback\n"))
 			return err
 		}
 
@@ -499,8 +461,6 @@ func (e *ecs) deployLocal(sg terminal.StepGroup) error {
 	if err = deregisterTaskDefinition(svc, &oldTaskDef); err != nil {
 		return err
 	}
-
-	s.Done()
 
 	return nil
 }

@@ -7,18 +7,21 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/hazelops/ize/internal/commands/build"
 	"github.com/hazelops/ize/internal/commands/configure"
 	"github.com/hazelops/ize/internal/commands/console"
 	"github.com/hazelops/ize/internal/commands/deploy"
-	"github.com/hazelops/ize/internal/commands/destroy"
+	"github.com/hazelops/ize/internal/commands/down"
 	"github.com/hazelops/ize/internal/commands/exec"
 	"github.com/hazelops/ize/internal/commands/gen"
 	"github.com/hazelops/ize/internal/commands/initialize"
 	"github.com/hazelops/ize/internal/commands/logs"
+	"github.com/hazelops/ize/internal/commands/push"
 	"github.com/hazelops/ize/internal/commands/secrets"
 	"github.com/hazelops/ize/internal/commands/status"
 	"github.com/hazelops/ize/internal/commands/terraform"
 	"github.com/hazelops/ize/internal/commands/tunnel"
+	"github.com/hazelops/ize/internal/commands/up"
 	cfg "github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/version"
 	"github.com/hazelops/ize/pkg/templates"
@@ -95,8 +98,9 @@ func init() {
 
 func addCommands() {
 	rootCmd.AddCommand(
+		build.NewCmdBuild(),
 		deploy.NewCmdDeploy(),
-		destroy.NewCmdDestroy(),
+		down.NewCmdDown(),
 		console.NewCmdConsole(),
 		terraform.NewCmdTerraform(),
 		secrets.NewCmdSecrets(),
@@ -107,6 +111,8 @@ func addCommands() {
 		logs.NewCmdLogs(),
 		status.NewDebugCmd(),
 		gen.NewCmdGen(),
+		push.NewCmdPush(),
+		up.NewCmdUp(),
 		NewVersionCmd(),
 	)
 }
