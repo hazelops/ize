@@ -1,4 +1,4 @@
-package deploy
+package up
 
 import (
 	"context"
@@ -13,18 +13,18 @@ import (
 	"github.com/spf13/viper"
 )
 
-type DeployInfraOptions struct {
+type UpInfraOptions struct {
 	Config *config.Config
 	Type   string
 	Infra  Infra
 	UI     terminal.UI
 }
 
-var deployInfraLongDesc = templates.LongDesc(`
+var upInfraLongDesc = templates.LongDesc(`
 	Only deploy infrastructure.
 `)
 
-var deployInfraExample = templates.Examples(`
+var upInfraExample = templates.Examples(`
 	# Deploy infra via flags
 	ize deploy infra --infra.terraform.version <version> --infra.terraform.aws-region <region> --infra.terraform.aws-profile <profile>
 
@@ -36,18 +36,18 @@ var deployInfraExample = templates.Examples(`
 	ize deploy infra
 `)
 
-func NewDeployInfraFlags() *DeployInfraOptions {
-	return &DeployInfraOptions{}
+func NewUpInfraFlags() *UpInfraOptions {
+	return &UpInfraOptions{}
 }
 
-func NewCmdDeployInfra() *cobra.Command {
-	o := NewDeployInfraFlags()
+func NewCmdUpInfra() *cobra.Command {
+	o := NewUpInfraFlags()
 
 	cmd := &cobra.Command{
 		Use:     "infra",
 		Short:   "Manage infra deployments",
-		Long:    deployInfraLongDesc,
-		Example: deployInfraExample,
+		Long:    upInfraLongDesc,
+		Example: upInfraExample,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)
@@ -86,7 +86,7 @@ func BindFlags(flags *pflag.FlagSet) {
 	})
 }
 
-func (o *DeployInfraOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *UpInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 	var err error
 
 	o.Config, err = config.GetConfig()
@@ -125,7 +125,7 @@ func (o *DeployInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (o *DeployInfraOptions) Validate() error {
+func (o *UpInfraOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("env must be specified")
 	}
@@ -137,7 +137,7 @@ func (o *DeployInfraOptions) Validate() error {
 	return nil
 }
 
-func (o *DeployInfraOptions) Run(cmd *cobra.Command) error {
+func (o *UpInfraOptions) Run(cmd *cobra.Command) error {
 	ui := o.UI
 
 	return deployInfra(ui, o.Infra, *o.Config)

@@ -1,4 +1,4 @@
-package destroy
+package down
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-type DestroyOptions struct {
+type DownOptions struct {
 	Config           *config.Config
 	AppName          string
 	Tag              string
@@ -36,12 +36,12 @@ type Infra struct {
 	Profile string `mapstructure:"aws_profile"`
 }
 
-var destroyLongDesc = templates.LongDesc(`
+var downLongDesc = templates.LongDesc(`
 	Destroy infrastructure or application.
 	For app destroy the app name must be specified.
 `)
 
-var destroyExample = templates.Examples(`
+var downExample = templates.Examples(`
 	# Destroy all (config file required)
 	ize destroy
 
@@ -56,18 +56,18 @@ var destroyExample = templates.Examples(`
 	ize destroy <app name>
 `)
 
-func NewDestroyFlags() *DestroyOptions {
-	return &DestroyOptions{}
+func NewDownFlags() *DownOptions {
+	return &DownOptions{}
 }
 
-func NewCmdDestroy() *cobra.Command {
-	o := NewDestroyFlags()
+func NewCmdDown() *cobra.Command {
+	o := NewDownFlags()
 
 	cmd := &cobra.Command{
-		Use:     "destroy [flags] [app name]",
-		Example: destroyExample,
+		Use:     "down [flags] [app name]",
+		Example: downExample,
 		Short:   "Destroy application",
-		Long:    destroyLongDesc,
+		Long:    downLongDesc,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
@@ -98,13 +98,13 @@ func NewCmdDestroy() *cobra.Command {
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "approve deploy all")
 
 	cmd.AddCommand(
-		NewCmdDestroyInfra(),
+		NewCmdDownInfra(),
 	)
 
 	return cmd
 }
 
-func (o *DestroyOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *DownOptions) Complete(cmd *cobra.Command, args []string) error {
 	var err error
 
 	if len(args) == 0 {
@@ -152,7 +152,7 @@ func (o *DestroyOptions) Complete(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (o *DestroyOptions) Validate() error {
+func (o *DownOptions) Validate() error {
 	if o.AppName == "" {
 		err := validateAll(o)
 		if err != nil {
@@ -168,7 +168,7 @@ func (o *DestroyOptions) Validate() error {
 	return nil
 }
 
-func (o *DestroyOptions) Run() error {
+func (o *DownOptions) Run() error {
 	ui := o.ui
 	if o.AppName == "" {
 		err := destroyAll(ui, o)
@@ -185,7 +185,7 @@ func (o *DestroyOptions) Run() error {
 	return nil
 }
 
-func validate(o *DestroyOptions) error {
+func validate(o *DownOptions) error {
 	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("can't validate options: env must be specified")
 	}
@@ -205,7 +205,7 @@ func validate(o *DestroyOptions) error {
 	return nil
 }
 
-func validateAll(o *DestroyOptions) error {
+func validateAll(o *DownOptions) error {
 	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("can't validate options: env must be specified")
 	}
@@ -221,7 +221,7 @@ func validateAll(o *DestroyOptions) error {
 	return nil
 }
 
-func destroyAll(ui terminal.UI, o *DestroyOptions) error {
+func destroyAll(ui terminal.UI, o *DownOptions) error {
 
 	logrus.Debug(o.Apps)
 
@@ -234,20 +234,20 @@ func destroyAll(ui terminal.UI, o *DestroyOptions) error {
 
 		at := (*o.Apps[name]).(map[string]interface{})["type"].(string)
 
-		var deployment apps.Deployment
+		var deployment apps.App
 
 		switch at {
 		case "ecs":
-			deployment = apps.NewECSDeployment(name, *o.Apps[name])
+			deployment = apps.NewECSApp(name, *o.Apps[name])
 		case "serverless":
-			deployment = apps.NewServerlessDeployment(name, *o.Apps[name])
+			deployment = apps.NewServerlessApp(name, *o.Apps[name])
 		case "alias":
-			deployment = apps.NewAliasDeployment(name)
+			deployment = apps.NewAliasApp(name)
 		default:
 			return fmt.Errorf("apps type of %s not supported", at)
 		}
 
-		err := deployment.Destroy(sg, ui)
+		err := deployment.Destroy(ui)
 		if err != nil {
 			return err
 		}
@@ -300,7 +300,7 @@ func destroyAll(ui terminal.UI, o *DestroyOptions) error {
 	return nil
 }
 
-func destroyApp(ui terminal.UI, o *DestroyOptions) error {
+func destroyApp(ui terminal.UI, o *DownOptions) error {
 	ui.Output("Destroying %s app...", o.AppName, terminal.WithHeaderStyle())
 	sg := ui.StepGroup()
 	defer sg.Wait()
@@ -317,20 +317,20 @@ func destroyApp(ui terminal.UI, o *DestroyOptions) error {
 		}
 	}
 
-	var deployment apps.Deployment
+	var deployment apps.App
 
 	switch appType {
 	case "ecs":
-		deployment = apps.NewECSDeployment(o.AppName, o.App)
+		deployment = apps.NewECSApp(o.AppName, o.App)
 	case "serverless":
-		deployment = apps.NewServerlessDeployment(o.AppName, o.App)
+		deployment = apps.NewServerlessApp(o.AppName, o.App)
 	case "alias":
-		deployment = apps.NewAliasDeployment(o.AppName)
+		deployment = apps.NewAliasApp(o.AppName)
 	default:
 		return fmt.Errorf("apps type of %s not supported", appType)
 	}
 
-	err := deployment.Destroy(sg, ui)
+	err := deployment.Destroy(ui)
 	if err != nil {
 		return fmt.Errorf("can't destroy: %w", err)
 	}
