@@ -29,8 +29,7 @@ type SecretsPushOptions struct {
 var secretsPushExample = templates.Examples(`
 	# Push secrets
 	ize secrets push --backend ssm --file example-service.json --force
-    # This will push your secrets from a "example-service.json" file to the AWS SSM storage 
-    # with force option(values will be overwritten if exist)
+    # This will push your secrets from a "example-service.json" file to the AWS SSM storage with force option(values will be overwritten if exist)
 `)
 
 func NewSecretsPushFlags() *SecretsPushOptions {
