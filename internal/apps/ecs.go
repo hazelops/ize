@@ -84,43 +84,6 @@ func (e *ecs) Deploy(ui terminal.UI) error {
 	s := sg.Add("%s: deploying app container...", e.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
-	cli, err := client.NewClientWithOpts(client.FromEnv)
-	if err != nil {
-		return err
-	}
-
-	imageRef, err := reference.ParseNormalizedNamed(ecsDeployImage)
-	if err != nil {
-		return fmt.Errorf("error parsing Docker image: %s", err)
-	}
-
-	imageList, err := cli.ImageList(context.Background(), types.ImageListOptions{
-		Filters: filters.NewArgs(filters.KeyValuePair{
-			Key:   "reference",
-			Value: reference.FamiliarString(imageRef),
-		}),
-	})
-	if err != nil {
-		return err
-	}
-
-	if len(imageList) == 0 {
-		resp, err := cli.ImagePull(context.Background(), reference.FamiliarString(imageRef), types.ImagePullOptions{})
-		if err != nil {
-			return err
-		}
-		defer resp.Close()
-
-		if err != nil {
-			return err
-		}
-
-		err = jsonmessage.DisplayJSONMessagesStream(resp, os.Stderr, os.Stderr.Fd(), true, nil)
-		if err != nil {
-			return fmt.Errorf("unable to stream pull logs to the terminal: %s", err)
-		}
-	}
-
 	if e.Image == "" {
 		e.Image = fmt.Sprintf("%s/%s:%s",
 			viper.GetString("DOCKER_REGISTRY"),
@@ -130,11 +93,12 @@ func (e *ecs) Deploy(ui terminal.UI) error {
 
 	if viper.GetString("prefer-runtime") == "native" {
 		err := e.deployLocal(s.TermOutput())
+		pterm.SetDefaultOutput(os.Stdout)
 		if err != nil {
 			return err
 		}
 	} else {
-		err := e.deployWithDocker(cli, s.TermOutput())
+		err := e.deployWithDocker(s.TermOutput())
 		if err != nil {
 			return err
 		}
@@ -288,7 +252,44 @@ func (e *ecs) Destroy(ui terminal.UI) error {
 	return nil
 }
 
-func (e *ecs) deployWithDocker(cli *client.Client, w io.Writer) error {
+func (e *ecs) deployWithDocker(w io.Writer) error {
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		return err
+	}
+
+	imageRef, err := reference.ParseNormalizedNamed(ecsDeployImage)
+	if err != nil {
+		return fmt.Errorf("error parsing Docker image: %s", err)
+	}
+
+	imageList, err := cli.ImageList(context.Background(), types.ImageListOptions{
+		Filters: filters.NewArgs(filters.KeyValuePair{
+			Key:   "reference",
+			Value: reference.FamiliarString(imageRef),
+		}),
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(imageList) == 0 {
+		resp, err := cli.ImagePull(context.Background(), reference.FamiliarString(imageRef), types.ImagePullOptions{})
+		if err != nil {
+			return err
+		}
+		defer resp.Close()
+
+		if err != nil {
+			return err
+		}
+
+		err = jsonmessage.DisplayJSONMessagesStream(resp, os.Stderr, os.Stderr.Fd(), true, nil)
+		if err != nil {
+			return fmt.Errorf("unable to stream pull logs to the terminal: %s", err)
+		}
+	}
+
 	cmd := []string{"ecs", "deploy",
 		"--profile", e.AwsProfile,
 		"--region", e.AwsRegion,
