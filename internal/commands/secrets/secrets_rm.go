@@ -22,9 +22,10 @@ type SecretsRemoveOptions struct {
 }
 
 var secretsRemoveExample = templates.Examples(`
-	# Remove secrets
-	ize secrets rm --backend ssm
-    # This will remove your secrets from the AWS SSM storage
+	# Remove secrets:
+
+    # This will remove your secrets for "squibby" service
+ 	ize secrets rm squibby
 `)
 
 func NewSecretsRemoveFlags() *SecretsRemoveOptions {
@@ -35,7 +36,7 @@ func NewCmdSecretsRemove() *cobra.Command {
 	o := NewSecretsRemoveFlags()
 
 	cmd := &cobra.Command{
-		Use:              "rm",
+		Use:              "rm <app>",
 		Example:          secretsRemoveExample,
 		Short:            "Remove secrets from storage",
 		Long:             "This command removes secrets from storage",

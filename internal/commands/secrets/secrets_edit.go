@@ -21,9 +21,13 @@ type SecretsEditOptions struct {
 }
 
 var secretsEditExample = templates.Examples(`
-	# Edit secrets
-	ize secrets --file example-service.json
+	# Edit secrets:
+
+    # This will open secrets file it in a local text editor if it's existed. If file is absent - it will be created. 
+    ize secrets edit squibby
+
     # This will open your secrets file with local text editor
+	ize secrets edit squibby --file example-service.json
 `)
 
 func NewSecretsEditFlags() *SecretsEditOptions {
@@ -34,7 +38,7 @@ func NewCmdSecretsEdit() *cobra.Command {
 	o := NewSecretsEditFlags()
 
 	cmd := &cobra.Command{
-		Use:     "edit",
+		Use:     "edit <app>",
 		Example: secretsEditExample,
 		Short:   "Edit secrets file",
 		Long:    "This command open secrets file in default text editor",

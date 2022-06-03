@@ -27,9 +27,13 @@ type SecretsPushOptions struct {
 }
 
 var secretsPushExample = templates.Examples(`
-	# Push secrets
-	ize secrets push --backend ssm --file example-service.json --force
-    # This will push your secrets from a "example-service.json" file to the AWS SSM storage with force option(values will be overwritten if exist)
+	# Push secrets:
+
+    # This will push secrets for "squibby" service
+    ize secrets push squibby
+    
+    # This will push secrets for "squibby" service from a "example-service.json" file to the AWS SSM storage with force option(values will be overwritten if exist)
+	ize secrets push squibby --backend ssm --file string example-service.json --force
 `)
 
 func NewSecretsPushFlags() *SecretsPushOptions {
@@ -40,7 +44,7 @@ func NewCmdSecretsPush() *cobra.Command {
 	o := NewSecretsPushFlags()
 
 	cmd := &cobra.Command{
-		Use:     "push",
+		Use:     "push <app>",
 		Example: secretsPushExample,
 		Short:   "Push secrets to a key-value storage (like SSM)",
 		Long:    "This command pushes secrets from a local file to a key-value storage (like SSM)",
