@@ -9,6 +9,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/pkg/templates"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -19,6 +20,12 @@ type SecretsEditOptions struct {
 	FilePath string
 }
 
+var secretsEditExample = templates.Examples(`
+	# Edit secrets
+	ize secrets --file example-service.json
+    # This will open your secrets file with local text editor
+`)
+
 func NewSecretsEditFlags() *SecretsEditOptions {
 	return &SecretsEditOptions{}
 }
@@ -27,10 +34,11 @@ func NewCmdSecretsEdit() *cobra.Command {
 	o := NewSecretsEditFlags()
 
 	cmd := &cobra.Command{
-		Use:   "edit",
-		Short: "Edit secrets file",
-		Long:  "This command open secrets file in default text editor",
-		Args:  cobra.MinimumNArgs(1),
+		Use:     "edit",
+		Example: secretsEditExample,
+		Short:   "Edit secrets file",
+		Long:    "This command open secrets file in default text editor",
+		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
