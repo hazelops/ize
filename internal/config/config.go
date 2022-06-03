@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/Masterminds/semver"
@@ -178,6 +179,7 @@ func InitConfig() {
 	}
 
 	viper.SetDefault("ROOT_DIR", cwd)
+	viper.SetDefault("PROJECTS_PATH", filepath.Join(cwd, "projects"))
 	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
 	setDefaultInfraDir(cwd)
 
