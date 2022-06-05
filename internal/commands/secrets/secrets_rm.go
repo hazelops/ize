@@ -24,7 +24,7 @@ type SecretsRemoveOptions struct {
 var secretsRemoveExample = templates.Examples(`
 	# Remove secrets:
 
-    # This will remove your secrets for "squibby" service
+    # This will remove your secrets for "squibby" app
  	ize secrets rm squibby
 `)
 
