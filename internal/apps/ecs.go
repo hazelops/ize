@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	ecssvc "github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/docker/distribution/reference"
@@ -398,8 +399,13 @@ func (e *ecs) deployLocal(w io.Writer) error {
 		Cluster:  &e.Cluster,
 		Services: []*string{&name},
 	})
-	if err != nil {
-		return err
+	if aerr, ok := err.(awserr.Error); ok {
+		switch aerr.Code() {
+		case "ClusterNotFoundException":
+			return fmt.Errorf("ECS cluster %s not found", e.Cluster)
+		default:
+			return err
+		}
 	}
 
 	if len(dso.Services) == 0 {

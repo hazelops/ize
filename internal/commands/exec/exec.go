@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/ssmsession"
@@ -39,7 +40,7 @@ func NewCmdExec() *cobra.Command {
 		Example: execExample,
 		Short:   "Execute command in ECS container",
 		Long:    "Connect to a container in the ECS via AWS SSM and run command.\nIt uses app name as an argument.",
-		Args: cobra.MinimumNArgs(1),
+		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			argsLenAtDash := cmd.ArgsLenAtDash()
@@ -121,8 +122,13 @@ func (o *ExecOptions) Run(cmd *cobra.Command) error {
 			DesiredStatus: aws.String(ecs.DesiredStatusRunning),
 			ServiceName:   &appName,
 		})
-		if err != nil {
-			return err
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case "ClusterNotFoundException":
+				return fmt.Errorf("ECS cluster %s not found", o.EcsCluster)
+			default:
+				return err
+			}
 		}
 
 		logrus.Debugf("list task output: %s", lto)
@@ -143,8 +149,13 @@ func (o *ExecOptions) Run(cmd *cobra.Command) error {
 		Task:        &o.Task,
 		Command:     aws.String(o.Command),
 	})
-	if err != nil {
-		return err
+	if aerr, ok := err.(awserr.Error); ok {
+		switch aerr.Code() {
+		case "ClusterNotFoundException":
+			return fmt.Errorf("ECS cluster %s not found", o.EcsCluster)
+		default:
+			return err
+		}
 	}
 
 	s.Success()
