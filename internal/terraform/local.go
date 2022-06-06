@@ -3,12 +3,18 @@ package terraform
 import (
 	"fmt"
 	"io"
+	"log"
+	"os"
+	"os/user"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"time"
 
-	"github.com/hazelops/ize/internal/terraform/tfswitcher"
+	"github.com/hashicorp/go-version"
 	"github.com/hazelops/ize/pkg/term"
 	"github.com/hazelops/ize/pkg/terminal"
+	tfswitcher "github.com/psihachina/terraform-switcher/lib"
 	"github.com/spf13/viper"
 )
 
@@ -44,12 +50,11 @@ func (l *local) Run() error {
 
 func (l *local) Prepare() error {
 	var (
-		tfpath        = "/usr/local/bin/terraform"
 		defaultMirror = "https://releases.hashicorp.com/terraform"
 		path          = ""
 	)
 
-	path, err := installVersion(l.version, &tfpath, &defaultMirror)
+	path, err := installVersion(l.version, &defaultMirror)
 	if err != nil {
 		return err
 	}
@@ -95,17 +100,35 @@ func (l *local) RunUI(ui terminal.UI) error {
 	return nil
 }
 
-func installVersion(version string, custBinPath *string, mirrorURL *string) (string, error) {
+func getInstallLocation(installPath string) string {
+	/* get current user */
+	usr, errCurr := user.Current()
+	if errCurr != nil {
+		log.Fatal(errCurr)
+	}
+
+	userCommon := usr.HomeDir
+
+	/* set installation location */
+	installLocation := filepath.Join(userCommon, installPath)
+
+	/* Create local installation directory if it does not exist */
+	tfswitcher.CreateDirIfNotExist(installLocation)
+
+	return installLocation
+
+}
+
+func installVersion(version string, mirrorURL *string) (string, error) {
 	var (
 		installFileVersionPath string
-		err                    error
 	)
 
 	if tfswitcher.ValidVersionFormat(version) {
 		requestedVersion := version
 
 		//check to see if the requested version has been downloaded before
-		installLocation := tfswitcher.GetInstallLocation()
+		installLocation := getInstallLocation(".ize/versions/terraform/")
 		installFileVersionPath = tfswitcher.ConvertExecutableExt(filepath.Join(installLocation, versionPrefix+requestedVersion))
 		recentDownloadFile := tfswitcher.CheckFileExist(installFileVersionPath)
 		if recentDownloadFile {
@@ -118,10 +141,7 @@ func installVersion(version string, custBinPath *string, mirrorURL *string) (str
 		exist := tfswitcher.VersionExist(requestedVersion, tflist) //check if version exist before downloading it
 
 		if exist {
-			installFileVersionPath, err = tfswitcher.Install(requestedVersion, *custBinPath, *mirrorURL)
-			if err != nil {
-				return "", err
-			}
+			Install(requestedVersion, *mirrorURL)
 		} else {
 			return "", fmt.Errorf("provided terraform version does not exist")
 		}
@@ -132,4 +152,61 @@ func installVersion(version string, custBinPath *string, mirrorURL *string) (str
 	}
 
 	return installFileVersionPath, nil
+}
+
+func Install(tfversion string, mirrorURL string) error {
+	installLocation := getInstallLocation(".ize/versions/terraform/") //get installation location -  this is where we will put our terraform binary file
+
+	goarch := runtime.GOARCH
+	goos := runtime.GOOS
+
+	// Terraform darwin arm64 comes with 1.0.2 and next version
+	tfver, _ := version.NewVersion(tfversion)
+	tf102, _ := version.NewVersion("1.0.2")
+	if goos == "darwin" && goarch == "arm64" && tfver.LessThan(tf102) {
+		goarch = "amd64"
+	}
+
+	/* check if selected version already downloaded */
+	installFileVersionPath := tfswitcher.ConvertExecutableExt(filepath.Join(installLocation, versionPrefix+tfversion))
+	fileExist := tfswitcher.CheckFileExist(installFileVersionPath)
+
+	/* if selected version already exist, */
+	if fileExist {
+		os.Exit(0)
+	}
+
+	//if does not have slash - append slash
+	hasSlash := strings.HasSuffix(mirrorURL, "/")
+	if !hasSlash {
+		mirrorURL = fmt.Sprintf("%s/", mirrorURL)
+	}
+
+	/* if selected version already exist, */
+	/* proceed to download it from the hashicorp release page */
+	url := mirrorURL + tfversion + "/" + versionPrefix + tfversion + "_" + goos + "_" + goarch + ".zip"
+	zipFile, errDownload := tfswitcher.DownloadFromURL(installLocation, url)
+
+	/* If unable to download file from url, exit(1) immediately */
+	if errDownload != nil {
+		fmt.Println(errDownload)
+		os.Exit(1)
+	}
+
+	/* unzip the downloaded zipfile */
+	_, errUnzip := tfswitcher.Unzip(zipFile, installLocation)
+	if errUnzip != nil {
+		fmt.Println("[Error] : Unable to unzip downloaded zip file")
+		log.Fatal(errUnzip)
+		os.Exit(1)
+	}
+
+	/* rename unzipped file to terraform version name - terraform_x.x.x */
+	installFilePath := tfswitcher.ConvertExecutableExt(filepath.Join(installLocation, "terraform"))
+	tfswitcher.RenameFile(installFilePath, installFileVersionPath)
+
+	/* remove zipped file to clear clutter */
+	tfswitcher.RemoveFiles(zipFile)
+
+	return nil
 }
