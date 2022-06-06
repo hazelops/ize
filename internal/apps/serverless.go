@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
@@ -38,9 +39,12 @@ func NewServerlessApp(name string, app interface{}) *serverless {
 
 	slsConfig.Name = name
 
-	if slsConfig.Path == "" {
-		slsConfig.Path = fmt.Sprintf("./projects/%s", name)
+	projectsPath := viper.GetString("PROJECTS_PATH")
+	if !filepath.IsAbs(projectsPath) {
+		projectsPath = filepath.Join(os.Getenv("PWD"), projectsPath)
 	}
+
+	slsConfig.Path = filepath.Join(projectsPath, name)
 
 	if len(slsConfig.File) == 0 {
 		slsConfig.File = "serverless.yml"

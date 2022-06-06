@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -59,7 +60,12 @@ func NewECSApp(name string, app interface{}) *ecs {
 	ecsConfig.Name = name
 
 	if ecsConfig.Path == "" {
-		ecsConfig.Path = fmt.Sprintf("./projects/%s", name)
+		projectsPath := viper.GetString("PROJECTS_PATH")
+		if !filepath.IsAbs(projectsPath) {
+			projectsPath = filepath.Join(os.Getenv("PWD"), projectsPath)
+		}
+
+		ecsConfig.Path = filepath.Join(projectsPath, name)
 	}
 
 	ecsConfig.AwsProfile = viper.GetString("aws_profile")
@@ -206,8 +212,13 @@ func (e *ecs) Build(ui terminal.UI) error {
 	image := fmt.Sprintf("%s-%s", viper.GetString("namespace"), e.Name)
 	imageUri := fmt.Sprintf("%s/%s", registry, image)
 
+	relProjectPath, err := filepath.Rel(viper.GetString("ROOT_DIR"), e.Path)
+	if err != nil {
+		return fmt.Errorf("unable to get relative path: %w", err)
+	}
+
 	buildArgs := map[string]*string{
-		"PROJECT_PATH": &e.Path,
+		"PROJECT_PATH": &relProjectPath,
 		"APP_NAME":     &e.Name,
 	}
 
@@ -228,7 +239,7 @@ func (e *ecs) Build(ui terminal.UI) error {
 		cache,
 	)
 
-	err := b.Build(ui, s)
+	err = b.Build(ui, s)
 	if err != nil {
 		return fmt.Errorf("unable to build image: %w", err)
 	}
