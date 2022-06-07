@@ -115,12 +115,17 @@ func (o *EnvOptions) Validate() error {
 func (o *EnvOptions) Run() error {
 	pterm.DefaultSection.Printfln("Starting generate terraform files")
 
+	awsStateRegion := o.Config.AwsRegion
+	if len(viper.GetString("infra.terraform.terraform_state_region")) > 0 {
+		awsStateRegion = viper.GetString("infra.terraform.terraform_state_region")
+	}
+
 	backendOpts := template.BackendOpts{
 		ENV:                            o.Config.Env,
 		LOCALSTACK_ENDPOINT:            "",
 		TERRAFORM_STATE_BUCKET_NAME:    o.TerraformStateBucketName,
 		TERRAFORM_STATE_KEY:            fmt.Sprintf("%v/terraform.tfstate", o.Config.Env),
-		TERRAFORM_STATE_REGION:         o.Config.AwsRegion,
+		TERRAFORM_STATE_REGION:         awsStateRegion,
 		TERRAFORM_STATE_PROFILE:        o.Config.AwsProfile,
 		TERRAFORM_STATE_DYNAMODB_TABLE: "tf-state-lock",
 		TERRAFORM_AWS_PROVIDER_VERSION: "",
