@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/ssmsession"
@@ -110,8 +111,13 @@ func (o *ConsoleOptions) Run() error {
 			DesiredStatus: aws.String(ecs.DesiredStatusRunning),
 			ServiceName:   &appName,
 		})
-		if err != nil {
-			return err
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case "ClusterNotFoundException":
+				return fmt.Errorf("ECS cluster %s not found", o.EcsCluster)
+			default:
+				return err
+			}
 		}
 
 		logrus.Debugf("list task output: %s", lto)
@@ -132,8 +138,13 @@ func (o *ConsoleOptions) Run() error {
 		Task:        &o.Task,
 		Command:     aws.String("/bin/sh"),
 	})
-	if err != nil {
-		return err
+	if aerr, ok := err.(awserr.Error); ok {
+		switch aerr.Code() {
+		case "ClusterNotFoundException":
+			return fmt.Errorf("ECS cluster %s not found", o.EcsCluster)
+		default:
+			return err
+		}
 	}
 
 	s.Success()
