@@ -16,6 +16,7 @@ func NewCmdSecrets() *cobra.Command {
 		NewCmdSecretsRemove(),
 		NewCmdSecretsPush(),
 		NewCmdSecretsEdit(),
+		NewCmdSecretsPull(),
 	)
 
 	return cmd
