@@ -176,7 +176,7 @@ func Install(tfversion string, mirrorURL string) error {
 		os.Exit(0)
 	}
 
-	//if does not have slash - append slash
+	// if it does not have a slash - append it
 	hasSlash := strings.HasSuffix(mirrorURL, "/")
 	if !hasSlash {
 		mirrorURL = fmt.Sprintf("%s/", mirrorURL)
