@@ -160,7 +160,7 @@ func Install(tfversion string, mirrorURL string) error {
 	goarch := runtime.GOARCH
 	goos := runtime.GOOS
 
-	// Terraform darwin arm64 comes with 1.0.2 and next version
+	// Terraform darwin arm64 comes with version 1.0.2 and above
 	tfver, _ := version.NewVersion(tfversion)
 	tf102, _ := version.NewVersion("1.0.2")
 	if goos == "darwin" && goarch == "arm64" && tfver.LessThan(tf102) {
