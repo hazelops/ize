@@ -171,7 +171,7 @@ func Install(tfversion string, mirrorURL string) error {
 	installFileVersionPath := tfswitcher.ConvertExecutableExt(filepath.Join(installLocation, versionPrefix+tfversion))
 	fileExist := tfswitcher.CheckFileExist(installFileVersionPath)
 
-	/* if selected version already exist, */
+	/* if selected version already exists */
 	if fileExist {
 		os.Exit(0)
 	}
