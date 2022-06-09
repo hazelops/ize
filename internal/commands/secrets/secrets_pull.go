@@ -115,7 +115,8 @@ func (o *SecretsPullOptions) pull(s *pterm.SpinnerPrinter) error {
 	ssmSvc := ssm.New(o.Config.Session)
 
 	params, err := ssmSvc.GetParametersByPath(&ssm.GetParametersByPathInput{
-		Path: aws.String(o.SecretsPath),
+		Path:           aws.String(o.SecretsPath),
+		WithDecryption: aws.Bool(true),
 	})
 	if err != nil {
 		return err
