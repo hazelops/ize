@@ -67,6 +67,12 @@ func NewECSApp(name string, app interface{}) *ecs {
 		}
 
 		ecsConfig.Path = filepath.Join(projectsPath, name)
+	} else {
+		rootDir := viper.GetString("ROOT_DIR")
+
+		if !filepath.IsAbs(ecsConfig.Path) {
+			ecsConfig.Path = filepath.Join(rootDir, ecsConfig.Path)
+		}
 	}
 
 	ecsConfig.AwsProfile = viper.GetString("aws_profile")
@@ -213,13 +219,9 @@ func (e *ecs) Build(ui terminal.UI) error {
 	image := fmt.Sprintf("%s-%s", viper.GetString("namespace"), e.Name)
 	imageUri := fmt.Sprintf("%s/%s", registry, image)
 
-	relProjectPath, err := filepath.Rel(viper.GetString("ROOT_DIR"), e.Path)
-	if err != nil {
-		return fmt.Errorf("unable to get relative path: %w", err)
-	}
-
+	println(e.Path)
 	buildArgs := map[string]*string{
-		"PROJECT_PATH": &relProjectPath,
+		"PROJECT_PATH": &e.Path,
 		"APP_NAME":     &e.Name,
 	}
 
@@ -240,7 +242,7 @@ func (e *ecs) Build(ui terminal.UI) error {
 		cache,
 	)
 
-	err = b.Build(ui, s)
+	err := b.Build(ui, s)
 	if err != nil {
 		return fmt.Errorf("unable to build image: %w", err)
 	}
