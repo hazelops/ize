@@ -167,7 +167,7 @@ func Install(tfversion string, mirrorURL string) error {
 		goarch = "amd64"
 	}
 
-	/* check if selected version already downloaded */
+	/* check if selected version has already been downloaded */
 	installFileVersionPath := tfswitcher.ConvertExecutableExt(filepath.Join(installLocation, versionPrefix+tfversion))
 	fileExist := tfswitcher.CheckFileExist(installFileVersionPath)
 
