@@ -66,6 +66,7 @@ func Execute(args []string) {
 	go version.CheckLatestRealese()
 
 	if err := rootCmd.Execute(); err != nil {
+		fmt.Println()
 		pterm.Error.Println(err)
 		os.Exit(1)
 	}

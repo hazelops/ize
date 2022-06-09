@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/apps"
+	"github.com/hazelops/ize/internal/apps/ecs"
 	"github.com/hazelops/ize/internal/commands/gen"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/terraform"
@@ -246,7 +247,7 @@ func deployAll(ui terminal.UI, o *UpOptions) error {
 
 		switch at {
 		case "ecs":
-			app = apps.NewECSApp(name, *o.Apps[name])
+			app = ecs.NewECSApp(name, *o.Apps[name])
 		case "serverless":
 			app = apps.NewServerlessApp(name, *o.Apps[name])
 		case "alias":
@@ -305,7 +306,7 @@ func deployApp(ui terminal.UI, o *UpOptions) error {
 
 	switch appType {
 	case "ecs":
-		app = apps.NewECSApp(o.AppName, o.App)
+		app = ecs.NewECSApp(o.AppName, o.App)
 	case "serverless":
 		app = apps.NewServerlessApp(o.AppName, o.App)
 	case "alias":
