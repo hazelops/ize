@@ -138,7 +138,7 @@ func (o *SecretsPullOptions) pull(s *pterm.SpinnerPrinter) error {
 			return err
 		}
 	} else {
-		return fmt.Errorf("file %s already exists", o.FilePath)
+		return fmt.Errorf("file %s already exists. Please use --force to overwrite.", o.FilePath)
 	}
 
 	return nil
