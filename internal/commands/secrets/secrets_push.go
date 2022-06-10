@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/pkg/templates"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -25,6 +26,16 @@ type SecretsPushOptions struct {
 	Force       bool
 }
 
+var secretsPushExample = templates.Examples(`
+	# Push secrets:
+
+    # This will push secrets for "squibby" app
+    ize secrets push squibby
+    
+    # This will push secrets for "squibby" app from a "example-service.json" file to the AWS SSM storage with force option (values will be overwritten if exist)
+	ize secrets push squibby --backend ssm --file example-service.json --force
+`)
+
 func NewSecretsPushFlags() *SecretsPushOptions {
 	return &SecretsPushOptions{}
 }
@@ -33,10 +44,11 @@ func NewCmdSecretsPush() *cobra.Command {
 	o := NewSecretsPushFlags()
 
 	cmd := &cobra.Command{
-		Use:   "push",
-		Short: "Push secrets to a key-value storage (like SSM)",
-		Long:  "This command pushes secrets from a local file to a key-value storage (like SSM)",
-		Args:  cobra.MinimumNArgs(1),
+		Use:     "push <app>",
+		Example: secretsPushExample,
+		Short:   "Push secrets to a key-value storage (like SSM)",
+		Long:    "This command pushes secrets from a local file to a key-value storage (like SSM)",
+		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 

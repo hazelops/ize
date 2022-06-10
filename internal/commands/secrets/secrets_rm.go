@@ -7,6 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -20,6 +21,13 @@ type SecretsRemoveOptions struct {
 	ui          terminal.UI
 }
 
+var secretsRemoveExample = templates.Examples(`
+	# Remove secrets:
+
+    # This will remove your secrets for "squibby" app
+ 	ize secrets rm squibby
+`)
+
 func NewSecretsRemoveFlags() *SecretsRemoveOptions {
 	return &SecretsRemoveOptions{}
 }
@@ -28,7 +36,8 @@ func NewCmdSecretsRemove() *cobra.Command {
 	o := NewSecretsRemoveFlags()
 
 	cmd := &cobra.Command{
-		Use:              "rm",
+		Use:              "rm <app>",
+		Example:          secretsRemoveExample,
 		Short:            "Remove secrets from storage",
 		Long:             "This command removes secrets from storage",
 		TraverseChildren: true,
