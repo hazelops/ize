@@ -15,7 +15,7 @@ func NewCmdDoc() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
-			err := doc.GenMarkdownTree(cmd.Parent(), "./commands")
+			err := doc.GenMarkdownTree(cmd.Root(), "./commands")
 			if err != nil {
 				return err
 			}
