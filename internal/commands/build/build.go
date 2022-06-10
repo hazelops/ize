@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hazelops/ize/internal/apps"
+	"github.com/hazelops/ize/internal/apps/ecs"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
@@ -114,7 +115,7 @@ func (o *BuildOptions) Run() error {
 
 	switch appType {
 	case "ecs":
-		app = apps.NewECSApp(o.AppName, o.App)
+		app = ecs.NewECSApp(o.AppName, o.App)
 	case "serverless":
 		app = apps.NewServerlessApp(o.AppName, o.App)
 	case "alias":

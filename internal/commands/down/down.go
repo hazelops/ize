@@ -6,6 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hazelops/ize/internal/apps"
+	"github.com/hazelops/ize/internal/apps/ecs"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/terraform"
 	"github.com/hazelops/ize/pkg/templates"
@@ -238,7 +239,7 @@ func destroyAll(ui terminal.UI, o *DownOptions) error {
 
 		switch at {
 		case "ecs":
-			deployment = apps.NewECSApp(name, *o.Apps[name])
+			deployment = ecs.NewECSApp(name, *o.Apps[name])
 		case "serverless":
 			deployment = apps.NewServerlessApp(name, *o.Apps[name])
 		case "alias":
@@ -321,7 +322,7 @@ func destroyApp(ui terminal.UI, o *DownOptions) error {
 
 	switch appType {
 	case "ecs":
-		deployment = apps.NewECSApp(o.AppName, o.App)
+		deployment = ecs.NewECSApp(o.AppName, o.App)
 	case "serverless":
 		deployment = apps.NewServerlessApp(o.AppName, o.App)
 	case "alias":

@@ -5,6 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hazelops/ize/internal/apps"
+	"github.com/hazelops/ize/internal/apps/ecs"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
@@ -135,7 +136,7 @@ func (o *DeployOptions) Run() error {
 
 	switch appType {
 	case "ecs":
-		deployment = apps.NewECSApp(o.AppName, o.App)
+		deployment = ecs.NewECSApp(o.AppName, o.App)
 	case "serverless":
 		deployment = apps.NewServerlessApp(o.AppName, o.App)
 	case "alias":
