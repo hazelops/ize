@@ -1,14 +1,19 @@
 package terraform
 
 import (
+	"bufio"
 	"fmt"
 	"io"
+	"os/exec"
+	"os/signal"
+	"syscall"
 	"log"
 	"os"
 	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
+
 	"time"
 
 	"github.com/hashicorp/go-version"
@@ -72,6 +77,45 @@ func (l *local) SetOut(out io.Writer) {
 	l.output = out
 }
 
+func printOutput(r io.Reader, w io.Writer) {
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		w.Write([]byte(scanner.Text() + "\n"))
+	}
+}
+
+func runCommand(cmd *exec.Cmd, out io.Writer) (stdout, stderr string, err error) {
+	signal.Ignore(os.Interrupt)
+	defer signal.Reset(os.Interrupt)
+
+	outReader, err := cmd.StdoutPipe()
+	if err != nil {
+		return
+	}
+	errReader, err := cmd.StderrPipe()
+	if err != nil {
+		return
+	}
+
+	if err = cmd.Start(); err != nil {
+		return
+	}
+
+	go printOutput(outReader, out)
+	go printOutput(errReader, out)
+
+	err = cmd.Wait()
+
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			if s, ok := exitErr.Sys().(syscall.WaitStatus); ok {
+				err = fmt.Errorf("exit status: %d", s.ExitStatus())
+			}
+		}
+	}
+	return
+}
+
 func (l *local) RunUI(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
@@ -84,13 +128,10 @@ func (l *local) RunUI(ui terminal.UI) error {
 		stdout = l.output
 	}
 
-	t := term.New(
-		term.WithStderr(s.TermOutput()),
-		term.WithStdout(stdout),
-		term.WithDir(viper.GetString("ENV_DIR")),
-	)
+	cmd := exec.Command(l.tfpath, l.command...)
+	cmd.Dir = viper.GetString("ENV_DIR")
+	_, _, err := runCommand(cmd, stdout)
 
-	err := t.InteractiveRun(l.tfpath, l.command)
 	if err != nil {
 		return err
 	}
