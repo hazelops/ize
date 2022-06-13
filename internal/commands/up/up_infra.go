@@ -14,10 +14,11 @@ import (
 )
 
 type UpInfraOptions struct {
-	Config *config.Config
-	Type   string
-	Infra  Infra
-	UI     terminal.UI
+	Config  *config.Config
+	Type    string
+	Infra   Infra
+	SkipGen bool
+	UI      terminal.UI
 }
 
 var upInfraLongDesc = templates.LongDesc(`
@@ -69,6 +70,7 @@ func NewCmdUpInfra() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&o.SkipGen, "skip-gen", false, "skip generating terraform files")
 	cmd.Flags().StringVar(&o.Infra.Version, "infra.terraform.version", "", "set terraform version")
 	cmd.Flags().StringVar(&o.Infra.Region, "infra.terraform.aws-region", "", "set aws region")
 	cmd.Flags().StringVar(&o.Infra.Profile, "infra.terraform.aws-profile", "", "set aws profile")
@@ -140,5 +142,5 @@ func (o *UpInfraOptions) Validate() error {
 func (o *UpInfraOptions) Run(cmd *cobra.Command) error {
 	ui := o.UI
 
-	return deployInfra(ui, o.Infra, *o.Config)
+	return deployInfra(ui, o.Infra, *o.Config, o.SkipGen)
 }
