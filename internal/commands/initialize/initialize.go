@@ -6,6 +6,7 @@ import (
 	"github.com/hazelops/ize/examples"
 	"github.com/hazelops/ize/internal/generate"
 	"github.com/hazelops/ize/pkg/templates"
+	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -82,10 +83,12 @@ func (o *InitOptions) Validate(cmd *cobra.Command) error {
 }
 
 func (o *InitOptions) Run() error {
-	_, err := generate.GenerateFiles(o.Template, o.Output)
+	dest, err := generate.GenerateFiles(o.Template, o.Output)
 	if err != nil {
 		return err
 	}
+
+	pterm.Success.Printfln(`Initialized project from template "%s" to %s`, o.Template, dest)
 
 	return nil
 }
