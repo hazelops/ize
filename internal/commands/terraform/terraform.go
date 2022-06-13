@@ -122,10 +122,15 @@ func (o *TerraformOptions) Run(args []string) error {
 		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
 	}
 
+	o.Version = viper.GetString("infra.terraform.version")
+	if o.Version == "" {
+		o.Version = viper.GetString("terraform_version")
+	}
+
 	if o.Config.IsDockerRuntime {
-		tf = terraform.NewDockerTerraform(viper.GetString("terraform_version"), args, env, nil)
+		tf = terraform.NewDockerTerraform(o.Version, args, env, nil)
 	} else {
-		tf = terraform.NewLocalTerraform(viper.GetString("terraform_version"), args, env, nil)
+		tf = terraform.NewLocalTerraform(o.Version, args, env, nil)
 		err = tf.Prepare()
 		if err != nil {
 			return err

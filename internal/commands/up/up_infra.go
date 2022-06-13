@@ -96,24 +96,14 @@ func (o *UpInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 
 	BindFlags(cmd.Flags())
 
-	if len(o.Infra.Profile) == 0 {
-		o.Infra.Profile = viper.GetString("infra.terraform.aws_profile")
-	}
+	viper.UnmarshalKey("infra.terraform", &o.Infra)
 
 	if len(o.Infra.Profile) == 0 {
 		o.Infra.Profile = o.Config.AwsProfile
 	}
 
 	if len(o.Infra.Region) == 0 {
-		o.Infra.Region = viper.GetString("infra.terraform.aws_region")
-	}
-
-	if len(o.Infra.Region) == 0 {
 		o.Infra.Region = o.Config.AwsRegion
-	}
-
-	if len(o.Infra.Version) == 0 {
-		o.Infra.Version = viper.GetString("infra.terraform.terraform_version")
 	}
 
 	if len(o.Infra.Version) == 0 {
