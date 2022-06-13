@@ -43,7 +43,7 @@ func NewDebugCmd() *cobra.Command {
 				{"PREFER_RUNTIME", viper.GetString("prefer_runtime")},
 			}).WithLeftAlignment().Render()
 
-			pterm.DefaultSection.Println("Terrafor Info")
+			pterm.DefaultSection.Println("Terraform Info")
 			dt.WithData(pterm.TableData{
 				{"TERRAFORM_VERSION", viper.GetString("terraform_version")},
 			}).WithLeftAlignment().Render()
@@ -57,7 +57,7 @@ func NewDebugCmd() *cobra.Command {
 
 			pterm.DefaultSection.Println("AWS Environment Info")
 
-			if len(viper.GetString("aws_profile")) > 1 {
+			if len(viper.GetString("aws_profile")) > 0 {
 				sess, err := utils.GetSession(&utils.SessionConfig{
 					Region:  viper.GetString("aws_region"),
 					Profile: viper.GetString("aws_profile"),
@@ -94,7 +94,7 @@ func NewDebugCmd() *cobra.Command {
 				if aerr, ok := err.(awserr.Error); ok {
 					switch aerr.Code() {
 					case "NoSuchEntity":
-						return fmt.Errorf("error obtaining AWS user with %s aws profile: %s is not found in account %s", viper.GetString("aws_profile"), *guo.User.UserName, *resp.Account)
+						return fmt.Errorf("error obtaining AWS user with aws_profile=%s: username %s is not found in account %s", viper.GetString("aws_profile"), *guo.User.UserName, *resp.Account)
 					default:
 						return err
 					}
