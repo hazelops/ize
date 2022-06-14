@@ -41,3 +41,7 @@ func (a *alias) Push(ui terminal.UI) error {
 func (a *alias) Build(ui terminal.UI) error {
 	return nil
 }
+
+func (a *alias) Redeploy(ui terminal.UI) error {
+	return nil
+}

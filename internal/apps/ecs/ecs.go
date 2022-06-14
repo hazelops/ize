@@ -25,15 +25,15 @@ import (
 const ecsDeployImage = "hazelops/ecs-deploy:latest"
 
 type ecs struct {
-	Name              string
-	Path              string
-	Image             string
-	Cluster           string
-	TaskDefinitionArn string
-	Timeout           int
-	AwsProfile        string
-	AwsRegion         string
-	Tag               string
+	Name                   string
+	Path                   string
+	Image                  string
+	Cluster                string
+	TaskDefinitionRevision string `mapstructure:"task_definition_revision"`
+	Timeout                int
+	AwsProfile             string
+	AwsRegion              string
+	Tag                    string
 }
 
 func NewECSApp(name string, app interface{}) *ecs {
@@ -106,6 +106,33 @@ func (e *ecs) Deploy(ui terminal.UI) error {
 
 	s.Done()
 	s = sg.Add("%s: deployment completed!", e.Name)
+	s.Done()
+
+	return nil
+}
+
+func (e *ecs) Redeploy(ui terminal.UI) error {
+	sg := ui.StepGroup()
+	defer sg.Wait()
+
+	s := sg.Add("%s: redeploying app container...", e.Name)
+	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
+
+	if viper.GetString("prefer-runtime") == "native" {
+		err := e.redeployLocal(s.TermOutput())
+		pterm.SetDefaultOutput(os.Stdout)
+		if err != nil {
+			return fmt.Errorf("unable to redeploy app: %w", err)
+		}
+	} else {
+		err := e.redeployWithDocker(s.TermOutput())
+		if err != nil {
+			return fmt.Errorf("unable to redeploy app: %w", err)
+		}
+	}
+
+	s.Done()
+	s = sg.Add("%s: redeployment completed!", e.Name)
 	s.Done()
 
 	return nil

@@ -3,6 +3,7 @@ package ecs
 import (
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"time"
 
@@ -117,13 +118,117 @@ func (e *ecs) deployLocal(w io.Writer) error {
 	return nil
 }
 
+func (e *ecs) redeployLocal(w io.Writer) error {
+	pterm.SetDefaultOutput(w)
+
+	sess, err := utils.GetSession(&utils.SessionConfig{
+		Region:  e.AwsRegion,
+		Profile: e.AwsProfile,
+	})
+	if err != nil {
+		return err
+	}
+
+	svc := ecssvc.New(sess)
+
+	name := fmt.Sprintf("%s-%s", viper.GetString("env"), e.Name)
+
+	dso, err := e.getService(name)
+	if err != nil {
+		return err
+	}
+
+	var td *ecssvc.TaskDefinition
+
+	switch e.TaskDefinitionRevision {
+	case "latest":
+		tds, err := svc.ListTaskDefinitions(&ecssvc.ListTaskDefinitionsInput{
+			FamilyPrefix: aws.String(name),
+			Sort:         aws.String("DESC"),
+		})
+		if err != nil {
+			return fmt.Errorf("unable to list task definitions: %w", err)
+		}
+
+		dtdo, err := svc.DescribeTaskDefinition(&ecssvc.DescribeTaskDefinitionInput{
+			TaskDefinition: tds.TaskDefinitionArns[0],
+		})
+		if err != nil {
+			return fmt.Errorf("unable to describe task definition: %w", err)
+		}
+
+		td = dtdo.TaskDefinition
+	case "current":
+		dtdo, err := svc.DescribeTaskDefinition(&ecssvc.DescribeTaskDefinitionInput{
+			TaskDefinition: dso.Services[0].TaskDefinition,
+		})
+		if err != nil {
+			return fmt.Errorf("unable to describe task definition: %w", err)
+		}
+
+		td = dtdo.TaskDefinition
+	default:
+		r, err := strconv.Atoi(e.TaskDefinitionRevision)
+		if err == nil && r > 0 {
+			arn := fmt.Sprintf("%s:%s", name, e.TaskDefinitionRevision)
+
+			dtdo, err := svc.DescribeTaskDefinition(&ecssvc.DescribeTaskDefinitionInput{
+				TaskDefinition: &arn,
+			})
+			if err != nil {
+				return fmt.Errorf("unable to describe task definition: %w", err)
+			}
+
+			td = dtdo.TaskDefinition
+		} else {
+			return fmt.Errorf("invalid task definition revision: %s", e.TaskDefinitionRevision)
+		}
+	}
+
+	if err = e.updateTaskDefinition(svc, td, name, "Redeploying new task definition"); err != nil {
+		pterm.Println(err)
+		err := getLastContainerLogs(fmt.Sprintf("%s-%s", viper.GetString("env"), e.Name), sess)
+		if err != nil {
+			pterm.Println("Failed to get logs:", err)
+		}
+		pterm.Println("test")
+		return nil
+	}
+
+	return nil
+}
+
+func (e *ecs) getService(name string) (*ecssvc.DescribeServicesOutput, error) {
+	sess, err := utils.GetSession(&utils.SessionConfig{
+		Region:  e.AwsRegion,
+		Profile: e.AwsProfile,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	dso, err := ecssvc.New(sess).DescribeServices(&ecssvc.DescribeServicesInput{
+		Cluster:  &e.Cluster,
+		Services: []*string{&name},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(dso.Services) == 0 {
+		return nil, fmt.Errorf("app %s not found", name)
+	}
+	return dso, nil
+}
+
 func (e *ecs) updateTaskDefinition(svc *ecssvc.ECS, td *ecssvc.TaskDefinition, serviceName string, title string) error {
 	pterm.Println("Updating service")
 
 	_, err := svc.UpdateService(&ecssvc.UpdateServiceInput{
-		Service:        aws.String(serviceName),
-		Cluster:        aws.String(e.Cluster),
-		TaskDefinition: aws.String(*td.TaskDefinitionArn),
+		Service:            aws.String(serviceName),
+		Cluster:            aws.String(e.Cluster),
+		TaskDefinition:     aws.String(*td.TaskDefinitionArn),
+		ForceNewDeployment: aws.Bool(true),
 	})
 	if err != nil {
 		return fmt.Errorf("unable to update service: %w", err)

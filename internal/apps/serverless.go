@@ -441,3 +441,7 @@ func (sls *serverless) Push(ui terminal.UI) error {
 func (sls *serverless) Build(ui terminal.UI) error {
 	return nil
 }
+
+func (sls *serverless) Redeploy(ui terminal.UI) error {
+	return nil
+}
