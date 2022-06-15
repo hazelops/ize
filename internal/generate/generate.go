@@ -32,7 +32,7 @@ func determineRepoDir(template string, destionation string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return "", nil
+		return destionation, nil
 	} else {
 		return "", fmt.Errorf("supported only repository url or internal examples")
 	}
