@@ -14,16 +14,20 @@ import (
 )
 
 type DeployOptions struct {
-	Config  *config.Config
-	AppName string
-	Tag     string
-	Image   string
-	App     interface{}
+	Config                 *config.Config
+	AppName                string
+	Tag                    string
+	Image                  string
+	App                    interface{}
+	TaskDefinitionRevision string
 }
 
 var deployLongDesc = templates.LongDesc(`
 	Deploy service.
     App name must be specified for a app deploy. 
+
+	If you install a revision of the task definition, the application will be redeployed (ECS only).
+	Warning: Redeployment using the docker runtime, a new task definition will be deployed based on the specified revision.
 `)
 
 var deployExample = templates.Examples(`
@@ -36,6 +40,9 @@ var deployExample = templates.Examples(`
 	# Deploy app via config file installed from env
 	export IZE_CONFIG_FILE=/path/to/config
 	ize deploy <app name>
+
+	# Redeploy app (ECS only)
+	ize deploy <app name> --task-definition-revision <task definition revision>
 `)
 
 func NewDeployFlags() *DeployOptions {
@@ -72,6 +79,8 @@ func NewCmdDeploy() *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().StringVar(&o.TaskDefinitionRevision, "task-definition-revision", "", "set task definition revision (ECS only)")
 
 	return cmd
 }
@@ -136,6 +145,7 @@ func (o *DeployOptions) Run() error {
 
 	switch appType {
 	case "ecs":
+		o.App.(map[string]interface{})["task_definition_revision"] = o.TaskDefinitionRevision
 		deployment = ecs.NewECSApp(o.AppName, o.App)
 	case "serverless":
 		deployment = apps.NewServerlessApp(o.AppName, o.App)
@@ -143,6 +153,17 @@ func (o *DeployOptions) Run() error {
 		deployment = apps.NewAliasApp(o.AppName)
 	default:
 		return fmt.Errorf("%s apps are not supported in this command", appType)
+	}
+
+	if len(o.TaskDefinitionRevision) != 0 {
+		err := deployment.Redeploy(ui)
+		if err != nil {
+			return err
+		}
+
+		ui.Output("Redeploy app %s completed\n", o.AppName, terminal.WithSuccessStyle())
+
+		return nil
 	}
 
 	err := deployment.Deploy(ui)
