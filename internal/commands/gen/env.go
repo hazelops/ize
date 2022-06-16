@@ -84,13 +84,8 @@ func (o *EnvOptions) Complete(cmd *cobra.Command, args []string) error {
 	o.Config.Env = viper.GetString("env")
 	o.Config.Namespace = viper.GetString("namespace")
 
-	// Viper can't automaticly bind ENV to flag variable
 	if len(o.TerraformStateBucketName) == 0 {
-		o.TerraformStateBucketName = viper.GetString("terraform-state-bucket-name")
-	}
-
-	if len(o.TerraformStateBucketName) == 0 {
-		o.TerraformStateBucketName = viper.GetString("infra.terraform.terraform_state_bucket_name")
+		o.TerraformStateBucketName = viper.GetString("infra.terraform.state_bucket_name")
 	}
 
 	return nil
@@ -116,8 +111,8 @@ func (o *EnvOptions) Run() error {
 	pterm.DefaultSection.Printfln("Starting generate terraform files")
 
 	awsStateRegion := o.Config.AwsRegion
-	if len(viper.GetString("infra.terraform.terraform_state_region")) > 0 {
-		awsStateRegion = viper.GetString("infra.terraform.terraform_state_region")
+	if len(viper.GetString("infra.terraform.state_bucket_region")) > 0 {
+		awsStateRegion = viper.GetString("infra.terraform.state_bucket_region")
 	}
 
 	backendOpts := template.BackendOpts{
