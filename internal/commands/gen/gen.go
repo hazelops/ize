@@ -22,6 +22,7 @@ func NewCmdGen() *cobra.Command {
 		NewCmdEnv(),
 		NewCmdCompletion(),
 		NewCmdMfa(),
+		NewCmdAWSProfile(),
 	)
 
 	return cmd
