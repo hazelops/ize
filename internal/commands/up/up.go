@@ -343,7 +343,7 @@ func deployApp(ui terminal.UI, o *UpOptions) error {
 func deployInfra(ui terminal.UI, infra Infra, config config.Config, skipGen bool) error {
 	if !skipGen {
 		if !checkFileExists(filepath.Join(viper.GetString("ENV_DIR"), "backend.tf")) || !checkFileExists(filepath.Join(viper.GetString("ENV_DIR"), "terraform.tfvars")) {
-			err := gen.NewCmdEnv().Execute()
+			err := gen.NewCmdTfenv().Execute()
 			if err != nil {
 				return err
 			}
