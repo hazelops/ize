@@ -14,39 +14,39 @@ import (
 	"github.com/spf13/viper"
 )
 
-type EnvOptions struct {
+type TfenvOptions struct {
 	Config                   *config.Config
 	TerraformStateBucketName string
 }
 
-var envLongDesc = templates.LongDesc(`
-	Env generates backend.tf and variable.tfvars files.
+var tfenvLongDesc = templates.LongDesc(`
+	tfenv generates backend.tf and variable.tfvars files.
 `)
 
-var envExample = templates.Examples(`
+var tfenvExample = templates.Examples(`
 	# Generate files
-	ize env
+	ize tfenv
 
 	# Generate files via config file
-	ize --config-file /path/to/config env
+	ize --config-file /path/to/config tfenv
 
 	# Generate files via config file installed from env
 	export IZE_CONFIG_FILE=/path/to/config
-	ize env
+	ize tfenv
 `)
 
-func NewEnvFlags() *EnvOptions {
-	return &EnvOptions{}
+func NewTfenvFlags() *TfenvOptions {
+	return &TfenvOptions{}
 }
 
-func NewCmdEnv() *cobra.Command {
-	o := NewEnvFlags()
+func NewCmdTfenv() *cobra.Command {
+	o := NewTfenvFlags()
 
 	cmd := &cobra.Command{
-		Use:     "env",
+		Use:     "tfenv",
 		Short:   "Generate terraform files",
-		Long:    envLongDesc,
-		Example: envExample,
+		Long:    tfenvLongDesc,
+		Example: tfenvExample,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			err := o.Complete(cmd, args)
@@ -73,7 +73,7 @@ func NewCmdEnv() *cobra.Command {
 	return cmd
 }
 
-func (o *EnvOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *TfenvOptions) Complete(cmd *cobra.Command, args []string) error {
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return err
@@ -91,7 +91,7 @@ func (o *EnvOptions) Complete(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (o *EnvOptions) Validate() error {
+func (o *TfenvOptions) Validate() error {
 	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("env must be specified\n")
 	}
@@ -107,7 +107,7 @@ func (o *EnvOptions) Validate() error {
 	return nil
 }
 
-func (o *EnvOptions) Run() error {
+func (o *TfenvOptions) Run() error {
 	pterm.DefaultSection.Printfln("Starting generate terraform files")
 
 	awsStateRegion := o.Config.AwsRegion
