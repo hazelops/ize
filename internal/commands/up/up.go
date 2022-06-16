@@ -30,6 +30,7 @@ type UpOptions struct {
 	AppName          string
 	Tag              string
 	SkipBuildAndPush bool
+	SkipGen          bool
 	Apps             map[string]*interface{}
 	Infra            Infra
 	App              interface{}
@@ -107,6 +108,7 @@ func NewCmdUp() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "approve deploy all")
+	cmd.Flags().BoolVar(&o.SkipGen, "skip-gen", false, "skip generating terraform files")
 
 	cmd.AddCommand(
 		NewCmdUpInfra(),
@@ -229,7 +231,7 @@ func validateAll(o *UpOptions) error {
 }
 
 func deployAll(ui terminal.UI, o *UpOptions) error {
-	err := deployInfra(ui, o.Infra, *o.Config)
+	err := deployInfra(ui, o.Infra, *o.Config, o.SkipGen)
 	if err != nil {
 		return err
 	}
@@ -338,7 +340,16 @@ func deployApp(ui terminal.UI, o *UpOptions) error {
 	return nil
 }
 
-func deployInfra(ui terminal.UI, infra Infra, config config.Config) error {
+func deployInfra(ui terminal.UI, infra Infra, config config.Config, skipGen bool) error {
+	if !skipGen {
+		if !checkFileExists(filepath.Join(viper.GetString("ENV_DIR"), "backend.tf")) || !checkFileExists(filepath.Join(viper.GetString("ENV_DIR"), "terraform.tfvars")) {
+			err := gen.NewCmdEnv().Execute()
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	var tf terraform.Terraform
 
 	logrus.Infof("infra: %s", infra)
@@ -346,10 +357,6 @@ func deployInfra(ui terminal.UI, infra Infra, config config.Config) error {
 	v, err := config.Session.Config.Credentials.Get()
 	if err != nil {
 		return fmt.Errorf("can't get AWS credentials: %w", err)
-	}
-
-	if !checkFileExists(filepath.Join(viper.GetString("ENV_DIR"), "backend.tf")) || !checkFileExists(filepath.Join(viper.GetString("ENV_DIR"), "terraform.tfvars")) {
-		gen.NewCmdEnv().Execute()
 	}
 
 	env := []string{
