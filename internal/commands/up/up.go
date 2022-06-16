@@ -41,7 +41,7 @@ type UpOptions struct {
 type Apps map[string]*interface{}
 
 type Infra struct {
-	Version string `mapstructure:"terraform_version"`
+	Version string `mapstructure:"version"`
 	Region  string `mapstructure:"aws_region"`
 	Profile string `mapstructure:"aws_profile"`
 }
