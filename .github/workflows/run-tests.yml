@@ -18,7 +18,10 @@ jobs:
     name: Build
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install Go
@@ -41,15 +44,21 @@ jobs:
           path: ${{ github.workspace }}/ize
 
   ecs-apps-monorepo:
-    name: ECS Apps
+    name: ECS Apps Monorepo
     needs: build
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
+        os:
+          - ubuntu-latest
+          - windows-latest
     runs-on: ${{ matrix.os }}
     env:
       ENV: test-ecs-apps
     steps:
+      - name: Configure PATH
+        run: |
+          echo "${{ github.workspace }}/bin/" >> $GITHUB_PATH
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -75,8 +84,8 @@ jobs:
 
       - name: Make Executable
         run: |
-          chmod +rx ${{ github.workspace }}/bin/ize
-          ${{ github.workspace }}/bin/ize --version
+          chmod +rx "${{ github.workspace }}/bin/ize"
+          ize --version
 
       - name: Create AWS Profile
         run: ize gen aws-profile
@@ -94,7 +103,6 @@ jobs:
           go test --timeout 0 --tags="e2e ecs_apps" ./...
         env:
           IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/${{ github.job }}
-          IZE_BINARY: ${{ github.workspace }}/bin/ize
         continue-on-error: true
 
   bastion-tunnel-monorepo:
@@ -107,64 +115,10 @@ jobs:
     env:
       ENV: bastion-tunnel
     steps:
-      - name: Configure AWS Credentials
-
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Install Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.17.x
-
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Prepare Test Environment
-        run: ize gen aws-profile
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: ize-${{ matrix.os }}
-          path: bin
-
-      - name: Make Executable
+      - name: Configure PATH
         run: |
-          chmod +rx ${{ github.workspace }}/bin/ize
-          ${{ github.workspace }}/bin/ize  --version
+          echo "${{ github.workspace }}/bin/" >> $GITHUB_PATH
 
-      - name: Create AWS Profile
-        run: ize gen aws-profile
-
-      - name: Install SSH key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ env.SSH_PUBLIC_KEY }}
-          name: id_rsa.pub
-          known_hosts: unnecessary
-          if_key_exists: replace
-
-      - name: Run Tests
-        run: |
-          go test --timeout 0 --tags="e2e bastion_tunnel" ./...
-        env:
-          IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/bastion-tunnel-monorepo
-          IZE_BINARY: ${{ github.workspace }}/bin/ize
-        continue-on-error: true
-
-  test-terraform:
-    name: Terraform
-    needs: build
-    strategy:
-      matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
-    runs-on: ${{ matrix.os }}
-    env:
-      ENV: test-terraform
-    steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -190,8 +144,68 @@ jobs:
 
       - name: Make Executable
         run: |
-          chmod +rx ${{ github.workspace }}/bin/ize
-          ${{ github.workspace }}/bin/ize --version
+          chmod +rx "${{ github.workspace }}/bin/ize"
+          ize  --version
+
+      - name: Create AWS Profile
+        run: ize gen aws-profile
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ env.SSH_PUBLIC_KEY }}
+          name: id_rsa.pub
+          known_hosts: unnecessary
+          if_key_exists: replace
+
+      - name: Run Tests
+        run: |
+          go test --timeout 0 --tags="e2e bastion_tunnel" ./...
+        env:
+          IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/bastion-tunnel-monorepo
+        continue-on-error: true
+
+  test-terraform:
+    name: Terraform
+    needs: build
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+    env:
+      ENV: test-terraform
+    steps:
+      - name: Configure PATH
+        run: |
+          echo "${{ github.workspace }}/bin/" >> $GITHUB_PATH
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.x
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Prepare Test Environment
+        run: mv "${{ github.workspace }}/examples/ecs-apps-monorepo/.ize/env/testnut" "${{ github.workspace }}/examples/ecs-apps-monorepo/.ize/env/${{ env.ENV }}"
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ize-${{ matrix.os }}
+          path: bin
+
+      - name: Make Executable
+        run: |
+          chmod +rx "${{ github.workspace }}/bin/ize"
+          ize --version
 
       - name: Create AWS Profile
         run: ize gen aws-profile
@@ -209,5 +223,4 @@ jobs:
           go test --timeout 0 --tags="e2e terraform" ./...
         env:
           IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/ecs-apps-monorepo
-          IZE_BINARY: ${{ github.workspace }}/bin/ize
-        continue-on-error: true
+          continue-on-error: true
