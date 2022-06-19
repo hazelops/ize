@@ -223,4 +223,4 @@ jobs:
           go test --timeout 0 --tags="e2e terraform" ./...
         env:
           IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/ecs-apps-monorepo
-          continue-on-error: true
+        continue-on-error: true
