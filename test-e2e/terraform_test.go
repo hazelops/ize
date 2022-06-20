@@ -36,18 +36,18 @@ func TestIzeTerraformInit(t *testing.T) {
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
-	stdout, stderr, err := ize.RunRaw("gen", "env")
+	stdout, stderr, err := ize.RunRaw("gen", "tfenv")
 
 	if err != nil {
 		t.Errorf("error: %s", err)
 	}
 
 	if stderr != "" {
-		t.Errorf("unexpected stderr output ize deploy all: %s", err)
+		t.Errorf("unexpected stderr output ize gen tfenv: %s", err)
 	}
 
 	if !strings.Contains(stdout, "Generate terraform files completed") {
-		t.Errorf("No success message detected after all deploy:\n%s", stdout)
+		t.Errorf("No success message detected after gen tfenv:\n%s", stdout)
 	}
 
 	stdout, stderr, err = ize.RunRaw("terraform", "init")
