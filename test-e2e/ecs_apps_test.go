@@ -268,7 +268,7 @@ func TestIzeDownAll_ecs_apps(t *testing.T) {
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
-	stdout, stderr, err := ize.RunRaw("dowb", "--auto-approve")
+	stdout, stderr, err := ize.RunRaw("down", "--auto-approve")
 
 	if err != nil {
 		t.Errorf("error: %s", err)

@@ -51,6 +51,7 @@ jobs:
         os:
           - ubuntu-latest
           - windows-latest
+          - macos-latest
     runs-on: ${{ matrix.os }}
     env:
       ENV: test-ecs-apps
@@ -100,7 +101,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          go test --timeout 0 --tags="e2e ecs_apps" ./...
+          go test -v --timeout 0 --tags="e2e ecs_apps" ./test-e2e
         env:
           IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/${{ github.job }}
         continue-on-error: true
@@ -110,7 +111,7 @@ jobs:
     needs: build
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
+        os: [ ubuntu-latest, windows-latest, macos-latest  ]
     runs-on: ${{ matrix.os }}
     env:
       ENV: bastion-tunnel
@@ -135,7 +136,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Prepare Test Environment
-        run: mv "${{ github.workspace }}/examples/ecs-apps-monorepo/.ize/env/testnut" "${{ github.workspace }}/examples/ecs-apps-monorepo/.ize/env/${{ env.ENV }}"
+        run: mv "${{ github.workspace }}/examples/${{ github.job }}/.ize/env/testnut" "${{ github.workspace }}/examples/${{ github.job }}/.ize/env/${{ env.ENV }}"
 
       - uses: actions/download-artifact@v3
         with:
@@ -160,9 +161,9 @@ jobs:
 
       - name: Run Tests
         run: |
-          go test --timeout 0 --tags="e2e bastion_tunnel" ./...
+          go test -v --timeout 0 --tags="e2e bastion_tunnel" ./test-e2e
         env:
-          IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/bastion-tunnel-monorepo
+          IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/${{ github.job }}
         continue-on-error: true
 
   test-terraform:
@@ -220,7 +221,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          go test --timeout 0 --tags="e2e terraform" ./...
+          go test -v --timeout 0 --tags="e2e terraform" ./test-e2e
         env:
           IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/ecs-apps-monorepo
         continue-on-error: true
