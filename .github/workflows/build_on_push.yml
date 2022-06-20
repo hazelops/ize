@@ -22,6 +22,7 @@ jobs:
     - name: Set env
       run: |
         echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+        echo "GITHUB_ACTOR=${GITHUB_ACTOR}" >> $GITHIB_ENV
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v2
       with:
@@ -35,3 +36,4 @@ jobs:
         RELEASE_VERSION: ${{ github.sha }}
         FURY_TOKEN: ${{ secrets.FURY_PUSH_TOKEN }}
         SHORT_GIT_SHA: $(git rev-parse --short HEAD)
+        GITHUB_ACTOR: ${{ env.GITHUB_ACTOR }}

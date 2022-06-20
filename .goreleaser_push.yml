@@ -15,7 +15,7 @@ builds:
     dir: .
     main: ./cmd
     ldflags:
-      - -s -w -X 'github.com/hazelops/ize/internal/version.Version={{.Env.RELEASE_VERSION}}' -X 'github.com/hazelops/ize/internal/vesrion.GitCommit={{.Env.SHORT_GIT_SHA}}'
+      - -s -w -X 'github.com/hazelops/ize/internal/version.Version={{.Env.RELEASE_VERSION}}{{.Date}}' -X 'github.com/hazelops/ize/internal/version.GitCommit={{.Env.SHORT_GIT_SHA}}'
 
 release:
   prerelease: true
