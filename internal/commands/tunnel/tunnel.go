@@ -186,13 +186,16 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 		return fmt.Errorf("can't run tunnel: %w", err)
 	}
 
-	c := exec.Command(
-		"ssh", "-M", "-t", "-S", "bastion.sock", "-fN",
+	args := []string{"-M", "-t", "-S", "bastion.sock", "-fN",
 		"-o", "StrictHostKeyChecking=no",
 		fmt.Sprintf("ubuntu@%s", o.BastionHostID),
-		"-F", sshConfigPath,
-		"-i", getPrivateKey(o.PrivateKeyFile),
-	)
+		"-F", sshConfigPath}
+
+	if _, err := os.Stat(o.PrivateKeyFile); !os.IsNotExist(err) {
+		args = append(args, "-i", o.PrivateKeyFile)
+	}
+
+	c := exec.Command("ssh", args...)
 
 	c.Dir = viper.GetString("ENV_DIR")
 
