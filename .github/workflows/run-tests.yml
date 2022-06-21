@@ -47,6 +47,7 @@ jobs:
     name: ECS Apps Monorepo
     needs: build
     strategy:
+      max-parallel: 1
       matrix:
         os:
           - ubuntu-latest
@@ -107,9 +108,10 @@ jobs:
         continue-on-error: true
 
   bastion-tunnel-monorepo:
-    name: Tunnel
+    name: Bastion tunnel monorepo
     needs: build
     strategy:
+      max-parallel: 1
       matrix:
         os: [ ubuntu-latest, windows-latest, macos-latest  ]
     runs-on: ${{ matrix.os }}
@@ -170,6 +172,7 @@ jobs:
     name: Terraform
     needs: build
     strategy:
+      max-parallel: 1
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
