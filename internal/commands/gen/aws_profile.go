@@ -34,10 +34,12 @@ func NewCmdAWSProfile() *cobra.Command {
 }
 
 func ConfigureAwsProfile() (string, error) {
-	aws := filepath.Join(os.Getenv("HOME"), ".aws")
+	homeDirPath, err := os.UserHomeDir()
+
+	aws := filepath.Join(homeDirPath, ".aws")
 	awsCredentialsPath := filepath.Join(aws, "credentials")
 
-	_, err := os.Stat(aws)
+	_, err = os.Stat(aws)
 	if os.IsNotExist(err) {
 		os.MkdirAll(aws, 0755)
 	}
