@@ -3,6 +3,7 @@ package gen
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -18,12 +19,12 @@ func NewCmdAWSProfile() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
-			err := ConfigureAwsProfile()
+			credentialsPath, err := ConfigureAwsProfile()
 			if err != nil {
 				return err
 			}
 
-			pterm.Success.Printfln("AWS profile added")
+			pterm.Success.Printfln("AWS profile `%s` added to %s", viper.GetString("AWS_PROFILE"), credentialsPath)
 
 			return nil
 		},
@@ -32,8 +33,10 @@ func NewCmdAWSProfile() *cobra.Command {
 	return cmd
 }
 
-func ConfigureAwsProfile() error {
-	aws := fmt.Sprintf("%s/.aws", os.Getenv("HOME"))
+func ConfigureAwsProfile() (string, error) {
+	aws := filepath.Join(os.Getenv("HOME"), ".aws")
+	awsCredentialsPath := filepath.Join(aws, "credentials")
+
 	_, err := os.Stat(aws)
 	if os.IsNotExist(err) {
 		os.MkdirAll(aws, 0755)
@@ -41,16 +44,16 @@ func ConfigureAwsProfile() error {
 
 	var f *os.File
 
-	_, err = os.Stat(fmt.Sprintf("%s/credentials", aws))
+	_, err = os.Stat(awsCredentialsPath)
 	if os.IsNotExist(err) {
-		f, err = os.OpenFile(fmt.Sprintf("%s/credentials", aws), os.O_RDWR|os.O_CREATE, 0600)
+		f, err = os.OpenFile(awsCredentialsPath, os.O_RDWR|os.O_CREATE, 0600)
 		if err != nil {
-			return fmt.Errorf("can't open file: %w", err)
+			return awsCredentialsPath, fmt.Errorf("can't open file: %w", err)
 		}
 	} else {
-		f, err = os.OpenFile(fmt.Sprintf("%s/credentials", aws), os.O_RDWR|os.O_APPEND, 0600)
+		f, err = os.OpenFile(filepath.Join(awsCredentialsPath), os.O_RDWR|os.O_APPEND, 0600)
 		if err != nil {
-			return fmt.Errorf("can't open file: %w", err)
+			return awsCredentialsPath, fmt.Errorf("can't open file: %w", err)
 		}
 	}
 
@@ -61,13 +64,13 @@ func ConfigureAwsProfile() error {
 	r := viper.GetString("AWS_REGION")
 	p := viper.GetString("AWS_PROFILE")
 	if ak == "" || sk == "" || r == "" || p == "" {
-		return fmt.Errorf("AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, AWS_PROFILE must be set")
+		return awsCredentialsPath, fmt.Errorf("AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, AWS_PROFILE must be set")
 	}
 
 	_, err = f.WriteString(fmt.Sprintf("[%v]\naws_access_key_id = %v\naws_secret_access_key = %v\nregion = %v\n\n", p, ak, sk, r))
 	if err != nil {
-		return fmt.Errorf("can't write to %s/credentials", aws)
+		return awsCredentialsPath, fmt.Errorf("can't write to %s", filepath.Join(awsCredentialsPath))
 	}
 
-	return nil
+	return awsCredentialsPath, nil
 }
