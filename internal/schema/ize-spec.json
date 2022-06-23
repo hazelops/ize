@@ -1,0 +1,108 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "aws_profile": {
+            "type": "string"
+        },
+        "aws_region": {
+            "type": "string"
+        },
+        "config_file": {
+            "type": "string"
+        },
+        "env": {
+            "type": "string"
+        },
+        "env_dir": {
+            "type": "string"
+        },
+        "home": {
+            "type": "string"
+        },
+        "infra_dir": {
+            "type": "string"
+        },
+        "log_level": {
+            "type": "string"
+        },
+        "namespace": {
+            "type": "string"
+        },
+        "plain_text": {
+            "type": "boolean"
+        },
+        "prefer_runtime": {
+            "type": "string"
+        },
+        "projects_path": {
+            "type": "string"
+        },
+        "root_dir": {
+            "type": "string"
+        },
+        "terraform_version": {
+            "type": "string"
+        },
+        "app": {
+            "type": "object",
+            "properties": {}
+        },
+        "infra": {
+            "type": "object",
+            "properties": {
+                "terraform": {
+                    "type": "object",
+                    "properties": {
+                        "version": {
+                            "type": "string"
+                        },
+                        "state_bucket_region": {
+                            "type": "string"
+                        },
+                        "state_bucket_name": {
+                            "type": "string"
+                        },
+                        "root_domain_name": {
+                            "type": "string"
+                        },
+                        "aws_region": {
+                            "type": "string"
+                        },
+                        "aws_profile": {
+                            "type": "string"
+                        },
+                        "Tunnel": {
+                            "type": "object",
+                            "properties": {
+                                "bastion_instance_id": {
+                                    "type": "string"
+                                },
+                                "forward_host": {
+                                    "type": "array"
+                                }
+                            },
+                            "additionalProperties": false
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            "required": [
+                "terraform"
+            ]
+        }
+    },
+    "required": [
+        "aws_profile",
+        "aws_region",
+        "env",
+        "env_dir",
+        "home",
+        "infra_dir",
+        "namespace",
+        "prefer_runtime",
+        "root_dir"
+    ],
+    "additionalProperties": false
+}
