@@ -20,6 +20,7 @@ type DeployOptions struct {
 	Image                  string
 	App                    interface{}
 	TaskDefinitionRevision string
+	Unsafe                 bool
 }
 
 var deployLongDesc = templates.LongDesc(`
@@ -81,6 +82,7 @@ func NewCmdDeploy() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.TaskDefinitionRevision, "task-definition-revision", "", "set task definition revision (ECS only)")
+	cmd.Flags().BoolVar(&o.Unsafe, "unsafe", false, "set unsafe option (accelerates deployment if possible)")
 
 	return cmd
 }
@@ -142,6 +144,8 @@ func (o *DeployOptions) Run() error {
 	}
 
 	var deployment apps.App
+
+	o.App.(map[string]interface{})["unsafe"] = o.Unsafe
 
 	switch appType {
 	case "ecs":

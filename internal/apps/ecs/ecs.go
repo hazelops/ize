@@ -26,6 +26,7 @@ const ecsDeployImage = "hazelops/ecs-deploy:latest"
 
 type ecs struct {
 	Name                   string
+	Unsafe                 bool
 	Path                   string
 	Image                  string
 	Cluster                string

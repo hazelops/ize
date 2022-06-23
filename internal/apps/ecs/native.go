@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	ecssvc "github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go/service/elbv2"
 	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/pterm/pterm"
 	"github.com/spf13/viper"
@@ -90,7 +91,7 @@ func (e *ecs) deployLocal(w io.Writer) error {
 
 	pterm.Printfln("Successfully created revision: %s:%d", *rtdo.TaskDefinition.Family, *rtdo.TaskDefinition.Revision)
 
-	if err = e.updateTaskDefinition(svc, rtdo.TaskDefinition, name, "Deploying new task definition"); err != nil {
+	if err = e.updateTaskDefinition(sess, rtdo.TaskDefinition, name, "Deploying new task definition"); err != nil {
 		err := getLastContainerLogs(fmt.Sprintf("%s-%s", viper.GetString("env"), e.Name), sess)
 		if err != nil {
 			pterm.Println("Failed to get logs:", err)
@@ -98,7 +99,7 @@ func (e *ecs) deployLocal(w io.Writer) error {
 
 		pterm.Printfln("Rolling back to old task definition: %s:%d", *oldTaskDef.Family, *oldTaskDef.Revision)
 		e.Timeout = 600
-		if err = e.updateTaskDefinition(svc, &oldTaskDef, name, "Deploying previous task definition"); err != nil {
+		if err = e.updateTaskDefinition(sess, &oldTaskDef, name, "Deploying previous task definition"); err != nil {
 			return fmt.Errorf("unable to rollback to old task definition: %w", err)
 		}
 
@@ -185,7 +186,7 @@ func (e *ecs) redeployLocal(w io.Writer) error {
 		}
 	}
 
-	if err = e.updateTaskDefinition(svc, td, name, "Redeploying new task definition"); err != nil {
+	if err = e.updateTaskDefinition(sess, td, name, "Redeploying new task definition"); err != nil {
 		pterm.Println(err)
 		err := getLastContainerLogs(fmt.Sprintf("%s-%s", viper.GetString("env"), e.Name), sess)
 		if err != nil {
@@ -221,10 +222,12 @@ func (e *ecs) getService(name string) (*ecssvc.DescribeServicesOutput, error) {
 	return dso, nil
 }
 
-func (e *ecs) updateTaskDefinition(svc *ecssvc.ECS, td *ecssvc.TaskDefinition, serviceName string, title string) error {
+func (e *ecs) updateTaskDefinition(sess *session.Session, td *ecssvc.TaskDefinition, serviceName string, title string) error {
 	pterm.Println("Updating service")
 
-	_, err := svc.UpdateService(&ecssvc.UpdateServiceInput{
+	svc := ecssvc.New(sess)
+
+	uso, err := svc.UpdateService(&ecssvc.UpdateServiceInput{
 		Service:            aws.String(serviceName),
 		Cluster:            aws.String(e.Cluster),
 		TaskDefinition:     aws.String(*td.TaskDefinitionArn),
@@ -232,6 +235,30 @@ func (e *ecs) updateTaskDefinition(svc *ecssvc.ECS, td *ecssvc.TaskDefinition, s
 	})
 	if err != nil {
 		return fmt.Errorf("unable to update service: %w", err)
+	}
+
+	var dtgo *elbv2.DescribeTargetGroupsOutput
+	if e.Unsafe {
+		pterm.Println("WARNING: deployment will be accelerated (unsafe)")
+
+		elbsvc := elbv2.New(sess)
+		dtgo, err = elbsvc.DescribeTargetGroups(&elbv2.DescribeTargetGroupsInput{
+			TargetGroupArns: aws.StringSlice([]string{*uso.Service.LoadBalancers[0].TargetGroupArn}),
+		})
+		if err != nil {
+			return fmt.Errorf("can't describe target groups: %w", err)
+		}
+
+		_, err = elbv2.New(sess).ModifyTargetGroup(&elbv2.ModifyTargetGroupInput{
+			HealthyThresholdCount:      aws.Int64(2),
+			HealthCheckIntervalSeconds: aws.Int64(5),
+			HealthCheckTimeoutSeconds:  aws.Int64(2),
+			UnhealthyThresholdCount:    aws.Int64(2),
+			TargetGroupArn:             uso.Service.LoadBalancers[0].TargetGroupArn,
+		})
+		if err != nil {
+			return fmt.Errorf("unable to modify target group: %w", err)
+		}
 	}
 
 	pterm.Printfln("Successfully changed task definition to: %s:%d", *td.Family, *td.Revision)
@@ -256,6 +283,19 @@ func (e *ecs) updateTaskDefinition(svc *ecssvc.ECS, td *ecssvc.TaskDefinition, s
 	if waiting && time.Now().After(waitingTimeout) {
 		pterm.Println("Deployment failed due to timeout")
 		return fmt.Errorf("deployment failed due to timeout")
+	}
+
+	if e.Unsafe {
+		_, err = elbv2.New(sess).ModifyTargetGroup(&elbv2.ModifyTargetGroupInput{
+			HealthyThresholdCount:      dtgo.TargetGroups[0].HealthyThresholdCount,
+			HealthCheckIntervalSeconds: dtgo.TargetGroups[0].HealthCheckIntervalSeconds,
+			HealthCheckTimeoutSeconds:  dtgo.TargetGroups[0].HealthCheckTimeoutSeconds,
+			UnhealthyThresholdCount:    dtgo.TargetGroups[0].UnhealthyThresholdCount,
+			TargetGroupArn:             uso.Service.LoadBalancers[0].TargetGroupArn,
+		})
+		if err != nil {
+			return fmt.Errorf("unable to modify target group: %w", err)
+		}
 	}
 
 	return nil
