@@ -22,6 +22,7 @@ import (
 	"github.com/hazelops/ize/internal/commands/terraform"
 	"github.com/hazelops/ize/internal/commands/tunnel"
 	"github.com/hazelops/ize/internal/commands/up"
+	"github.com/hazelops/ize/internal/commands/validate"
 	cfg "github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/version"
 	"github.com/hazelops/ize/pkg/templates"
@@ -87,10 +88,13 @@ func init() {
 	rootCmd.PersistentFlags().String("terraform-version", "", "set terraform-version")
 	rootCmd.PersistentFlags().String("prefer-runtime", "native", "set prefer runtime (native or docker)")
 	rootCmd.Flags().StringP("tag", "t", "", "set tag")
-	viper.BindPFlags(rootCmd.PersistentFlags())
+	// viper.BindPFlags(rootCmd.PersistentFlags())
 	rootCmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
-		viper.BindPFlag(strings.ReplaceAll(f.Name, "_", "-"), rootCmd.PersistentFlags().Lookup(f.Name))
+		viper.BindPFlag(strings.ReplaceAll(f.Name, "-", "_"), rootCmd.PersistentFlags().Lookup(f.Name))
 	})
+
+	// [log-level aws-profile projects_path env_dir terraform-version prefer_runtime prefer-runtime aws-region home infra_dir root_dir config-file plain-text]
+	// [projects_path home env_dir aws-region aws-profile config-file prefer_runtime prefer-runtime infra_dir terraform-version root_dir log-level plain-text]
 
 	addCommands()
 
@@ -114,6 +118,7 @@ func addCommands() {
 		gen.NewCmdGen(),
 		push.NewCmdPush(),
 		up.NewCmdUp(),
+		validate.NewValidateCmd(),
 		NewVersionCmd(),
 	)
 }
