@@ -44,6 +44,12 @@
         "terraform_version": {
             "type": "string"
         },
+        "tag": {
+            "type": "string"
+        },
+        "tf_log": {
+            "type": "string"
+        },
         "app": {
             "type": "object",
             "properties": {}
