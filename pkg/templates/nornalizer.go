@@ -22,12 +22,30 @@ func Examples(s string) string {
 	return normalizer{s}.trim().indent().string
 }
 
+// Dedent removes any common leading whitespace from every line in text.
+func Dedent(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	return normalizer{s}.trim().dedent().string
+}
+
 type normalizer struct {
 	string
 }
 
 func (s normalizer) trim() normalizer {
 	s.string = strings.TrimSpace(s.string)
+	return s
+}
+
+func (s normalizer) dedent() normalizer {
+	text := []string{}
+	for _, line := range strings.Split(s.string, "\n") {
+		trimmed := strings.TrimSpace(line)
+		text = append(text, trimmed)
+	}
+	s.string = strings.Join(text, "\n")
 	return s
 }
 
