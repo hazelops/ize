@@ -199,9 +199,13 @@ func (o *TunnelOptions) Run(cmd *cobra.Command) error {
 
 	c.Dir = viper.GetString("ENV_DIR")
 
-	_, _, _, err = runCommand(c)
+	_, _, code, err := runCommand(c)
 	if err != nil {
 		return err
+	}
+
+	if code != 0 {
+		return fmt.Errorf("exit status: %d", code)
 	}
 
 	pterm.Success.Println("Tunnel is up! Forwarded ports:")
