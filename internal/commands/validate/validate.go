@@ -19,7 +19,7 @@ func NewValidateCmd() *cobra.Command {
 				return err
 			}
 
-			pterm.Success.Println("All good!")
+			pterm.Success.Println("Config structure, env vars and flags look valid. ")
 
 			return nil
 		},
