@@ -82,8 +82,6 @@ func (o *TunnelDownOptions) Run(cmd *cobra.Command) error {
 	c.Stderr = out
 	c.Dir = viper.GetString("ENV_DIR")
 
-	fmt.Println(viper.GetString("ENV_DIR"))
-
 	err := c.Run()
 	if err != nil {
 		patherr, ok := err.(*fs.PathError)

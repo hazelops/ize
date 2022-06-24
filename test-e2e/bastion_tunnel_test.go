@@ -16,22 +16,22 @@ func TestIzeGenEnv_bastion_tunnel(t *testing.T) {
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
-	stdout, stderr, err := ize.RunRaw("gen", "env")
+	stdout, stderr, err := ize.RunRaw("gen", "tfenv")
 
 	if err != nil {
 		t.Errorf("error: %s", err)
 	}
 
 	if stderr != "" {
-		t.Errorf("unexpected stderr output ize gen env: %s", err)
+		t.Errorf("unexpected stderr output ize gen tfenv: %s", err)
 	}
 
 	if !strings.Contains(stdout, "Generate terraform files completed") {
-		t.Errorf("No success message detected after gen env:\n%s", stdout)
+		t.Errorf("No success message detected after gen tfenv:\n%s", stdout)
 	}
 }
 
-func TestIzeDeployAll_bastion_tunnel(t *testing.T) {
+func TestIzeUpAll_bastion_tunnel(t *testing.T) {
 	if examplesRootDir == "" {
 		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
 	}
@@ -58,18 +58,18 @@ func TestIzeDeployAll_bastion_tunnel(t *testing.T) {
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
-	stdout, stderr, err := ize.RunRaw("deploy", "--auto-approve", "--prefer-runtime=docker")
+	stdout, stderr, err := ize.RunRaw("up", "--auto-approve")
 
 	if err != nil {
 		t.Errorf("error: %s", err)
 	}
 
 	if stderr != "" {
-		t.Errorf("unexpected stderr output ize deploy all: %s", err)
+		t.Errorf("unexpected stderr output ize up all: %s", err)
 	}
 
 	if !strings.Contains(stdout, "Deploy all completed!") {
-		t.Errorf("No success message detected after all deploy:\n%s", stdout)
+		t.Errorf("No success message detected after all up:\n%s", stdout)
 	}
 }
 
@@ -139,24 +139,24 @@ func TestIzeTunnelDown(t *testing.T) {
 	}
 }
 
-func TestIzeDestroyAll_bastion_tunnel(t *testing.T) {
+func TestIzeDownAll_bastion_tunnel(t *testing.T) {
 	if examplesRootDir == "" {
 		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
 	}
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
-	stdout, stderr, err := ize.RunRaw("destroy", "--auto-approve", "--prefer-runtime=docker")
+	stdout, stderr, err := ize.RunRaw("down", "--auto-approve")
 
 	if err != nil {
 		t.Errorf("error: %s", err)
 	}
 
 	if stderr != "" {
-		t.Errorf("unexpected stderr output ize deploy all: %s", err)
+		t.Errorf("unexpected stderr output ize down all: %s", err)
 	}
 
 	if !strings.Contains(stdout, "Destroy all completed!") {
-		t.Errorf("No success message detected after all destroy:\n%s", stdout)
+		t.Errorf("No success message detected after all down:\n%s", stdout)
 	}
 }

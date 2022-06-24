@@ -162,10 +162,11 @@ func InitConfig() {
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 
-	viper.SetDefault("ENV", os.Getenv("ENV"))
-	viper.SetDefault("AWS_PROFILE", os.Getenv("AWS_PROFILE"))
-	viper.SetDefault("AWS_REGION", os.Getenv("AWS_REGION"))
-	viper.SetDefault("NAMESPACE", os.Getenv("NAMESPACE"))
+	viper.BindEnv("ENV", "ENV")
+	viper.BindEnv("AWS_PROFILE", "AWS_PROFILE")
+	viper.BindEnv("AWS_REGION", "AWS_REGION")
+	viper.BindEnv("NAMESPACE", "NAMESPACE")
+
 	// TODO: those static defaults should probably go to a separate package and/or function. Also would include image names and such.
 	viper.SetDefault("TERRAFORM_VERSION", "1.1.3")
 	viper.SetDefault("PREFER_RUNTIME", "native")

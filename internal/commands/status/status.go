@@ -2,12 +2,13 @@ package status
 
 import (
 	"fmt"
+	"os"
+	"runtime"
+
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hazelops/ize/internal/aws/utils"
-	"os"
-	"runtime"
 
 	"github.com/hazelops/ize/internal/version"
 	"github.com/pterm/pterm"
@@ -33,7 +34,7 @@ func NewDebugCmd() *cobra.Command {
 
 			dt.WithData(pterm.TableData{
 				{"ENV", viper.GetString("env")},
-				{"NAMESPACE", viper.GetString("namepsace")},
+				{"NAMESPACE", viper.GetString("namespace")},
 				{"TAG", viper.GetString("tag")},
 				{"INFRA DIR", viper.GetString("infra_dir")},
 				{"PWD", cwd},
