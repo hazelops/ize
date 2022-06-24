@@ -82,7 +82,7 @@ func NewCmdDeploy() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.TaskDefinitionRevision, "task-definition-revision", "", "set task definition revision (ECS only)")
-	cmd.Flags().BoolVar(&o.Unsafe, "unsafe", false, "set unsafe option (accelerates deployment if possible)")
+	cmd.Flags().BoolVar(&o.Unsafe, "unsafe", false, "set unsafe healtcheck options (accelerates deployment if possible)")
 
 	return cmd
 }
@@ -127,7 +127,7 @@ func (o *DeployOptions) Validate() error {
 func (o *DeployOptions) Run() error {
 	ui := terminal.ConsoleUI(aws.BackgroundContext(), o.Config.IsPlainText)
 
-	ui.Output("Deploying %s app...", o.AppName, terminal.WithHeaderStyle())
+	ui.Output("Deploying %s app...\n", o.AppName, terminal.WithHeaderStyle())
 	sg := ui.StepGroup()
 	defer sg.Wait()
 

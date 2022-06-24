@@ -239,8 +239,6 @@ func (e *ecs) updateTaskDefinition(sess *session.Session, td *ecssvc.TaskDefinit
 
 	var dtgo *elbv2.DescribeTargetGroupsOutput
 	if e.Unsafe {
-		pterm.Println("WARNING: deployment will be accelerated (unsafe)")
-
 		elbsvc := elbv2.New(sess)
 		dtgo, err = elbsvc.DescribeTargetGroups(&elbv2.DescribeTargetGroupsInput{
 			TargetGroupArns: aws.StringSlice([]string{*uso.Service.LoadBalancers[0].TargetGroupArn}),

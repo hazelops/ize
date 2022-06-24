@@ -15,6 +15,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/docker"
+	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pterm/pterm"
@@ -79,6 +80,15 @@ func NewECSApp(name string, app interface{}) *ecs {
 
 // Deploy deploys app container to ECS via ECS deploy
 func (e *ecs) Deploy(ui terminal.UI) error {
+	if e.Unsafe && viper.GetString("prefer-runtime") == "native" {
+		pterm.Warning.Println(templates.Dedent(`
+			deployment will be accelerated (unsafe):
+			- Health Check Interval: 5s
+			- Health Check Timeout: 2s
+			- Healthy Threshold Count: 2
+			- Unhealthy Threshold Count: 2`))
+	}
+
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
