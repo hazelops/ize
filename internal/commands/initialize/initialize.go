@@ -40,8 +40,9 @@ func NewCmdInit() *cobra.Command {
 	o := NewInitFlags()
 
 	cmd := &cobra.Command{
-		Use:     "init",
+		Use:     "init [flags] <path>",
 		Short:   "Initialize project",
+		Args:    cobra.MaximumNArgs(1),
 		Long:    initLongDesc,
 		Example: initExample,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -52,7 +53,12 @@ func NewCmdInit() *cobra.Command {
 				return nil
 			}
 
-			err := o.Validate(cmd)
+			err := o.Complete(cmd)
+			if err != nil {
+				return err
+			}
+
+			err = o.Validate(cmd)
 			if err != nil {
 				return err
 			}
@@ -67,10 +73,18 @@ func NewCmdInit() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.Template, "template", "", "set template (url or internal)")
-	cmd.Flags().StringVar(&o.Output, "output", "", "set output dir")
 	cmd.Flags().BoolVar(&o.ShowList, "list", false, "show list of examples")
 
 	return cmd
+}
+
+func (o *InitOptions) Complete(cmd *cobra.Command) error {
+	o.Output = "."
+	if len(cmd.Flags().Args()) != 0 {
+		o.Output = cmd.Flags().Args()[0]
+	}
+
+	return nil
 }
 
 func (o *InitOptions) Validate(cmd *cobra.Command) error {
