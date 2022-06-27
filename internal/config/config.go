@@ -160,7 +160,6 @@ func GetConfig() (*Config, error) {
 func InitConfig() {
 	viper.SetEnvPrefix("IZE")
 	viper.AutomaticEnv()
-	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 
 	viper.BindEnv("ENV", "ENV")
 	viper.BindEnv("AWS_PROFILE", "AWS_PROFILE")

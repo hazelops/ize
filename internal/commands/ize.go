@@ -22,6 +22,7 @@ import (
 	"github.com/hazelops/ize/internal/commands/terraform"
 	"github.com/hazelops/ize/internal/commands/tunnel"
 	"github.com/hazelops/ize/internal/commands/up"
+	"github.com/hazelops/ize/internal/commands/validate"
 	cfg "github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/version"
 	"github.com/hazelops/ize/pkg/templates"
@@ -87,9 +88,8 @@ func init() {
 	rootCmd.PersistentFlags().String("terraform-version", "", "set terraform-version")
 	rootCmd.PersistentFlags().String("prefer-runtime", "native", "set prefer runtime (native or docker)")
 	rootCmd.Flags().StringP("tag", "t", "", "set tag")
-	viper.BindPFlags(rootCmd.PersistentFlags())
 	rootCmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
-		viper.BindPFlag(strings.ReplaceAll(f.Name, "_", "-"), rootCmd.PersistentFlags().Lookup(f.Name))
+		viper.BindPFlag(strings.ReplaceAll(f.Name, "-", "_"), rootCmd.PersistentFlags().Lookup(f.Name))
 	})
 
 	addCommands()
@@ -114,6 +114,7 @@ func addCommands() {
 		gen.NewCmdGen(),
 		push.NewCmdPush(),
 		up.NewCmdUp(),
+		validate.NewValidateCmd(),
 		NewVersionCmd(),
 	)
 }
