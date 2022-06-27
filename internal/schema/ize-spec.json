@@ -78,7 +78,7 @@
                         "aws_profile": {
                             "type": "string"
                         },
-                        "Tunnel": {
+                        "tunnel": {
                             "type": "object",
                             "properties": {
                                 "bastion_instance_id": {
