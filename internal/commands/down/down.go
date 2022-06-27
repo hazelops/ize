@@ -302,7 +302,7 @@ func destroyAll(ui terminal.UI, o *DownOptions) error {
 }
 
 func destroyApp(ui terminal.UI, o *DownOptions) error {
-	ui.Output("Destroying %s app...", o.AppName, terminal.WithHeaderStyle())
+	ui.Output("Destroying %s app...\n", o.AppName, terminal.WithHeaderStyle())
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
