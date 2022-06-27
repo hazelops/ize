@@ -210,7 +210,7 @@ func TestIzeExecGoblin(t *testing.T) {
 }
 
 func TestCheckSecretsSquibby(t *testing.T) {
-	url := "http://squibby.testnut.examples.ize.sh/"
+	url := fmt.Sprintf("http://squibby.%s.examples.ize.sh/", os.Getenv("ENV"))
 
 	for i := 0; i < 10; i++ {
 		resp, err := http.Get(url)
@@ -234,7 +234,7 @@ func TestCheckSecretsSquibby(t *testing.T) {
 }
 
 func TestCheckSecretsGoblin(t *testing.T) {
-	url := "http://goblin.testnut.examples.ize.sh/"
+	url := fmt.Sprintf("http://goblin.%s.examples.ize.sh/", os.Getenv("ENV"))
 
 	for i := 0; i < 10; i++ {
 		resp, err := http.Get(url)
