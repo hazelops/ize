@@ -2,13 +2,17 @@ package initialize
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/hazelops/ize/examples"
 	"github.com/hazelops/ize/internal/generate"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type InitOptions struct {
@@ -88,21 +92,115 @@ func (o *InitOptions) Complete(cmd *cobra.Command) error {
 }
 
 func (o *InitOptions) Validate(cmd *cobra.Command) error {
-	if len(o.Template) == 0 {
-		cmd.Help()
-		return fmt.Errorf("template must be specified\n")
-	}
-
 	return nil
 }
 
 func (o *InitOptions) Run() error {
-	dest, err := generate.GenerateFiles(o.Template, o.Output)
-	if err != nil {
-		return err
+	if len(o.Template) != 0 {
+		dest, err := generate.GenerateFiles(o.Template, o.Output)
+		if err != nil {
+			return err
+		}
+
+		pterm.Success.Printfln(`Initialized project from template "%s" to %s`, o.Template, dest)
+
+		return nil
 	}
 
-	pterm.Success.Printfln(`Initialized project from template "%s" to %s`, o.Template, dest)
+	namespace := ""
+	envList := []string{}
+
+	env := os.Getenv("ENV")
+	if len(env) == 0 {
+		env = "dev"
+	}
+
+	dir := o.Output
+	if dir == "." {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("can't get current work directory: %s", cwd)
+		}
+	}
+
+	dir, err := filepath.Abs(o.Output)
+	if err != nil {
+		return fmt.Errorf("can't init: %w", err)
+	}
+
+	fmt.Println(dir)
+
+	namespace = filepath.Base(dir)
+	err = survey.AskOne(
+		&survey.Input{
+			Message: fmt.Sprintf("Which namespace will you have?"),
+			Default: namespace,
+		},
+		&namespace,
+		survey.WithValidator(survey.Required),
+	)
+	if err != nil {
+		return fmt.Errorf("can't init: %w", err)
+	}
+
+	err = survey.AskOne(
+		&survey.Input{
+			Message: fmt.Sprintf("Which environments will you have?"),
+			Default: env,
+		},
+		&env,
+		survey.WithValidator(survey.Required),
+	)
+	if err != nil {
+		return fmt.Errorf("can't init: %w", err)
+	}
+
+	envList = append(envList, env)
+	env = ""
+
+	for {
+		err = survey.AskOne(
+			&survey.Input{
+				Message: fmt.Sprintf("Another environment? [enter - skip]"),
+				Default: env,
+			},
+			&env,
+		)
+		if err != nil {
+			return fmt.Errorf("can't init: %w", err)
+		}
+
+		if env == "" {
+			break
+		}
+
+		envList = append(envList, env)
+		env = ""
+	}
+
+	for _, v := range envList {
+		envPath := filepath.Join(dir, ".ize", "env", v)
+		err := os.MkdirAll(envPath, 0755)
+		if err != nil {
+			return fmt.Errorf("can't create dir by path %s: %w", envPath, err)
+		}
+
+		viper.Reset()
+		cfg := make(map[string]string)
+		cfg["namespace"] = namespace
+		cfg["env"] = v
+
+		raw := make(map[string]interface{}, len(cfg))
+		for k, v := range cfg {
+			raw[k] = v
+		}
+
+		viper.MergeConfigMap(raw)
+		err = viper.WriteConfigAs(filepath.Join(envPath, "ize.toml"))
+		if err != nil {
+			return fmt.Errorf("can't write config: %w", err)
+		}
+	}
 
 	return nil
 }
