@@ -38,7 +38,7 @@ func NewCmdCI() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&o.Template, "template", "", "set terraform state bucket name (default <NAMESPACE>-tf-state)")
+	cmd.Flags().StringVar(&o.Template, "template", "", "set template path")
 
 	return cmd
 }
