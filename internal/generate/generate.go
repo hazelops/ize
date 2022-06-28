@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	pp "github.com/psihachina/path-parser"
+	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -21,18 +23,80 @@ func GenerateFiles(repoDir string, destionation string) (string, error) {
 	return determineRepoDir(repoDir, destionation)
 }
 
-func determineRepoDir(template string, destionation string) (string, error) {
-	if isRepoUrl(template) {
-		return clone(template, destionation)
-	} else if isInternalTemplate(template) {
-		if destionation == "" {
-			destionation = strings.Split(template, "/")[len(strings.Split(template, "/"))-1]
+func GetDataFromFile(template string) ([]byte, error) {
+	o := pp.ParsePath(template)
+
+	switch o.Protocol {
+	case "file":
+		open, err := os.Open(o.Href)
+		if err != nil {
+			return nil, err
 		}
-		err := copyEmbedExamples(examples.Examples, template, destionation)
+		all, err := io.ReadAll(open)
+		if err != nil {
+			return nil, err
+		}
+
+		return all, nil
+	//case "http", "https":
+	//	parse, err := url.Parse(template)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	fmt.Println(parse.Path)
+	//	re := regexp.MustCompile(`(\w+)[\/](.+)[:|\/](.+)`)
+	//	all := re.FindStringSubmatch(parse.Path)
+	//	fmt.Println(all[1:])
+	//	return nil, nil
+	//case "ssh":
+	//	re := regexp.MustCompile(`(\w+)[\/](.+)[:|\/](.+)`)
+	//	all := re.FindStringSubmatch(o.Pathname)
+	//	fmt.Println(all[1:])
+	//
+	//	all[2] = strings.TrimSuffix(all[2], ".git")
+	//
+	//	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/contents/%s", all[1], all[2], all[3])
+	//
+	//	get, err := http.Get(url)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	body, err := ioutil.ReadAll(get.Body)
+	//
+	//	var gitResp map[string]interface{}
+	//	err = json.Unmarshal(body, &gitResp)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	du := gitResp["download_url"].(string)
+	//
+	//	get, err = http.Get(du)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	body, err = ioutil.ReadAll(get.Body)
+	//
+	//	return body, nil
+	default:
+		return nil, fmt.Errorf("can't get data from %s: type %s not supported", o.Href, o.Protocol)
+	}
+}
+
+func determineRepoDir(template string, destination string) (string, error) {
+	if isRepoUrl(template) {
+		return clone(template, destination)
+	} else if isInternalTemplate(template) {
+		if destination == "" {
+			destination = strings.Split(template, "/")[len(strings.Split(template, "/"))-1]
+		}
+		err := copyEmbedExamples(examples.Examples, template, destination)
 		if err != nil {
 			return "", err
 		}
-		return destionation, nil
+		return destination, nil
 	} else {
 		return "", fmt.Errorf("supported only repository url or internal examples")
 	}

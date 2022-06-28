@@ -27,13 +27,14 @@ require (
 	github.com/oklog/ulid v1.3.1
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/opencontainers/image-spec v1.0.2 // indirect
+	github.com/psihachina/path-parser v1.0.1 // indirect
 	github.com/psihachina/terraform-switcher v0.13.1275
 	github.com/pterm/pterm v0.12.41
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.12.0
-	github.com/stretchr/testify v1.7.2
+	github.com/stretchr/testify v1.7.5
 	github.com/zclconf/go-cty v1.10.0
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
 	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
