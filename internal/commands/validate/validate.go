@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"fmt"
 	"github.com/hazelops/ize/internal/schema"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -20,6 +21,7 @@ func NewValidateCmd() *cobra.Command {
 			}
 
 			pterm.Success.Println("Config structure, env vars and flags look valid. ")
+			fmt.Println(viper.AllSettings())
 
 			return nil
 		},

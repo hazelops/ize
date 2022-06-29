@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	Filename    = "ize.hcl"
 	defaultPerm = 0665
 )
 
@@ -180,7 +179,7 @@ func InitConfig() {
 	}
 
 	viper.SetDefault("ROOT_DIR", cwd)
-	viper.SetDefault("PROJECTS_PATH", filepath.Join(cwd, "projects"))
+	viper.SetDefault("APPS_PATH", filepath.Join(cwd, "apps"))
 	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
 	setDefaultInfraDir(cwd)
 

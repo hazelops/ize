@@ -35,7 +35,7 @@
         "prefer_runtime": {
             "type": "string"
         },
-        "projects_path": {
+        "apps_path": {
             "type": "string"
         },
         "root_dir": {

@@ -10,11 +10,11 @@ type Project struct {
 	PlainText        bool   `mapstructure:"plain_text,omitempty"`
 	PreferRuntime    string `mapstructure:"prefer_runtime,omitempty"`
 
-	home         string `mapstructure:",omitempty"`
-	rootDir      string `mapstructure:"root_dir,omitempty"`
-	infraDir     string `mapstructure:"infra_dir,omitempty"`
-	envDir       string `mapstructure:"env_dir,omitempty"`
-	projectsPath string `mapstructure:"projects_path,omitempty"`
+	home     string `mapstructure:",omitempty"`
+	rootDir  string `mapstructure:"root_dir,omitempty"`
+	infraDir string `mapstructure:"infra_dir,omitempty"`
+	envDir   string `mapstructure:"env_dir,omitempty"`
+	appsPath string `mapstructure:"apps_path,omitempty"`
 
 	Infra *Infra          `mapstructure:",omitempty"`
 	App   *map[string]App `mapstructure:",omitempty"`
