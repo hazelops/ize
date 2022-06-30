@@ -14,10 +14,11 @@ import (
 )
 
 type ConsoleOptions struct {
-	Config     *config.Config
-	AppName    string
-	EcsCluster string
-	Task       string
+	Config       *config.Config
+	AppName      string
+	EcsCluster   string
+	Task         string
+	CustomPrompt bool
 }
 
 func NewConsoleFlags() *ConsoleOptions {
@@ -55,6 +56,7 @@ func NewCmdConsole() *cobra.Command {
 
 	cmd.Flags().StringVar(&o.EcsCluster, "ecs-cluster", "", "set ECS cluster name")
 	cmd.Flags().StringVar(&o.Task, "task", "", "set task id")
+	cmd.Flags().BoolVar(&o.CustomPrompt, "custom-prompt", false, "enable custom prompt in the console")
 
 	return cmd
 }
@@ -130,13 +132,21 @@ func (o *ConsoleOptions) Run() error {
 	}
 
 	s.UpdateText("Executing command...")
+	consoleCommand := `/bin/sh`
+
+	if o.CustomPrompt {
+		// This is ASCII Prompt string with colors. See https://dev.to/ifenna__/adding-colors-to-bash-scripts-48g4 for reference
+		// TODO: Make this customizable via a config
+		promptString := fmt.Sprintf(`\e[1;35m★\e[0m $ENV-$APP_NAME\n\e[1;33m\e[0m \w \e[1;34m❯\e[0m `)
+		consoleCommand = fmt.Sprintf(`/bin/sh -c '$(echo "export PS1=\"%s\"" > /etc/profile.d/ize.sh) /bin/bash --rcfile /etc/profile'`, promptString)
+	}
 
 	out, err := ecsSvc.ExecuteCommand(&ecs.ExecuteCommandInput{
 		Container:   &o.AppName,
 		Interactive: aws.Bool(true),
 		Cluster:     &o.EcsCluster,
 		Task:        &o.Task,
-		Command:     aws.String("/bin/sh"),
+		Command:     aws.String(consoleCommand),
 	})
 	if aerr, ok := err.(awserr.Error); ok {
 		switch aerr.Code() {
