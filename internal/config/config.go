@@ -64,7 +64,7 @@ func CheckRequirements(options ...Option) error {
 		}
 	}
 
-	switch viper.GetString("prefer-runtime") {
+	switch viper.GetString("prefer_runtime") {
 	case "native":
 		logrus.Debug("use native runtime")
 	case "docker":
@@ -73,7 +73,7 @@ func CheckRequirements(options ...Option) error {
 		}
 		logrus.Debug("use docker runtime")
 	default:
-		return fmt.Errorf("unknown runtime type: %s", viper.GetString("prefer-runtime"))
+		return fmt.Errorf("unknown runtime type: %s", viper.GetString("prefer_runtime"))
 	}
 
 	if len(viper.ConfigFileUsed()) == 0 && r.configFile {
@@ -160,7 +160,6 @@ func GetConfig() (*Config, error) {
 func InitConfig() {
 	viper.SetEnvPrefix("IZE")
 	viper.AutomaticEnv()
-	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 
 	viper.BindEnv("ENV", "ENV")
 	viper.BindEnv("AWS_PROFILE", "AWS_PROFILE")
@@ -185,7 +184,7 @@ func InitConfig() {
 	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
 	setDefaultInfraDir(cwd)
 
-	cfg, err := readConfigFile(viper.GetString("config-file"))
+	cfg, err := readConfigFile(viper.GetString("config_file"))
 	if err != nil {
 		logrus.Fatal("can't initialize config: %w", err)
 	}

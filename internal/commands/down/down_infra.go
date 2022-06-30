@@ -93,7 +93,7 @@ func (o *DownInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 		o.Terraform.Version = viper.GetString("terraform_version")
 	}
 
-	o.ui = terminal.ConsoleUI(context.Background(), viper.GetBool("plain-text"))
+	o.ui = terminal.ConsoleUI(context.Background(), viper.GetBool("plain_text"))
 
 	return nil
 }

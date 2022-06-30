@@ -288,7 +288,7 @@ func deployAll(ui terminal.UI, o *UpOptions) error {
 }
 
 func deployApp(ui terminal.UI, o *UpOptions) error {
-	ui.Output("Deploying %s app...", o.AppName, terminal.WithHeaderStyle())
+	ui.Output("Deploying %s app...\n", o.AppName, terminal.WithHeaderStyle())
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
