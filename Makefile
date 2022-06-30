@@ -10,4 +10,4 @@ install: bin
 
 .PHONY: bin
 bin: 
-	CGO_ENABLED=$(CGO_ENABLED) go build -ldflags $(GOLDFLAGS) -o ./ize ./cmd 
+	CGO_ENABLED=$(CGO_ENABLED) go build -tags=viper_toml1 -ldflags $(GOLDFLAGS) -o ./ize ./cmd

@@ -16,6 +16,8 @@ builds:
     main: ./cmd
     ldflags:
       - -s -w -X 'github.com/hazelops/ize/internal/version.Version={{.Env.RELEASE_VERSION}}' -X 'github.com/hazelops/ize/internal/version.GitCommit={{.Env.SHORT_SHA}}'
+    tags:
+      - viper_toml1
 
 brews:
   - name: ize
