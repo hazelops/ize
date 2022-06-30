@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"github.com/hazelops/ize/examples"
 	pp "github.com/psihachina/path-parser"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -13,7 +15,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hazelops/ize/examples"
+	"github.com/go-git/go-git/v5"
 	"github.com/pterm/pterm"
 )
 
@@ -23,9 +25,9 @@ func GenerateFiles(repoDir string, destionation string) (string, error) {
 	return determineRepoDir(repoDir, destionation)
 }
 
-func GetDataFromFile(template string) ([]byte, error) {
-	o := pp.ParsePath(template)
-
+func GetDataFromFile(source, template string) ([]byte, error) {
+	o := pp.ParsePath(source)
+	fmt.Println(o.Protocol)
 	switch o.Protocol {
 	case "file":
 		open, err := os.Open(o.Href)
@@ -38,48 +40,38 @@ func GetDataFromFile(template string) ([]byte, error) {
 		}
 
 		return all, nil
-	//case "http", "https":
-	//	parse, err := url.Parse(template)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	fmt.Println(parse.Path)
-	//	re := regexp.MustCompile(`(\w+)[\/](.+)[:|\/](.+)`)
-	//	all := re.FindStringSubmatch(parse.Path)
-	//	fmt.Println(all[1:])
-	//	return nil, nil
-	//case "ssh":
-	//	re := regexp.MustCompile(`(\w+)[\/](.+)[:|\/](.+)`)
-	//	all := re.FindStringSubmatch(o.Pathname)
-	//	fmt.Println(all[1:])
-	//
-	//	all[2] = strings.TrimSuffix(all[2], ".git")
-	//
-	//	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/contents/%s", all[1], all[2], all[3])
-	//
-	//	get, err := http.Get(url)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	body, err := ioutil.ReadAll(get.Body)
-	//
-	//	var gitResp map[string]interface{}
-	//	err = json.Unmarshal(body, &gitResp)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	du := gitResp["download_url"].(string)
-	//
-	//	get, err = http.Get(du)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	body, err = ioutil.ReadAll(get.Body)
-	//
-	//	return body, nil
+	case "ssh", "http", "https":
+		dir, err := ioutil.TempDir("", "clone-template")
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println(dir)
+
+		defer os.RemoveAll(dir) // clean up
+
+		_, err = git.PlainClone(dir, false,
+			&git.CloneOptions{
+				URL:      source,
+				Depth:    1,
+				Progress: os.Stdout,
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println(dir, template)
+
+		file, err := os.Open(filepath.Join(dir, template))
+		if err != nil {
+			return nil, err
+		}
+
+		all, err := io.ReadAll(file)
+		if err != nil {
+			return nil, err
+		}
+
+		return all, nil
 	default:
 		return nil, fmt.Errorf("can't get data from %s: type %s not supported", o.Href, o.Protocol)
 	}

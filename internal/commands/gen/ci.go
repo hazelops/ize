@@ -8,6 +8,7 @@ import (
 
 type CIOptions struct {
 	Template string
+	Source   string
 }
 
 func NewCIOptions() *CIOptions {
@@ -27,18 +28,23 @@ func NewCmdCI() *cobra.Command {
 				return fmt.Errorf("'--template' must be specified")
 			}
 
-			file, err := generate.GetDataFromFile(o.Template)
+			if o.Source == "" {
+				o.Source = "."
+			}
+
+			file, err := generate.GetDataFromFile(o.Source, o.Template)
 			if err != nil {
 				return err
 			}
 
-			fmt.Print(string(file))
+			fmt.Print("template:\n", string(file))
 
 			return nil
 		},
 	}
 
 	cmd.Flags().StringVar(&o.Template, "template", "", "set template path")
+	cmd.Flags().StringVar(&o.Source, "source", "", "set git repository")
 
 	return cmd
 }
