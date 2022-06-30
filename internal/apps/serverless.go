@@ -39,12 +39,12 @@ func NewServerlessApp(name string, app interface{}) *serverless {
 
 	slsConfig.Name = name
 
-	projectsPath := viper.GetString("APPS_PATH")
-	if !filepath.IsAbs(projectsPath) {
-		projectsPath = filepath.Join(os.Getenv("PWD"), projectsPath)
+	appsPath := viper.GetString("APPS_PATH")
+	if !filepath.IsAbs(appsPath) {
+		appsPath = filepath.Join(os.Getenv("PWD"), appsPath)
 	}
 
-	slsConfig.Path = filepath.Join(projectsPath, name)
+	slsConfig.Path = filepath.Join(appsPath, name)
 
 	if len(slsConfig.File) == 0 {
 		slsConfig.File = "serverless.yml"

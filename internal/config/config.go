@@ -178,8 +178,15 @@ func InitConfig() {
 		logrus.Fatalln("can't initialize config: %w", err)
 	}
 
+	// set default apps folder
+	_, err = os.Stat(filepath.Join(cwd, "projects"))
+	if os.IsNotExist(err) {
+		viper.SetDefault("APPS_PATH", filepath.Join(cwd, "apps"))
+	} else {
+		viper.SetDefault("APPS_PATH", filepath.Join(cwd, "projects"))
+	}
+
 	viper.SetDefault("ROOT_DIR", cwd)
-	viper.SetDefault("APPS_PATH", filepath.Join(cwd, "apps"))
 	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
 	setDefaultInfraDir(cwd)
 
