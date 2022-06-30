@@ -26,8 +26,10 @@ func GenerateFiles(repoDir string, destionation string) (string, error) {
 }
 
 func GetDataFromFile(source, template string) ([]byte, error) {
+	if source == "" {
+		source = template
+	}
 	o := pp.ParsePath(source)
-	fmt.Println(o.Protocol)
 	switch o.Protocol {
 	case "file":
 		open, err := os.Open(o.Href)
@@ -45,7 +47,6 @@ func GetDataFromFile(source, template string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println(dir)
 
 		defer os.RemoveAll(dir) // clean up
 
@@ -59,7 +60,6 @@ func GetDataFromFile(source, template string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println(dir, template)
 
 		file, err := os.Open(filepath.Join(dir, template))
 		if err != nil {

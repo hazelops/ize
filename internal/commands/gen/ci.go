@@ -28,10 +28,6 @@ func NewCmdCI() *cobra.Command {
 				return fmt.Errorf("'--template' must be specified")
 			}
 
-			if o.Source == "" {
-				o.Source = "."
-			}
-
 			file, err := generate.GetDataFromFile(o.Source, o.Template)
 			if err != nil {
 				return err
