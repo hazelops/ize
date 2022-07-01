@@ -50,12 +50,12 @@ func NewECSApp(name string, app interface{}) *ecs {
 	ecsConfig.Name = name
 
 	if ecsConfig.Path == "" {
-		projectsPath := viper.GetString("PROJECTS_PATH")
-		if !filepath.IsAbs(projectsPath) {
-			projectsPath = filepath.Join(os.Getenv("PWD"), projectsPath)
+		appsPath := viper.GetString("APPS_PATH")
+		if !filepath.IsAbs(appsPath) {
+			appsPath = filepath.Join(os.Getenv("PWD"), appsPath)
 		}
 
-		ecsConfig.Path = filepath.Join(projectsPath, name)
+		ecsConfig.Path = filepath.Join(appsPath, name)
 	} else {
 		rootDir := viper.GetString("ROOT_DIR")
 

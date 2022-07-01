@@ -39,12 +39,12 @@ func NewServerlessApp(name string, app interface{}) *serverless {
 
 	slsConfig.Name = name
 
-	projectsPath := viper.GetString("PROJECTS_PATH")
-	if !filepath.IsAbs(projectsPath) {
-		projectsPath = filepath.Join(os.Getenv("PWD"), projectsPath)
+	appsPath := viper.GetString("APPS_PATH")
+	if !filepath.IsAbs(appsPath) {
+		appsPath = filepath.Join(os.Getenv("PWD"), appsPath)
 	}
 
-	slsConfig.Path = filepath.Join(projectsPath, name)
+	slsConfig.Path = filepath.Join(appsPath, name)
 
 	if len(slsConfig.File) == 0 {
 		slsConfig.File = "serverless.yml"
@@ -119,7 +119,7 @@ func (sls *serverless) Deploy(ui terminal.UI) error {
 
 	s.Update("%s: downloading npm modules...", sls.Name)
 
-	err = sls.npm(cli, []string{"npm", "install", "--save-dev"}, s, ui)
+	err = sls.npm(cli, []string{"npm", "install", "--save-dev"}, s)
 	if err != nil {
 		return fmt.Errorf("can't deploy %s: %w", sls.Name, err)
 	}
@@ -324,7 +324,7 @@ msgLoop:
 	}
 }
 
-func (sls *serverless) npm(cli *client.Client, cmd []string, s terminal.Step, ui terminal.UI) error {
+func (sls *serverless) npm(cli *client.Client, cmd []string, s terminal.Step) error {
 	contConfig := &container.Config{
 		WorkingDir:   "/app",
 		Image:        fmt.Sprintf("node:%v", sls.NodeVersion),

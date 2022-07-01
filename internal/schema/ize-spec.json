@@ -35,7 +35,7 @@
         "prefer_runtime": {
             "type": "string"
         },
-        "projects_path": {
+        "apps_path": {
             "type": "string"
         },
         "root_dir": {
@@ -51,8 +51,44 @@
             "type": "string"
         },
         "app": {
+            "id": "#/properties/app",
             "type": "object",
-            "properties": {}
+            "patternProperties": {
+                "^[a-zA-Z0-9._-]+$": {
+                    "$ref": "#/definitions/app"
+                }
+            },
+            "additionalProperties": false
+        },
+        "ecs": {
+            "id": "#/properties/ecs",
+            "type": "object",
+            "patternProperties": {
+                "^[a-zA-Z0-9._-]+$": {
+                    "$ref": "#/definitions/ecs"
+                }
+            },
+            "additionalProperties": false
+        },
+        "serverless": {
+            "id": "#/properties/serverless",
+            "type": "object",
+            "patternProperties": {
+                "^[a-zA-Z0-9._-]+$": {
+                    "$ref": "#/definitions/serverless"
+                }
+            },
+            "additionalProperties": false
+        },
+        "terraform": {
+            "id": "#/properties/terraform",
+            "type": "object",
+            "patternProperties": {
+                "^[a-zA-Z0-9._-]+$": {
+                    "$ref": "#/definitions/terraform"
+                }
+            },
+            "additionalProperties": false
         },
         "infra": {
             "type": "object",
@@ -85,7 +121,10 @@
                                     "type": "string"
                                 },
                                 "forward_host": {
-                                    "type": "array"
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
                                 }
                             },
                             "additionalProperties": false
@@ -97,6 +136,132 @@
             "required": [
                 "terraform"
             ]
+        }
+    },
+    "definitions": {
+        "app": {
+            "id": "#/definitions/app",
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string"
+                },
+                "file": {
+                    "type": "string"
+                },
+                "node_version": {
+                    "type": "string"
+                },
+                "create_domain" : {
+                    "type": "boolean"
+                },
+                "path"   : {
+                    "type": "string"
+                },
+                "sls_node_module_cache_mount"   : {
+                    "type": "string"
+                },
+                "env"  : {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "unsafe": {
+                    "type": "boolean"
+                },
+                "image" : {
+                    "type": "string"
+                },
+                "cluster"   : {
+                    "type": "string"
+                },
+                "task_definition_revision"   : {
+                    "type": "string"
+                },
+                "timeout"  : {
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false
+        },
+        "ecs": {
+            "id": "#/definitions/ecs",
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string"
+                },
+                "unsafe": {
+                    "type": "boolean"
+                },
+                "image" : {
+                    "type": "string"
+                },
+                "cluster"   : {
+                    "type": "string"
+                },
+                "task_definition_revision"   : {
+                    "type": "string"
+                },
+                "timeout"  : {
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false
+        },
+        "serverless": {
+            "id": "#/definitions/serverless",
+            "type": "object",
+            "properties": {
+                "file": {
+                    "type": "string"
+                },
+                "node_version": {
+                    "type": "string"
+                },
+                "create_domain" : {
+                    "type": "boolean"
+                },
+                "path"   : {
+                    "type": "string"
+                },
+                "sls_node_module_cache_mount"   : {
+                    "type": "string"
+                },
+                "env"  : {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "additionalProperties": false
+        },
+        "terraform": {
+            "id": "#/definitions/terraform",
+            "type": "object",
+            "properties": {
+                "version": {
+                    "type": "string"
+                },
+                "state_bucket_region": {
+                    "type": "string"
+                },
+                "state_bucket_name" : {
+                    "type": "string"
+                },
+                "root_domain_name"   : {
+                    "type": "string"
+                },
+                "aws_region"   : {
+                    "type": "string"
+                },
+                "aws_profile"  : {
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false
         }
     },
     "required": [
