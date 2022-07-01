@@ -1,4 +1,4 @@
-name: "Build IZE on push"
+name: "Build & Publish dev Release"
 on:
   release:
     types: [created]
