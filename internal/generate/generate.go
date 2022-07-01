@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"github.com/hazelops/ize/examples"
+	pp "github.com/psihachina/path-parser"
+	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -11,7 +15,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hazelops/ize/examples"
+	"github.com/go-git/go-git/v5"
 	"github.com/pterm/pterm"
 )
 
@@ -21,18 +25,70 @@ func GenerateFiles(repoDir string, destionation string) (string, error) {
 	return determineRepoDir(repoDir, destionation)
 }
 
-func determineRepoDir(template string, destionation string) (string, error) {
-	if isRepoUrl(template) {
-		return clone(template, destionation)
-	} else if isInternalTemplate(template) {
-		if destionation == "" {
-			destionation = strings.Split(template, "/")[len(strings.Split(template, "/"))-1]
+func GetDataFromFile(source, template string) ([]byte, error) {
+	if source == "" {
+		source = template
+	}
+	o := pp.ParsePath(source)
+	switch o.Protocol {
+	case "file":
+		open, err := os.Open(o.Href)
+		if err != nil {
+			return nil, err
 		}
-		err := copyEmbedExamples(examples.Examples, template, destionation)
+		all, err := io.ReadAll(open)
+		if err != nil {
+			return nil, err
+		}
+
+		return all, nil
+	case "ssh", "http", "https":
+		dir, err := ioutil.TempDir("", "clone-template")
+		if err != nil {
+			return nil, err
+		}
+
+		defer os.RemoveAll(dir) // clean up
+
+		_, err = git.PlainClone(dir, false,
+			&git.CloneOptions{
+				URL:      source,
+				Depth:    1,
+				Progress: os.Stdout,
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		file, err := os.Open(filepath.Join(dir, template))
+		if err != nil {
+			return nil, err
+		}
+
+		all, err := io.ReadAll(file)
+		if err != nil {
+			return nil, err
+		}
+
+		return all, nil
+	default:
+		return nil, fmt.Errorf("can't get data from %s: type %s not supported", o.Href, o.Protocol)
+	}
+}
+
+func determineRepoDir(template string, destination string) (string, error) {
+	if isRepoUrl(template) {
+		return clone(template, destination)
+	} else if isInternalTemplate(template) {
+		if destination == "" {
+			destination = strings.Split(template, "/")[len(strings.Split(template, "/"))-1]
+		}
+		err := copyEmbedExamples(examples.Examples, template, destination)
 		if err != nil {
 			return "", err
 		}
-		return destionation, nil
+		return destination, nil
 	} else {
 		return "", fmt.Errorf("supported only repository url or internal examples")
 	}
