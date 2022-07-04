@@ -3,9 +3,12 @@ package config
 import (
 	"errors"
 	"fmt"
+	"github.com/hazelops/ize/internal/schema"
+	"github.com/mitchellh/mapstructure"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/Masterminds/semver"
@@ -153,6 +156,21 @@ func GetConfig() (*Config, error) {
 		cfg.IsDockerRuntime = true
 	}
 
+	err = ConvertApps()
+	if err != nil {
+		return nil, err
+	}
+
+	err = ConvertInfra()
+	if err != nil {
+		return nil, err
+	}
+
+	err = schema.Validate(viper.AllSettings())
+	if err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
 }
 
@@ -231,7 +249,6 @@ func InitConfig() {
 			os.MkdirAll(viper.GetString("ENV_DIR"), defaultPerm)
 		}
 	}
-
 }
 
 func setDefaultInfraDir(cwd string) {
@@ -391,4 +408,74 @@ func readConfigFile(path string) (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+func ConvertApps() error {
+	ecs := map[string]interface{}{}
+	serverless := map[string]interface{}{}
+
+	apps := viper.GetStringMap("app")
+	for name, app := range apps {
+		body := app.(map[string]interface{})
+		t := body["type"].(string)
+		switch t {
+		case "ecs":
+			ecsApp := Ecs{}
+			err := mapstructure.Decode(&body, &ecsApp)
+			if err != nil {
+				return err
+			}
+
+			ecs[name] = structToMap(ecsApp)
+		case "serverless":
+			slsApp := Serverless{}
+			err := mapstructure.Decode(&body, &slsApp)
+			if err != nil {
+				return err
+			}
+
+			serverless[name] = structToMap(slsApp)
+		default:
+			return fmt.Errorf("does not support %s type", t)
+		}
+
+	}
+
+	err := viper.MergeConfigMap(map[string]interface{}{
+		"ecs":        ecs,
+		"serverless": serverless,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ConvertInfra() error {
+	tf := viper.GetStringMap("infra.terraform")
+
+	err := viper.MergeConfigMap(map[string]interface{}{
+		"terraform.infra": tf,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func structToMap(item interface{}) map[string]interface{} {
+	res := map[string]interface{}{}
+
+	v := reflect.ValueOf(item)
+	typeOfOpts := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		if !v.Field(i).IsZero() {
+			res[strings.ToLower(typeOfOpts.Field(i).Name)] = v.Field(i).Interface()
+		}
+	}
+
+	return res
 }

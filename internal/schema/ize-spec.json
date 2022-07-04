@@ -44,6 +44,12 @@
         "terraform_version": {
             "type": "string"
         },
+        "docker_registry": {
+            "type": "string"
+        },
+        "tf_log_path": {
+            "type": "string"
+        },
         "tag": {
             "type": "string"
         },
@@ -113,21 +119,21 @@
                         },
                         "aws_profile": {
                             "type": "string"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "tunnel": {
+                    "type": "object",
+                    "properties": {
+                        "bastion_instance_id": {
+                            "type": "string"
                         },
-                        "tunnel": {
-                            "type": "object",
-                            "properties": {
-                                "bastion_instance_id": {
-                                    "type": "string"
-                                },
-                                "forward_host": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string"
-                                    }
-                                }
-                            },
-                            "additionalProperties": false
+                        "forward_host": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
                         }
                     },
                     "additionalProperties": false
