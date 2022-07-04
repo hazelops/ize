@@ -2,6 +2,7 @@ package console
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -74,6 +75,10 @@ func (o *ConsoleOptions) Complete(cmd *cobra.Command, args []string) error {
 
 	if o.EcsCluster == "" {
 		o.EcsCluster = fmt.Sprintf("%s-%s", o.Config.Env, o.Config.Namespace)
+	}
+
+	if !o.CustomPrompt {
+		o.CustomPrompt = viper.GetBool("CUSTOM_PROMPT")
 	}
 
 	o.AppName = cmd.Flags().Args()[0]
