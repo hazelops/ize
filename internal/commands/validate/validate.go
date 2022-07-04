@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/schema"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -13,7 +14,13 @@ func NewValidateCmd() *cobra.Command {
 		Short: "Validate configuration (only for test)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			err := schema.Validate(viper.AllSettings())
+
+			_, err := config.GetConfig()
+			if err != nil {
+				return err
+			}
+
+			err = schema.Validate(viper.AllSettings())
 
 			if err != nil {
 				return err
