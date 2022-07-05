@@ -6,18 +6,17 @@ import (
 	"strings"
 
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/internal/terraform"
 	"github.com/hazelops/ize/pkg/terminal"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
 type DownInfraOptions struct {
-	Config    *config.Config
-	Terraform terraformInfraConfig
-	ui        terminal.UI
+	Config  *config.Config
+	Infra   Infra
+	SkipGen bool
+	ui      terminal.UI
 }
 
 func NewDownInfraFlags() *DownInfraOptions {
@@ -32,7 +31,7 @@ func NewCmdDownInfra() *cobra.Command {
 		Short: "Destroy infrastructure",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			err := o.Complete(cmd, args)
+			err := o.Complete(cmd)
 			if err != nil {
 				return err
 			}
@@ -51,8 +50,8 @@ func NewCmdDownInfra() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&o.Terraform.Version, "infra.terraform.version", "", "set terraform version")
-	cmd.Flags().StringVar(&o.Terraform.Profile, "infra.terraform.aws-profile", "", "set aws profile")
+	cmd.Flags().StringVar(&o.Infra.Version, "infra.terraform.version", "", "set terraform version")
+	cmd.Flags().StringVar(&o.Infra.Profile, "infra.terraform.aws-profile", "", "set aws profile")
 
 	return cmd
 }
@@ -67,7 +66,7 @@ func BindFlags(flags *pflag.FlagSet) {
 	})
 }
 
-func (o *DownInfraOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *DownInfraOptions) Complete(cmd *cobra.Command) error {
 	var err error
 
 	o.Config, err = config.GetConfig()
@@ -77,20 +76,20 @@ func (o *DownInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 
 	BindFlags(cmd.Flags())
 
-	if len(o.Terraform.Profile) == 0 {
-		o.Terraform.Profile = viper.GetString("infra.terraform.aws_profile")
+	if len(o.Infra.Profile) == 0 {
+		o.Infra.Profile = viper.GetString("infra.terraform.aws_profile")
 	}
 
-	if len(o.Terraform.Profile) == 0 {
-		o.Terraform.Profile = o.Config.AwsProfile
+	if len(o.Infra.Profile) == 0 {
+		o.Infra.Profile = o.Config.AwsProfile
 	}
 
-	if len(o.Terraform.Version) == 0 {
-		o.Terraform.Version = viper.GetString("infra.terraform.terraform_version")
+	if len(o.Infra.Version) == 0 {
+		o.Infra.Version = viper.GetString("infra.terraform.terraform_version")
 	}
 
-	if len(o.Terraform.Version) == 0 {
-		o.Terraform.Version = viper.GetString("terraform_version")
+	if len(o.Infra.Version) == 0 {
+		o.Infra.Version = viper.GetString("terraform_version")
 	}
 
 	o.ui = terminal.ConsoleUI(context.Background(), viper.GetBool("plain_text"))
@@ -108,48 +107,5 @@ func (o *DownInfraOptions) Validate() error {
 
 func (o *DownInfraOptions) Run() error {
 	ui := o.ui
-	var tf terraform.Terraform
-
-	logrus.Infof("infra: %s", o.Terraform)
-
-	v, err := o.Config.Session.Config.Credentials.Get()
-	if err != nil {
-		return fmt.Errorf("can't set AWS credentials: %w", err)
-	}
-
-	env := []string{
-		fmt.Sprintf("ENV=%v", o.Config.Env),
-		fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
-		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
-		fmt.Sprintf("AWS_ACCESS_KEY_ID=%v", v.AccessKeyID),
-		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%v", v.SecretAccessKey),
-		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
-	}
-
-	if o.Config.IsDockerRuntime {
-		tf = terraform.NewDockerTerraform(o.Terraform.Version, []string{"destroy", "-auto-approve"}, env, nil)
-	} else {
-		tf = terraform.NewLocalTerraform(o.Terraform.Version, []string{"destroy", "-auto-approve"}, env, nil)
-		err = tf.Prepare()
-		if err != nil {
-			return fmt.Errorf("can't destroy infra: %w", err)
-		}
-	}
-
-	ui.Output("Running terraform destroy...", terminal.WithHeaderStyle())
-
-	err = tf.RunUI(ui)
-	if err != nil {
-		return err
-	}
-
-	ui.Output("Terraform destroy completed!\n", terminal.WithSuccessStyle())
-
-	return nil
-}
-
-type terraformInfraConfig struct {
-	Version string `mapstructure:"terraform_version,optional"`
-	Profile string `mapstructure:"aws_profile,optional"`
+	return destroyInfra(ui, o.Infra, *o.Config, o.SkipGen)
 }
