@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/hazelops/ize/internal/config"
 	"log"
 	"net/http"
 
@@ -50,6 +51,7 @@ func CheckLatestRealese() {
 
 	if Version != gr.Version {
 		pterm.Warning.Printfln("Newest version is %s current version is %s. Consider upgrading.", gr.Version, Version)
+		config.ShowUpgradeCommand()
 	}
 }
 

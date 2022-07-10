@@ -27,6 +27,28 @@ const (
 	ssmMacOsUrl = "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/sessionmanager-bundle.zip"
 )
 
+func ShowUpgradeCommand() error {
+	switch goos := runtime.GOOS; goos {
+	case "darwin":
+		pterm.Warning.Println("Use the command to update\n:\tbrew upgrade ize")
+	case "linux":
+		distroName, err := getLinuxDistoName()
+		if err != nil {
+			return err
+		}
+		switch distroName {
+		case "Ubuntu":
+			pterm.Warning.Println("Use the command to update:\n\tapt update && apt install ize")
+		default:
+			pterm.Warning.Println("See https://github.com/hazelops/ize/blob/main/DOCS.md#installation")
+		}
+	default:
+		pterm.Warning.Println("See https://github.com/hazelops/ize/blob/main/DOCS.md#installation")
+	}
+
+	return nil
+}
+
 func downloadSSMAgentPlugin() error {
 	switch goos := runtime.GOOS; goos {
 	case "darwin":
@@ -56,7 +78,7 @@ func downloadSSMAgentPlugin() error {
 
 		defer file.Close()
 	case "linux":
-		distrName, err := getLinuxDistoName()
+		distroName, err := getLinuxDistoName()
 		if err != nil {
 			return err
 		}
@@ -81,7 +103,7 @@ func downloadSSMAgentPlugin() error {
 			},
 		}
 
-		if distrName == "Ubuntu" || distrName == "Debian" {
+		if distroName == "Ubuntu" || distroName == "Debian" {
 			file, err := os.Create("session-manager-plugin.deb")
 			if err != nil {
 				log.Fatal(err)

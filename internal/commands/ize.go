@@ -2,11 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
-	"path"
-	"runtime"
-	"strings"
-
 	"github.com/hazelops/ize/internal/commands/build"
 	"github.com/hazelops/ize/internal/commands/configure"
 	"github.com/hazelops/ize/internal/commands/console"
@@ -31,6 +26,11 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"os"
+	"path"
+	"runtime"
+	"strings"
+	"sync"
 )
 
 var deployIzeDesc = templates.LongDesc(`
@@ -64,13 +64,20 @@ var (
 )
 
 func Execute(args []string) {
-	go version.CheckLatestRealese()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		version.CheckLatestRealese()
+	}()
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println()
 		pterm.Error.Println(err)
 		os.Exit(1)
 	}
+
+	wg.Wait()
 }
 
 func init() {
