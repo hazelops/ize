@@ -56,6 +56,24 @@
         "tf_log": {
             "type": "string"
         },
+        "custom_prompt": {
+            "type": "string"
+        },
+        "tunnel": {
+            "type": "object",
+            "properties": {
+                "bastion_instance_id": {
+                    "type": "string"
+                },
+                "forward_host": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "additionalProperties": false
+        },
         "app": {
             "id": "#/properties/app",
             "type": "object",

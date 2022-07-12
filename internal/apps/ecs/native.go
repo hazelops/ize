@@ -12,28 +12,18 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	ecssvc "github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/elbv2"
-	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/pterm/pterm"
-	"github.com/spf13/viper"
 )
 
-func (e *ecs) deployLocal(w io.Writer) error {
+func (e *EcsService) deployLocal(w io.Writer) error {
 	pterm.SetDefaultOutput(w)
 
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  e.AwsRegion,
-		Profile: e.AwsProfile,
-	})
-	if err != nil {
-		return err
-	}
+	svc := ecssvc.New(e.Project.Session)
 
-	svc := ecssvc.New(sess)
-
-	name := fmt.Sprintf("%s-%s", viper.GetString("env"), e.Name)
+	name := fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name)
 
 	dso, err := svc.DescribeServices(&ecssvc.DescribeServicesInput{
-		Cluster:  &e.Cluster,
+		Cluster:  &e.App.Cluster,
 		Services: []*string{&name},
 	})
 	if err != nil {
@@ -58,13 +48,13 @@ func (e *ecs) deployLocal(w io.Writer) error {
 	var image string
 	for i := 0; i < len(dtdo.TaskDefinition.ContainerDefinitions); i++ {
 		container := dtdo.TaskDefinition.ContainerDefinitions[i]
-		if *container.Name == e.Name {
-			image = e.Image
+		if *container.Name == e.App.Name {
+			image = e.App.Image
 			pterm.Printfln(`Changed image of container "%s" to : "%s" (was: "%s")`, *container.Name, image, *container.Image)
 			container.Image = &image
-		} else if len(e.Tag) != 0 {
+		} else if len(e.Project.Tag) != 0 {
 			name := strings.Split(*container.Image, ":")[0]
-			image = fmt.Sprintf("%s:%s", name, e.Tag)
+			image = fmt.Sprintf("%s:%s", name, e.Project.Tag)
 			pterm.Printfln(`Changed image of container "%s" to : "%s" (was: "%s")`, *container.Name, image, *container.Image)
 			container.Image = &image
 
@@ -91,15 +81,15 @@ func (e *ecs) deployLocal(w io.Writer) error {
 
 	pterm.Printfln("Successfully created revision: %s:%d", *rtdo.TaskDefinition.Family, *rtdo.TaskDefinition.Revision)
 
-	if err = e.updateTaskDefinition(sess, rtdo.TaskDefinition, name, "Deploying new task definition"); err != nil {
-		err := getLastContainerLogs(fmt.Sprintf("%s-%s", viper.GetString("env"), e.Name), sess)
+	if err = e.updateTaskDefinition(e.Project.Session, rtdo.TaskDefinition, name, "Deploying new task definition"); err != nil {
+		err := getLastContainerLogs(fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name), e.Project.Session)
 		if err != nil {
 			pterm.Println("Failed to get logs:", err)
 		}
 
 		pterm.Printfln("Rolling back to old task definition: %s:%d", *oldTaskDef.Family, *oldTaskDef.Revision)
-		e.Timeout = 600
-		if err = e.updateTaskDefinition(sess, &oldTaskDef, name, "Deploying previous task definition"); err != nil {
+		e.App.Timeout = 600
+		if err = e.updateTaskDefinition(e.Project.Session, &oldTaskDef, name, "Deploying previous task definition"); err != nil {
 			return fmt.Errorf("unable to rollback to old task definition: %w", err)
 		}
 
@@ -119,29 +109,21 @@ func (e *ecs) deployLocal(w io.Writer) error {
 	return nil
 }
 
-func (e *ecs) redeployLocal(w io.Writer) error {
+func (e *EcsService) redeployLocal(w io.Writer) error {
 	pterm.SetDefaultOutput(w)
 
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  e.AwsRegion,
-		Profile: e.AwsProfile,
-	})
-	if err != nil {
-		return err
-	}
+	svc := ecssvc.New(e.Project.Session)
 
-	svc := ecssvc.New(sess)
+	name := fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name)
 
-	name := fmt.Sprintf("%s-%s", viper.GetString("env"), e.Name)
-
-	dso, err := e.getService(name)
+	dso, err := getService(name, e.App.Cluster, svc)
 	if err != nil {
 		return err
 	}
 
 	var td *ecssvc.TaskDefinition
 
-	switch e.TaskDefinitionRevision {
+	switch e.App.TaskDefinitionRevision {
 	case "latest":
 		tds, err := svc.ListTaskDefinitions(&ecssvc.ListTaskDefinitionsInput{
 			FamilyPrefix: aws.String(name),
@@ -169,9 +151,9 @@ func (e *ecs) redeployLocal(w io.Writer) error {
 
 		td = dtdo.TaskDefinition
 	default:
-		r, err := strconv.Atoi(e.TaskDefinitionRevision)
+		r, err := strconv.Atoi(e.App.TaskDefinitionRevision)
 		if err == nil && r > 0 {
-			arn := fmt.Sprintf("%s:%s", name, e.TaskDefinitionRevision)
+			arn := fmt.Sprintf("%s:%s", name, e.App.TaskDefinitionRevision)
 
 			dtdo, err := svc.DescribeTaskDefinition(&ecssvc.DescribeTaskDefinitionInput{
 				TaskDefinition: &arn,
@@ -182,13 +164,13 @@ func (e *ecs) redeployLocal(w io.Writer) error {
 
 			td = dtdo.TaskDefinition
 		} else {
-			return fmt.Errorf("invalid task definition revision: %s", e.TaskDefinitionRevision)
+			return fmt.Errorf("invalid task definition revision: %s", e.App.TaskDefinitionRevision)
 		}
 	}
 
-	if err = e.updateTaskDefinition(sess, td, name, "Redeploying new task definition"); err != nil {
+	if err = e.updateTaskDefinition(e.Project.Session, td, name, "Redeploying new task definition"); err != nil {
 		pterm.Println(err)
-		err := getLastContainerLogs(fmt.Sprintf("%s-%s", viper.GetString("env"), e.Name), sess)
+		err := getLastContainerLogs(fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name), e.Project.Session)
 		if err != nil {
 			pterm.Println("Failed to get logs:", err)
 		}
@@ -199,17 +181,9 @@ func (e *ecs) redeployLocal(w io.Writer) error {
 	return nil
 }
 
-func (e *ecs) getService(name string) (*ecssvc.DescribeServicesOutput, error) {
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  e.AwsRegion,
-		Profile: e.AwsProfile,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	dso, err := ecssvc.New(sess).DescribeServices(&ecssvc.DescribeServicesInput{
-		Cluster:  &e.Cluster,
+func getService(name string, cluster string, svc *ecssvc.ECS) (*ecssvc.DescribeServicesOutput, error) {
+	dso, err := svc.DescribeServices(&ecssvc.DescribeServicesInput{
+		Cluster:  &cluster,
 		Services: []*string{&name},
 	})
 	if err != nil {
@@ -222,14 +196,14 @@ func (e *ecs) getService(name string) (*ecssvc.DescribeServicesOutput, error) {
 	return dso, nil
 }
 
-func (e *ecs) updateTaskDefinition(sess *session.Session, td *ecssvc.TaskDefinition, serviceName string, title string) error {
+func (e *EcsService) updateTaskDefinition(sess *session.Session, td *ecssvc.TaskDefinition, serviceName string, title string) error {
 	pterm.Println("Updating service")
 
 	svc := ecssvc.New(sess)
 
 	uso, err := svc.UpdateService(&ecssvc.UpdateServiceInput{
 		Service:            aws.String(serviceName),
-		Cluster:            aws.String(e.Cluster),
+		Cluster:            aws.String(e.App.Cluster),
 		TaskDefinition:     aws.String(*td.TaskDefinitionArn),
 		ForceNewDeployment: aws.Bool(true),
 	})
@@ -238,7 +212,7 @@ func (e *ecs) updateTaskDefinition(sess *session.Session, td *ecssvc.TaskDefinit
 	}
 
 	var dtgo *elbv2.DescribeTargetGroupsOutput
-	if e.Unsafe {
+	if e.App.Unsafe {
 		elbsvc := elbv2.New(sess)
 		dtgo, err = elbsvc.DescribeTargetGroups(&elbv2.DescribeTargetGroupsInput{
 			TargetGroupArns: aws.StringSlice([]string{*uso.Service.LoadBalancers[0].TargetGroupArn}),
@@ -262,11 +236,11 @@ func (e *ecs) updateTaskDefinition(sess *session.Session, td *ecssvc.TaskDefinit
 	pterm.Printfln("Successfully changed task definition to: %s:%d", *td.Family, *td.Revision)
 	pterm.Println(title)
 
-	waitingTimeout := time.Now().Add(time.Duration(e.Timeout) * time.Second)
+	waitingTimeout := time.Now().Add(time.Duration(e.App.Timeout) * time.Second)
 	waiting := true
 
 	for waiting && time.Now().Before(waitingTimeout) {
-		d, err := e.isDeployed(svc, serviceName)
+		d, err := isDeployed(svc, serviceName, e.App.Cluster)
 		if err != nil {
 			return err
 		}
@@ -283,7 +257,7 @@ func (e *ecs) updateTaskDefinition(sess *session.Session, td *ecssvc.TaskDefinit
 		return fmt.Errorf("deployment failed due to timeout")
 	}
 
-	if e.Unsafe {
+	if e.App.Unsafe {
 		_, err = elbv2.New(sess).ModifyTargetGroup(&elbv2.ModifyTargetGroupInput{
 			HealthyThresholdCount:      dtgo.TargetGroups[0].HealthyThresholdCount,
 			HealthCheckIntervalSeconds: dtgo.TargetGroups[0].HealthCheckIntervalSeconds,
@@ -299,9 +273,9 @@ func (e *ecs) updateTaskDefinition(sess *session.Session, td *ecssvc.TaskDefinit
 	return nil
 }
 
-func (e *ecs) isDeployed(svc *ecssvc.ECS, name string) (bool, error) {
+func isDeployed(svc *ecssvc.ECS, name string, cluster string) (bool, error) {
 	dso, err := svc.DescribeServices(&ecssvc.DescribeServicesInput{
-		Cluster:  &e.Cluster,
+		Cluster:  &cluster,
 		Services: []*string{&name},
 	})
 	if err != nil {
@@ -317,7 +291,7 @@ func (e *ecs) isDeployed(svc *ecssvc.ECS, name string) (bool, error) {
 	}
 
 	runningTasks, err := svc.ListTasks(&ecssvc.ListTasksInput{
-		Cluster:     &e.Cluster,
+		Cluster:     &cluster,
 		ServiceName: &name,
 	})
 	if err != nil {
@@ -328,7 +302,7 @@ func (e *ecs) isDeployed(svc *ecssvc.ECS, name string) (bool, error) {
 		return *dso.Services[0].DesiredCount == 0, nil
 	}
 
-	runningCount, err := getRunningTaskCount(e.Cluster, runningTasks.TaskArns, *dso.Services[0].TaskDefinition, svc)
+	runningCount, err := getRunningTaskCount(cluster, runningTasks.TaskArns, *dso.Services[0].TaskDefinition, svc)
 	if err != nil {
 		return false, err
 	}

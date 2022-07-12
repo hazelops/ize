@@ -14,7 +14,7 @@ import (
 )
 
 type SecretsRemoveOptions struct {
-	Config      *config.Config
+	Config      *config.Project
 	AppName     string
 	Backend     string
 	SecretsPath string
@@ -43,7 +43,7 @@ func NewCmdSecretsRemove() *cobra.Command {
 		TraverseChildren: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			err := o.Complete(cmd, args)
+			err := o.Complete(cmd)
 			if err != nil {
 				return err
 			}
@@ -63,7 +63,7 @@ func NewCmdSecretsRemove() *cobra.Command {
 	return cmd
 }
 
-func (o *SecretsRemoveOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *SecretsRemoveOptions) Complete(cmd *cobra.Command) error {
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func (o *SecretsRemoveOptions) Complete(cmd *cobra.Command, args []string) error
 		o.SecretsPath = fmt.Sprintf("/%s/%s", o.Config.Env, o.AppName)
 	}
 
-	o.ui = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
+	o.ui = terminal.ConsoleUI(context.Background(), o.Config.PlainText)
 
 	return nil
 }

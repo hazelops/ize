@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/hazelops/ize/internal/config"
 	"os"
 	"path"
 	"path/filepath"
@@ -13,74 +14,50 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/docker/docker/api/types"
-	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/docker"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
-	"github.com/mitchellh/mapstructure"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 const ecsDeployImage = "hazelops/ecs-deploy:latest"
 
-type ecs struct {
-	Name                   string
-	Unsafe                 bool
-	Path                   string
-	Image                  string
-	Cluster                string
-	TaskDefinitionRevision string `mapstructure:"task_definition_revision"`
-	Timeout                int
-	AwsProfile             string
-	AwsRegion              string
-	Tag                    string
+type EcsService struct {
+	Project *config.Project
+	App     *config.Ecs
 }
 
-func NewECSApp(name string, app interface{}) *ecs {
-	ecsConfig := ecs{}
-
-	raw, ok := app.(map[string]interface{})
-	if ok {
-		ecsConfig.Name = name
-		mapstructure.Decode(raw, &ecsConfig)
-	}
-
-	ecsConfig.Name = name
-
-	if ecsConfig.Path == "" {
-		appsPath := viper.GetString("APPS_PATH")
+func (e *EcsService) prepare() {
+	if e.App.Path == "" {
+		appsPath := e.Project.AppsPath
 		if !filepath.IsAbs(appsPath) {
 			appsPath = filepath.Join(os.Getenv("PWD"), appsPath)
 		}
 
-		ecsConfig.Path = filepath.Join(appsPath, name)
+		e.App.Path = filepath.Join(appsPath, e.App.Name)
 	} else {
-		rootDir := viper.GetString("ROOT_DIR")
+		rootDir := e.Project.RootDir
 
-		if !filepath.IsAbs(ecsConfig.Path) {
-			ecsConfig.Path = filepath.Join(rootDir, ecsConfig.Path)
+		if !filepath.IsAbs(e.App.Path) {
+			e.App.Path = filepath.Join(rootDir, e.App.Path)
 		}
 	}
 
-	ecsConfig.AwsProfile = viper.GetString("aws_profile")
-	ecsConfig.AwsRegion = viper.GetString("aws_region")
-	ecsConfig.Tag = viper.GetString("tag")
-	if len(ecsConfig.Cluster) == 0 {
-		ecsConfig.Cluster = fmt.Sprintf("%s-%s", viper.GetString("env"), viper.GetString("namespace"))
+	if len(e.App.Cluster) == 0 {
+		e.App.Cluster = fmt.Sprintf("%s-%s", e.Project.Env, e.Project.Namespace)
 	}
 
-	if ecsConfig.Timeout == 0 {
-		ecsConfig.Timeout = 300
+	if e.App.Timeout == 0 {
+		e.App.Timeout = 300
 	}
-
-	return &ecsConfig
 }
 
 // Deploy deploys app container to ECS via ECS deploy
-func (e *ecs) Deploy(ui terminal.UI) error {
-	if e.Unsafe && viper.GetString("prefer-runtime") == "native" {
+func (e *EcsService) Deploy(ui terminal.UI) error {
+	e.prepare()
+
+	if e.App.Unsafe && e.Project.PreferRuntime == "native" {
 		pterm.Warning.Println(templates.Dedent(`
 			deployment will be accelerated (unsafe):
 			- Health Check Interval: 5s
@@ -92,17 +69,17 @@ func (e *ecs) Deploy(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("%s: deploying app container...", e.Name)
+	s := sg.Add("%s: deploying app container...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
-	if e.Image == "" {
-		e.Image = fmt.Sprintf("%s/%s:%s",
-			viper.GetString("DOCKER_REGISTRY"),
-			fmt.Sprintf("%s-%s", viper.GetString("namespace"), e.Name),
-			fmt.Sprintf("%s-%s", viper.GetString("env"), "latest"))
+	if e.App.Image == "" {
+		e.App.Image = fmt.Sprintf("%s/%s:%s",
+			e.Project.DockerRegistry,
+			fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name),
+			fmt.Sprintf("%s-%s", e.Project.Env, "latest"))
 	}
 
-	if viper.GetString("prefer-runtime") == "native" {
+	if e.Project.PreferRuntime == "native" {
 		err := e.deployLocal(s.TermOutput())
 		pterm.SetDefaultOutput(os.Stdout)
 		if err != nil {
@@ -116,20 +93,22 @@ func (e *ecs) Deploy(ui terminal.UI) error {
 	}
 
 	s.Done()
-	s = sg.Add("%s: deployment completed!", e.Name)
+	s = sg.Add("%s: deployment completed!", e.App.Name)
 	s.Done()
 
 	return nil
 }
 
-func (e *ecs) Redeploy(ui terminal.UI) error {
+func (e *EcsService) Redeploy(ui terminal.UI) error {
+	e.prepare()
+
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("%s: redeploying app container...", e.Name)
+	s := sg.Add("%s: redeploying app container...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
-	if viper.GetString("prefer-runtime") == "native" {
+	if e.Project.PreferRuntime == "native" {
 		err := e.redeployLocal(s.TermOutput())
 		pterm.SetDefaultOutput(os.Stdout)
 		if err != nil {
@@ -143,30 +122,24 @@ func (e *ecs) Redeploy(ui terminal.UI) error {
 	}
 
 	s.Done()
-	s = sg.Add("%s: redeployment completed!", e.Name)
+	s = sg.Add("%s: redeployment completed!", e.App.Name)
 	s.Done()
 
 	return nil
 }
 
-func (e *ecs) Push(ui terminal.UI) error {
+func (e *EcsService) Push(ui terminal.UI) error {
+	e.prepare()
+
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("%s: push app image...", e.Name)
+	s := sg.Add("%s: push app image...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
-	image := fmt.Sprintf("%s-%s", viper.GetString("namespace"), e.Name)
+	image := fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name)
 
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  e.AwsRegion,
-		Profile: e.AwsProfile,
-	})
-	if err != nil {
-		return fmt.Errorf("unable to get aws session: %w", err)
-	}
-
-	svc := ecr.New(sess)
+	svc := ecr.New(e.Project.Session)
 
 	var repository *ecr.Repository
 
@@ -201,8 +174,8 @@ func (e *ecs) Push(ui terminal.UI) error {
 		return fmt.Errorf("no authorization tokens provided")
 	}
 
-	uptoken := *gat.AuthorizationData[0].AuthorizationToken
-	data, err := base64.StdEncoding.DecodeString(uptoken)
+	upToken := *gat.AuthorizationData[0].AuthorizationToken
+	data, err := base64.StdEncoding.DecodeString(upToken)
 	if err != nil {
 		return fmt.Errorf("unable to decode authorization token: %w", err)
 	}
@@ -216,14 +189,14 @@ func (e *ecs) Push(ui terminal.UI) error {
 
 	token := base64.URLEncoding.EncodeToString(authBytes)
 
-	tagLatest := fmt.Sprintf("%s-latest", viper.GetString("env"))
+	tagLatest := fmt.Sprintf("%s-latest", e.Project.Env)
 
-	dockerRegistry := viper.GetString("DOCKER_REGISTRY")
+	dockerRegistry := e.Project.DockerRegistry
 	imageUri := fmt.Sprintf("%s/%s", dockerRegistry, image)
 
 	r := docker.NewRegistry(*repository.RepositoryUri, token)
 
-	err = r.Push(context.Background(), s.TermOutput(), imageUri, []string{viper.GetString("tag"), tagLatest})
+	err = r.Push(context.Background(), s.TermOutput(), imageUri, []string{e.Project.Tag, tagLatest})
 	if err != nil {
 		return fmt.Errorf("can't push image: %w", err)
 	}
@@ -233,36 +206,38 @@ func (e *ecs) Push(ui terminal.UI) error {
 	return nil
 }
 
-func (e *ecs) Build(ui terminal.UI) error {
+func (e *EcsService) Build(ui terminal.UI) error {
+	e.prepare()
+
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("%s: building app container...", e.Name)
+	s := sg.Add("%s: building app container...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
-	registry := viper.GetString("DOCKER_REGISTRY")
-	image := fmt.Sprintf("%s-%s", viper.GetString("namespace"), e.Name)
+	registry := e.Project.DockerRegistry
+	image := fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name)
 	imageUri := fmt.Sprintf("%s/%s", registry, image)
 
-	relProjectPath, err := filepath.Rel(viper.GetString("ROOT_DIR"), e.Path)
+	relProjectPath, err := filepath.Rel(e.Project.RootDir, e.App.Path)
 	if err != nil {
 		return fmt.Errorf("unable to get relative path: %w", err)
 	}
 
 	buildArgs := map[string]*string{
 		"PROJECT_PATH": &relProjectPath,
-		"APP_NAME":     &e.Name,
+		"APP_NAME":     &e.App.Name,
 	}
 
 	tags := []string{
 		image,
-		fmt.Sprintf("%s:%s", imageUri, e.Tag),
-		fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", viper.GetString("ENV"))),
+		fmt.Sprintf("%s:%s", imageUri, e.Project.Tag),
+		fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", e.Project.Env)),
 	}
 
-	dockerfile := path.Join(e.Path, "Dockerfile")
+	dockerfile := path.Join(e.App.Path, "Dockerfile")
 
-	cache := []string{fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", viper.GetString("ENV")))}
+	cache := []string{fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", e.Project.Env))}
 
 	b := docker.NewBuilder(
 		buildArgs,
@@ -271,7 +246,7 @@ func (e *ecs) Build(ui terminal.UI) error {
 		cache,
 	)
 
-	err = b.Build(ui, s)
+	err = b.Build(ui, s, e.Project.RootDir)
 	if err != nil {
 		return fmt.Errorf("unable to build image: %w", err)
 	}
@@ -281,14 +256,14 @@ func (e *ecs) Build(ui terminal.UI) error {
 	return nil
 }
 
-func (e *ecs) Destroy(ui terminal.UI) error {
+func (e *EcsService) Destroy(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
 	ui.Output("Destroying ECS applications requires destroying the infrastructure.", terminal.WithWarningStyle())
 	time.Sleep(time.Millisecond * 100)
 
-	s := sg.Add("%s: destroying completed!", e.Name)
+	s := sg.Add("%s: destroying completed!", e.App.Name)
 	defer func() { s.Abort() }()
 	s.Done()
 

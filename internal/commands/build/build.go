@@ -13,15 +13,14 @@ import (
 	"github.com/spf13/viper"
 )
 
-type BuildOptions struct {
-	Config  *config.Config
+type Options struct {
+	Config  *config.Project
 	AppName string
-	Tag     string
 	App     interface{}
 }
 
 var buildLongDesc = templates.LongDesc(`
-	Build sevice.
+	Build app.
     App name must be specified for a app build. 
 `)
 
@@ -37,8 +36,8 @@ var buildExample = templates.Examples(`
 	ize build <app name>
 `)
 
-func NewBuildFlags() *BuildOptions {
-	return &BuildOptions{}
+func NewBuildFlags() *Options {
+	return &Options{}
 }
 
 func NewCmdBuild() *cobra.Command {
@@ -53,7 +52,7 @@ func NewCmdBuild() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
-			err := o.Complete(cmd, args)
+			err := o.Complete(cmd)
 			if err != nil {
 				return err
 			}
@@ -75,7 +74,7 @@ func NewCmdBuild() *cobra.Command {
 	return cmd
 }
 
-func (o *BuildOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *Options) Complete(cmd *cobra.Command) error {
 	var err error
 	o.Config, err = config.GetConfig()
 	if err != nil {
@@ -86,43 +85,42 @@ func (o *BuildOptions) Complete(cmd *cobra.Command, args []string) error {
 	o.AppName = cmd.Flags().Args()[0]
 	viper.UnmarshalKey(fmt.Sprintf("app.%s", o.AppName), &o.App)
 
-	o.Tag = viper.GetString("tag")
+	return nil
+}
+
+func (o *Options) Validate() error {
 
 	return nil
 }
 
-func (o *BuildOptions) Validate() error {
+func (o *Options) Run() error {
+	ui := terminal.ConsoleUI(context.Background(), o.Config.PlainText)
 
-	return nil
-}
+	var appService apps.App
 
-func (o *BuildOptions) Run() error {
-	ui := terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
-
-	var appType string
-
-	a, ok := o.App.(map[string]interface{})
-	if !ok {
-		appType = "ecs"
+	if app, ok := o.Config.Serverless[o.AppName]; ok {
+		appService = &apps.SlsService{
+			Project: o.Config,
+			App:     app,
+		}
+	}
+	if app, ok := o.Config.Alias[o.AppName]; ok {
+		appService = &apps.AliasService{
+			Project: o.Config,
+			App:     app,
+		}
+	}
+	if app, ok := o.Config.Ecs[o.AppName]; ok {
+		appService = &ecs.EcsService{
+			Project: o.Config,
+			App:     app,
+		}
 	} else {
-		appType, ok = a["type"].(string)
-		if !ok {
-			appType = "ecs"
+		appService = &ecs.EcsService{
+			Project: o.Config,
+			App:     &config.Ecs{Name: o.AppName},
 		}
 	}
 
-	var app apps.App
-
-	switch appType {
-	case "ecs":
-		app = ecs.NewECSApp(o.AppName, o.App)
-	case "serverless":
-		app = apps.NewServerlessApp(o.AppName, o.App)
-	case "alias":
-		app = apps.NewAliasApp(o.AppName)
-	default:
-		return fmt.Errorf("%s apps are not supported in this command", appType)
-	}
-
-	return app.Build(ui)
+	return appService.Build(ui)
 }

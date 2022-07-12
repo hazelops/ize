@@ -1,47 +1,43 @@
 package apps
 
 import (
+	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/terminal"
 )
 
-type alias struct {
-	Name string
+type AliasService struct {
+	Project *config.Project
+	App     *config.Alias
 }
 
-func NewAliasApp(name string) *alias {
-	return &alias{
-		Name: name,
-	}
-}
-
-func (a *alias) Deploy(ui terminal.UI) error {
+func (a *AliasService) Deploy(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("%s: deployment completed!", a.Name)
+	s := sg.Add("%s: deployment completed!", a.App.Name)
 	s.Done()
 
 	return nil
 }
 
-func (a *alias) Destroy(ui terminal.UI) error {
+func (a *AliasService) Destroy(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("%s: destroy completed!", a.Name)
+	s := sg.Add("%s: destroy completed!", a.App.Name)
 	s.Done()
 
 	return nil
 }
 
-func (a *alias) Push(ui terminal.UI) error {
+func (a *AliasService) Push(ui terminal.UI) error {
 	return nil
 }
 
-func (a *alias) Build(ui terminal.UI) error {
+func (a *AliasService) Build(ui terminal.UI) error {
 	return nil
 }
 
-func (a *alias) Redeploy(ui terminal.UI) error {
+func (a *AliasService) Redeploy(ui terminal.UI) error {
 	return nil
 }

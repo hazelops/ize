@@ -1,6 +1,8 @@
 package apps
 
-import "github.com/hazelops/ize/pkg/terminal"
+import (
+	"github.com/hazelops/ize/pkg/terminal"
+)
 
 type App interface {
 	Deploy(ui terminal.UI) error

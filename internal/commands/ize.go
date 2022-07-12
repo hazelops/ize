@@ -63,7 +63,7 @@ var (
 	}
 )
 
-func Execute(args []string) {
+func Execute() {
 	go version.CheckLatestRealese()
 
 	if err := rootCmd.Execute(); err != nil {
@@ -89,7 +89,9 @@ func init() {
 	rootCmd.PersistentFlags().String("prefer-runtime", "native", "set prefer runtime (native or docker)")
 	rootCmd.Flags().StringP("tag", "t", "", "set tag")
 	rootCmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
-		viper.BindPFlag(strings.ReplaceAll(f.Name, "-", "_"), rootCmd.PersistentFlags().Lookup(f.Name))
+		if viper.IsSet(f.Name) {
+			viper.BindPFlag(strings.ReplaceAll(f.Name, "-", "_"), rootCmd.PersistentFlags().Lookup(f.Name))
+		}
 	})
 
 	addCommands()

@@ -11,11 +11,10 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type TfenvOptions struct {
-	Config                   *config.Config
+	Config                   *config.Project
 	TerraformStateBucketName string
 }
 
@@ -49,7 +48,7 @@ func NewCmdTfenv() *cobra.Command {
 		Example: tfenvExample,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			err := o.Complete(cmd, args)
+			err := o.Complete()
 			if err != nil {
 				return err
 			}
@@ -73,20 +72,13 @@ func NewCmdTfenv() *cobra.Command {
 	return cmd
 }
 
-func (o *TfenvOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *TfenvOptions) Complete() error {
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return err
 	}
 
 	o.Config = cfg
-
-	o.Config.Env = viper.GetString("env")
-	o.Config.Namespace = viper.GetString("namespace")
-
-	if len(o.TerraformStateBucketName) == 0 {
-		o.TerraformStateBucketName = viper.GetString("infra.terraform.state_bucket_name")
-	}
 
 	return nil
 }
@@ -110,22 +102,31 @@ func (o *TfenvOptions) Validate() error {
 func (o *TfenvOptions) Run() error {
 	pterm.DefaultSection.Printfln("Starting generate terraform files")
 
-	awsStateRegion := o.Config.AwsRegion
-	if len(viper.GetString("infra.terraform.state_bucket_region")) > 0 {
-		awsStateRegion = viper.GetString("infra.terraform.state_bucket_region")
+	var tf config.Terraform
+	if o.Config.Terraform != nil {
+		tf = *o.Config.Terraform["infra"]
+	}
+
+	if len(o.TerraformStateBucketName) != 0 {
+		tf.StateBucketName = o.TerraformStateBucketName
+	}
+
+	if len(tf.StateBucketRegion) == 0 {
+		tf.StateBucketRegion = o.Config.AwsRegion
+
 	}
 
 	backendOpts := template.BackendOpts{
 		ENV:                            o.Config.Env,
 		LOCALSTACK_ENDPOINT:            "",
-		TERRAFORM_STATE_BUCKET_NAME:    o.TerraformStateBucketName,
+		TERRAFORM_STATE_BUCKET_NAME:    tf.StateBucketName,
 		TERRAFORM_STATE_KEY:            fmt.Sprintf("%v/terraform.tfstate", o.Config.Env),
-		TERRAFORM_STATE_REGION:         awsStateRegion,
+		TERRAFORM_STATE_REGION:         tf.StateBucketRegion,
 		TERRAFORM_STATE_PROFILE:        o.Config.AwsProfile,
 		TERRAFORM_STATE_DYNAMODB_TABLE: "tf-state-lock",
 		TERRAFORM_AWS_PROVIDER_VERSION: "",
 	}
-	envDir := viper.GetString("ENV_DIR")
+	envDir := o.Config.EnvDir
 
 	logrus.Debugf("backend opts: %s", backendOpts)
 	logrus.Debugf("ENV dir path: %s", envDir)
@@ -161,10 +162,10 @@ func (o *TfenvOptions) Run() error {
 		AWS_PROFILE:       o.Config.AwsProfile,
 		AWS_REGION:        o.Config.AwsRegion,
 		EC2_KEY_PAIR_NAME: fmt.Sprintf("%v-%v", o.Config.Env, o.Config.Namespace),
-		ROOT_DOMAIN_NAME:  viper.GetString("infra.terraform.root_domain_name"),
+		ROOT_DOMAIN_NAME:  tf.RootDomainName,
 		TAG:               o.Config.Env,
 		SSH_PUBLIC_KEY:    string(key)[:len(string(key))-1],
-		DOCKER_REGISTRY:   viper.GetString("DOCKER_REGISTRY"),
+		DOCKER_REGISTRY:   o.Config.DockerRegistry,
 		NAMESPACE:         o.Config.Namespace,
 	}
 

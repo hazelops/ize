@@ -1,8 +1,8 @@
 package tunnel
 
 import (
-	"context"
 	"fmt"
+	"github.com/pterm/pterm"
 	"os"
 
 	"github.com/hazelops/ize/internal/config"
@@ -12,9 +12,8 @@ import (
 )
 
 type TunnelSSHKeyOptions struct {
-	Config        *config.Config
+	Config        *config.Project
 	PublicKeyFile string
-	UI            terminal.UI
 }
 
 func NewSSHKeyFlags() *TunnelSSHKeyOptions {
@@ -30,7 +29,7 @@ func NewCmdSSHKey() *cobra.Command {
 		Long:  "Send ssh key to remote server",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			err := o.Complete(cmd, args)
+			err := o.Complete()
 			if err != nil {
 				return err
 			}
@@ -54,14 +53,13 @@ func NewCmdSSHKey() *cobra.Command {
 	return cmd
 }
 
-func (o *TunnelSSHKeyOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *TunnelSSHKeyOptions) Complete() error {
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return fmt.Errorf("can't load options for a command: %w", err)
 	}
 
 	o.Config = cfg
-	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
 
 	if o.PublicKeyFile == "" {
 		home, _ := os.UserHomeDir()
@@ -80,13 +78,7 @@ func (o *TunnelSSHKeyOptions) Validate() error {
 }
 
 func (o *TunnelSSHKeyOptions) Run() error {
-	ui := o.UI
-	sg := ui.StepGroup()
-	defer sg.Wait()
-
 	logrus.Debugf("public key path: %s", o.PublicKeyFile)
-
-	s := sg.Add("Sending the SSH user's public key...")
 
 	to, err := getTerraformOutput(o.Config.Session, o.Config.Env)
 	if err != nil {
@@ -98,8 +90,7 @@ func (o *TunnelSSHKeyOptions) Run() error {
 		return fmt.Errorf("can't send ssh key: %w", err)
 	}
 
-	s.Done()
-	ui.Output("SSH user's public key has been sent!\n", terminal.WithSuccessStyle())
+	pterm.Success.Printfln("SSH user's public key has been sent!\n", terminal.WithSuccessStyle())
 
 	return nil
 }

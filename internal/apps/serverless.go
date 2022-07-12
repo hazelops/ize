@@ -3,6 +3,7 @@ package apps
 import (
 	"context"
 	"fmt"
+	"github.com/hazelops/ize/internal/config"
 	"os"
 	"path/filepath"
 
@@ -15,54 +16,46 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/hazelops/ize/pkg/terminal"
-	"github.com/mitchellh/mapstructure"
-	"github.com/spf13/viper"
 )
 
-type serverless struct {
-	Name                    string
-	File                    string
-	NodeVersion             string `mapstructure:"node_version"`
-	Env                     []string
-	Path                    string
-	SLSNodeModuleCacheMount string
-	CreateDomain            bool `mapstructure:"creare_domain"`
+type SlsService struct {
+	Project *config.Project
+	App     *config.Serverless
 }
 
-func NewServerlessApp(name string, app interface{}) *serverless {
-	slsConfig := serverless{}
+func (sls *SlsService) prepare() {
+	if sls.App.Path == "" {
+		appsPath := sls.Project.AppsPath
+		if !filepath.IsAbs(appsPath) {
+			appsPath = filepath.Join(os.Getenv("PWD"), appsPath)
+		}
 
-	raw, ok := app.(map[string]interface{})
-	if ok {
-		mapstructure.Decode(raw, &slsConfig)
+		sls.App.Path = filepath.Join(appsPath, sls.App.Name)
+	} else {
+		rootDir := sls.Project.RootDir
+
+		if !filepath.IsAbs(sls.App.Path) {
+			sls.App.Path = filepath.Join(rootDir, sls.App.Path)
+		}
 	}
 
-	slsConfig.Name = name
-
-	appsPath := viper.GetString("APPS_PATH")
-	if !filepath.IsAbs(appsPath) {
-		appsPath = filepath.Join(os.Getenv("PWD"), appsPath)
+	if len(sls.App.File) == 0 {
+		sls.App.File = "serverless.yml"
+	}
+	if len(sls.App.SLSNodeModuleCacheMount) == 0 {
+		sls.App.SLSNodeModuleCacheMount = fmt.Sprintf("%s-node-modules", sls.App.Name)
 	}
 
-	slsConfig.Path = filepath.Join(appsPath, name)
-
-	if len(slsConfig.File) == 0 {
-		slsConfig.File = "serverless.yml"
-	}
-	if len(slsConfig.SLSNodeModuleCacheMount) == 0 {
-		slsConfig.SLSNodeModuleCacheMount = fmt.Sprintf("%s-node-modules", slsConfig.Name)
-	}
-
-	slsConfig.Env = append(slsConfig.Env, "SLS_DEBUG=*")
-
-	return &slsConfig
+	sls.App.Env = append(sls.App.Env, "SLS_DEBUG=*")
 }
 
-func (sls *serverless) Deploy(ui terminal.UI) error {
+func (sls *SlsService) Deploy(ui terminal.UI) error {
+	sls.prepare()
+
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("%s: initializing Docker client...", sls.Name)
+	s := sg.Add("%s: initializing Docker client...", sls.App.Name)
 	defer func() { s.Abort() }()
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
@@ -70,9 +63,9 @@ func (sls *serverless) Deploy(ui terminal.UI) error {
 		return err
 	}
 
-	image := "node:" + sls.NodeVersion
+	image := "node:" + sls.App.NodeVersion
 
-	s.Update("%s: checking for Docker image: %s", sls.Name, image)
+	s.Update("%s: checking for Docker image: %s", sls.App.Name, image)
 
 	imageRef, err := reference.ParseNormalizedNamed(image)
 	if err != nil {
@@ -90,7 +83,7 @@ func (sls *serverless) Deploy(ui terminal.UI) error {
 	}
 
 	if len(imageList) == 0 {
-		s.Update("%s: pulling image: %s", sls.Name, image)
+		s.Update("%s: pulling image: %s", sls.App.Name, image)
 
 		resp, err := cli.ImagePull(context.Background(), reference.FamiliarString(imageRef), types.ImagePullOptions{})
 		if err != nil {
@@ -117,23 +110,23 @@ func (sls *serverless) Deploy(ui terminal.UI) error {
 		s = sg.Add("")
 	}
 
-	s.Update("%s: downloading npm modules...", sls.Name)
+	s.Update("%s: downloading npm modules...", sls.App.Name)
 
 	err = sls.npm(cli, []string{"npm", "install", "--save-dev"}, s)
 	if err != nil {
-		return fmt.Errorf("can't deploy %s: %w", sls.Name, err)
+		return fmt.Errorf("can't deploy %s: %w", sls.App.Name, err)
 	}
 
 	s.Done()
 
-	if sls.CreateDomain {
-		s = sg.Add("%s: creating domain...", sls.Name)
+	if sls.App.CreateDomain {
+		s = sg.Add("%s: creating domain...", sls.App.Name)
 		err = sls.serverless(cli, []string{
 			"create_domain",
 			"--verbose",
-			"--region", viper.GetString("aws_region"),
-			"--env", viper.GetString("env"),
-			"--profile", viper.GetString("aws_profile"),
+			"--region", sls.Project.AwsRegion,
+			"--profile", sls.Project.AwsProfile,
+			"--env", sls.Project.Env,
 		}, s)
 		if err != nil {
 			return err
@@ -142,16 +135,16 @@ func (sls *serverless) Deploy(ui terminal.UI) error {
 		s.Done()
 	}
 
-	s = sg.Add("%s: deloying app...", sls.Name)
+	s = sg.Add("%s: deloying app...", sls.App.Name)
 
 	err = sls.serverless(cli, []string{
 		"deploy",
-		"--config", sls.File,
-		"--service", sls.Name,
+		"--config", sls.App.File,
+		"--service", sls.App.Name,
 		"--verbose",
-		"--region", viper.GetString("aws_region"),
-		"--env", viper.GetString("env"),
-		"--profile", viper.GetString("aws_profile"),
+		"--region", sls.Project.AwsRegion,
+		"--profile", sls.Project.AwsProfile,
+		"--env", sls.Project.Env,
 	}, s)
 	if err != nil {
 		s.Abort()
@@ -159,17 +152,19 @@ func (sls *serverless) Deploy(ui terminal.UI) error {
 	}
 
 	s.Done()
-	s = sg.Add("%s: deployment completed!", sls.Name)
+	s = sg.Add("%s: deployment completed!", sls.App.Name)
 	s.Done()
 
 	return nil
 }
 
-func (sls *serverless) Destroy(ui terminal.UI) error {
+func (sls *SlsService) Destroy(ui terminal.UI) error {
+	sls.prepare()
+
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("%s: initializing Docker client...", sls.Name)
+	s := sg.Add("%s: initializing Docker client...", sls.App.Name)
 	defer func() { s.Abort() }()
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
@@ -177,9 +172,9 @@ func (sls *serverless) Destroy(ui terminal.UI) error {
 		return err
 	}
 
-	image := "node:" + sls.NodeVersion
+	image := "node:" + sls.App.NodeVersion
 
-	s.Update("%s: checking for Docker image: %s", sls.Name, image)
+	s.Update("%s: checking for Docker image: %s", sls.App.Name, image)
 
 	imageRef, err := reference.ParseNormalizedNamed(image)
 	if err != nil {
@@ -197,7 +192,7 @@ func (sls *serverless) Destroy(ui terminal.UI) error {
 	}
 
 	if len(imageList) == 0 {
-		s.Update("%s: pulling image: %s", sls.Name, image)
+		s.Update("%s: pulling image: %s", sls.App.Name, image)
 
 		resp, err := cli.ImagePull(context.Background(), reference.FamiliarString(imageRef), types.ImagePullOptions{})
 		if err != nil {
@@ -225,16 +220,16 @@ func (sls *serverless) Destroy(ui terminal.UI) error {
 	}
 
 	s.Done()
-	s = sg.Add("%s: destroying app...", sls.Name)
+	s = sg.Add("%s: destroying app...", sls.App.Name)
 
 	err = sls.serverless(cli, []string{
 		"remove",
-		"--config", sls.File,
-		"--service", sls.Name,
+		"--config", sls.App.File,
+		"--service", sls.App.Name,
 		"--verbose",
-		"--region", viper.GetString("aws_region"),
-		"--env", viper.GetString("env"),
-		"--profile", viper.GetString("aws_profile"),
+		"--region", sls.Project.AwsRegion,
+		"--env", sls.Project.Env,
+		"--profile", sls.Project.AwsProfile,
 	}, s)
 	if err != nil {
 		s.Abort()
@@ -242,21 +237,21 @@ func (sls *serverless) Destroy(ui terminal.UI) error {
 	}
 
 	s.Done()
-	s = sg.Add("%s: deployment completed!", sls.Name)
+	s = sg.Add("%s: deployment completed!", sls.App.Name)
 	s.Done()
 
 	return nil
 }
 
-func (sls *serverless) serverless(cli *client.Client, cmd []string, step terminal.Step) error {
+func (sls *SlsService) serverless(cli *client.Client, cmd []string, step terminal.Step) error {
 	command := []string{"serverless"}
 	command = append(command, cmd...)
 
 	contConfig := &container.Config{
-		Image:        fmt.Sprintf("node:%v", sls.NodeVersion),
+		Image:        fmt.Sprintf("node:%v", sls.App.NodeVersion),
 		Entrypoint:   strslice.StrSlice{"/usr/local/bin/npx"},
 		WorkingDir:   "/app",
-		Env:          sls.Env,
+		Env:          sls.App.Env,
 		Tty:          true,
 		Cmd:          command,
 		AttachStdin:  true,
@@ -264,7 +259,7 @@ func (sls *serverless) serverless(cli *client.Client, cmd []string, step termina
 		AttachStderr: true,
 	}
 
-	contHostConfig := sls.getHostConfig()
+	contHostConfig := sls.getHostConfig(sls.Project.Home, sls.Project.RootDir)
 
 	cont, err := cli.ContainerCreate(
 		context.Background(),
@@ -324,10 +319,10 @@ msgLoop:
 	}
 }
 
-func (sls *serverless) npm(cli *client.Client, cmd []string, s terminal.Step) error {
+func (sls *SlsService) npm(cli *client.Client, cmd []string, s terminal.Step) error {
 	contConfig := &container.Config{
 		WorkingDir:   "/app",
-		Image:        fmt.Sprintf("node:%v", sls.NodeVersion),
+		Image:        fmt.Sprintf("node:%v", sls.App.NodeVersion),
 		Tty:          true,
 		Cmd:          cmd,
 		AttachStdin:  true,
@@ -336,7 +331,7 @@ func (sls *serverless) npm(cli *client.Client, cmd []string, s terminal.Step) er
 		OpenStdin:    true,
 	}
 
-	contHostConfig := sls.getHostConfig()
+	contHostConfig := sls.getHostConfig(sls.Project.Home, sls.Project.RootDir)
 
 	cont, err := cli.ContainerCreate(
 		context.Background(),
@@ -400,48 +395,48 @@ msgLoop:
 	}
 }
 
-func (sls *serverless) getHostConfig() *container.HostConfig {
+func (sls *SlsService) getHostConfig(homeDir, rootDir string) *container.HostConfig {
 	return &container.HostConfig{
 		AutoRemove: true,
 		Mounts: []mount.Mount{
 			{
 				Type:     mount.TypeBind,
 				ReadOnly: true,
-				Source:   fmt.Sprintf("%v/.aws", viper.Get("HOME")),
+				Source:   fmt.Sprintf("%v/.aws", homeDir),
 				Target:   "/root/.aws",
 			},
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%s/%s", viper.Get("ROOT_DIR"), sls.Path),
+				Source: fmt.Sprintf("%s/%s", rootDir, sls.App.Path),
 				Target: "/app",
 			},
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%s/%s/.serverless/", viper.Get("ROOT_DIR"), sls.Path),
+				Source: fmt.Sprintf("%s/%s/.serverless/", rootDir, sls.App.Path),
 				Target: "/root/.config",
 			},
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%s/.npm/", viper.Get("ROOT_DIR")),
+				Source: fmt.Sprintf("%s/.npm/", rootDir),
 				Target: "/root/.npm",
 			},
 			{
 				Type:   mount.TypeVolume,
-				Source: sls.SLSNodeModuleCacheMount,
+				Source: sls.App.SLSNodeModuleCacheMount,
 				Target: "/app/node_modules",
 			},
 		},
 	}
 }
 
-func (sls *serverless) Push(ui terminal.UI) error {
+func (sls *SlsService) Push(ui terminal.UI) error {
 	return nil
 }
 
-func (sls *serverless) Build(ui terminal.UI) error {
+func (sls *SlsService) Build(ui terminal.UI) error {
 	return nil
 }
 
-func (sls *serverless) Redeploy(ui terminal.UI) error {
+func (sls *SlsService) Redeploy(ui terminal.UI) error {
 	return nil
 }

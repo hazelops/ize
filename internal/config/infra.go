@@ -1,9 +1,8 @@
 package config
 
 type Infra struct {
-	Terraform Terraform `mapstructure:",omitempty"`
-
-	Tunnel Tunnel `mapstructure:",omitempty"`
+	Terraform Terraform `mapstructure:"infra.terraform,omitempty"`
+	Tunnel    Tunnel    `mapstructure:"infra.tunnel,omitempty"`
 }
 
 type Terraform struct {

@@ -3,21 +3,20 @@ package down
 import (
 	"context"
 	"fmt"
-	"strings"
-
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/terraform"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 )
 
 type DownInfraOptions struct {
-	Config    *config.Config
-	Terraform terraformInfraConfig
-	ui        terminal.UI
+	Config *config.Project
+	ui     terminal.UI
+
+	Version    string
+	AwsProfile string
+	AwsRegion  string
 }
 
 func NewDownInfraFlags() *DownInfraOptions {
@@ -32,7 +31,7 @@ func NewCmdDownInfra() *cobra.Command {
 		Short: "Destroy infrastructure",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			err := o.Complete(cmd, args)
+			err := o.Complete()
 			if err != nil {
 				return err
 			}
@@ -51,23 +50,14 @@ func NewCmdDownInfra() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&o.Terraform.Version, "infra.terraform.version", "", "set terraform version")
-	cmd.Flags().StringVar(&o.Terraform.Profile, "infra.terraform.aws-profile", "", "set aws profile")
+	cmd.Flags().StringVar(&o.Version, "infra.terraform.version", "", "set terraform version")
+	cmd.Flags().StringVar(&o.AwsProfile, "infra.terraform.aws-profile", "", "set aws profile")
+	cmd.Flags().StringVar(&o.AwsRegion, "infra.terraform.aws-region", "", "set aws region")
 
 	return cmd
 }
 
-func BindFlags(flags *pflag.FlagSet) {
-	replacer := strings.NewReplacer("-", "_")
-
-	flags.VisitAll(func(flag *pflag.Flag) {
-		if err := viper.BindPFlag(replacer.Replace(flag.Name), flag); err != nil {
-			panic("unable to bind flag " + flag.Name + ": " + err.Error())
-		}
-	})
-}
-
-func (o *DownInfraOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *DownInfraOptions) Complete() error {
 	var err error
 
 	o.Config, err = config.GetConfig()
@@ -75,25 +65,36 @@ func (o *DownInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("can't load options for a command: %w", err)
 	}
 
-	BindFlags(cmd.Flags())
-
-	if len(o.Terraform.Profile) == 0 {
-		o.Terraform.Profile = viper.GetString("infra.terraform.aws_profile")
+	if o.Config.Terraform == nil {
+		o.Config.Terraform = map[string]*config.Terraform{}
+		o.Config.Terraform["infra"] = &config.Terraform{}
 	}
 
-	if len(o.Terraform.Profile) == 0 {
-		o.Terraform.Profile = o.Config.AwsProfile
+	if len(o.AwsProfile) != 0 {
+		o.Config.Terraform["infra"].AwsProfile = o.AwsProfile
 	}
 
-	if len(o.Terraform.Version) == 0 {
-		o.Terraform.Version = viper.GetString("infra.terraform.terraform_version")
+	if len(o.Config.Terraform["infra"].AwsProfile) == 0 {
+		o.Config.Terraform["infra"].AwsProfile = o.Config.AwsProfile
 	}
 
-	if len(o.Terraform.Version) == 0 {
-		o.Terraform.Version = viper.GetString("terraform_version")
+	if len(o.AwsProfile) != 0 {
+		o.Config.Terraform["infra"].AwsRegion = o.AwsRegion
 	}
 
-	o.ui = terminal.ConsoleUI(context.Background(), viper.GetBool("plain_text"))
+	if len(o.Config.Terraform["infra"].AwsRegion) == 0 {
+		o.Config.Terraform["infra"].AwsRegion = o.Config.AwsRegion
+	}
+
+	if len(o.Version) != 0 {
+		o.Config.Terraform["infra"].Version = o.Version
+	}
+
+	if len(o.Config.Terraform["infra"].Version) == 0 {
+		o.Config.Terraform["infra"].Version = o.Config.TerraformVersion
+	}
+
+	o.ui = terminal.ConsoleUI(context.Background(), o.Config.PlainText)
 
 	return nil
 }
@@ -110,7 +111,7 @@ func (o *DownInfraOptions) Run() error {
 	ui := o.ui
 	var tf terraform.Terraform
 
-	logrus.Infof("infra: %s", o.Terraform)
+	logrus.Infof("infra: %s", o.Config.Terraform["infra"])
 
 	v, err := o.Config.Session.Config.Credentials.Get()
 	if err != nil {
@@ -119,22 +120,25 @@ func (o *DownInfraOptions) Run() error {
 
 	env := []string{
 		fmt.Sprintf("ENV=%v", o.Config.Env),
-		fmt.Sprintf("AWS_PROFILE=%v", o.Terraform.Profile),
-		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
+		fmt.Sprintf("AWS_PROFILE=%v", o.Config.Terraform["infra"].AwsProfile),
+		fmt.Sprintf("TF_LOG=%v", o.Config.TFLog),
+		fmt.Sprintf("TF_LOG_PATH=%v", o.Config.TFLogPath),
 		fmt.Sprintf("AWS_ACCESS_KEY_ID=%v", v.AccessKeyID),
 		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%v", v.SecretAccessKey),
 		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
 	}
 
-	if o.Config.IsDockerRuntime {
-		tf = terraform.NewDockerTerraform(o.Terraform.Version, []string{"destroy", "-auto-approve"}, env, nil)
-	} else {
-		tf = terraform.NewLocalTerraform(o.Terraform.Version, []string{"destroy", "-auto-approve"}, env, nil)
+	switch o.Config.PreferRuntime {
+	case "docker":
+		tf = terraform.NewDockerTerraform(o.Config.Terraform["infra"].Version, []string{"destroy", "-auto-approve"}, env, nil, o.Config.Home, o.Config.InfraDir, o.Config.EnvDir)
+	case "native":
+		tf = terraform.NewLocalTerraform(o.Config.Terraform["infra"].Version, []string{"destroy", "-auto-approve"}, env, nil, o.Config.EnvDir)
 		err = tf.Prepare()
 		if err != nil {
 			return fmt.Errorf("can't destroy infra: %w", err)
 		}
+	default:
+		return fmt.Errorf("can't supported %s runtime", o.Config.PreferRuntime)
 	}
 
 	ui.Output("Running terraform destroy...", terminal.WithHeaderStyle())
@@ -147,9 +151,4 @@ func (o *DownInfraOptions) Run() error {
 	ui.Output("Terraform destroy completed!\n", terminal.WithSuccessStyle())
 
 	return nil
-}
-
-type terraformInfraConfig struct {
-	Version string `mapstructure:"terraform_version,optional"`
-	Profile string `mapstructure:"aws_profile,optional"`
 }
