@@ -10,13 +10,11 @@ import (
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type Options struct {
 	Config  *config.Project
 	AppName string
-	App     interface{}
 }
 
 var buildLongDesc = templates.LongDesc(`
@@ -81,9 +79,7 @@ func (o *Options) Complete(cmd *cobra.Command) error {
 		return fmt.Errorf("can't load options for a command: %w", err)
 	}
 
-	viper.BindPFlags(cmd.Flags())
 	o.AppName = cmd.Flags().Args()[0]
-	viper.UnmarshalKey(fmt.Sprintf("app.%s", o.AppName), &o.App)
 
 	return nil
 }
@@ -99,18 +95,21 @@ func (o *Options) Run() error {
 	var appService apps.App
 
 	if app, ok := o.Config.Serverless[o.AppName]; ok {
+		app.Name = o.AppName
 		appService = &apps.SlsService{
 			Project: o.Config,
 			App:     app,
 		}
 	}
 	if app, ok := o.Config.Alias[o.AppName]; ok {
+		app.Name = o.AppName
 		appService = &apps.AliasService{
 			Project: o.Config,
 			App:     app,
 		}
 	}
 	if app, ok := o.Config.Ecs[o.AppName]; ok {
+		app.Name = o.AppName
 		appService = &ecs.EcsService{
 			Project: o.Config,
 			App:     app,

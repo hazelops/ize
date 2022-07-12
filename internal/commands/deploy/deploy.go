@@ -127,20 +127,23 @@ func (o *Options) Run() error {
 	var appService apps.App
 
 	if app, ok := o.Config.Serverless[o.AppName]; ok {
+		app.Name = o.AppName
 		appService = &apps.SlsService{
 			Project: o.Config,
 			App:     app,
 		}
 	}
 	if app, ok := o.Config.Alias[o.AppName]; ok {
+		app.Name = o.AppName
 		appService = &apps.AliasService{
 			Project: o.Config,
 			App:     app,
 		}
 	}
 	if app, ok := o.Config.Ecs[o.AppName]; ok {
-		o.Config.Ecs[o.AppName].TaskDefinitionRevision = o.TaskDefinitionRevision
-		o.Config.Ecs[o.AppName].Unsafe = o.Unsafe
+		app.Name = o.AppName
+		app.TaskDefinitionRevision = o.TaskDefinitionRevision
+		app.Unsafe = o.Unsafe
 		appService = &ecs.EcsService{
 			Project: o.Config,
 			App:     app,

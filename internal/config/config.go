@@ -149,7 +149,7 @@ func GetConfig() (*Project, error) {
 	}
 
 	if len(cfg.DockerRegistry) == 0 {
-		cfg.DockerRegistry = fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, cfg.AwsProfile)
+		cfg.DockerRegistry = fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, cfg.AwsRegion)
 	}
 	// Reset env directory to default because env may change
 	if len(cfg.DockerRegistry) == 0 {
