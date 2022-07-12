@@ -57,7 +57,7 @@
             "type": "string"
         },
         "custom_prompt": {
-            "type": "string"
+            "type": "boolean"
         },
         "tunnel": {
             "type": "object",

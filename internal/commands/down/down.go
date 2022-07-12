@@ -245,7 +245,7 @@ func destroyAll(ui terminal.UI, o *DownOptions) error {
 		return err
 	}
 
-	err = destroyInfra(ui, *o.Config, o.SkipGen)
+	err = destroyInfra(ui, o.Config, o.SkipGen)
 	if err != nil {
 		return err
 	}
@@ -255,14 +255,11 @@ func destroyAll(ui terminal.UI, o *DownOptions) error {
 	return nil
 }
 
-func destroyInfra(ui terminal.UI, config config.Project, skipGen bool) error {
+func destroyInfra(ui terminal.UI, config *config.Project, skipGen bool) error {
 	if !skipGen {
 		if !checkFileExists(filepath.Join(config.EnvDir, "backend.tf")) || !checkFileExists(filepath.Join(config.EnvDir, "terraform.tfvars")) {
 			err := gen.GenerateTerraformFiles(
-				config.AwsRegion,
-				config.AwsProfile,
-				config.Env,
-				config.Namespace,
+				config,
 				"",
 			)
 			if err != nil {
