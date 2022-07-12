@@ -57,7 +57,14 @@
             "type": "string"
         },
         "custom_prompt": {
-            "type": "boolean"
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "boolean"
+                }
+            ]
         },
         "tunnel": {
             "type": "object",
