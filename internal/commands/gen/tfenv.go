@@ -53,11 +53,6 @@ func NewCmdTfenv() *cobra.Command {
 				return err
 			}
 
-			err = o.Validate()
-			if err != nil {
-				return err
-			}
-
 			err = o.Run()
 			if err != nil {
 				return err
@@ -100,33 +95,41 @@ func (o *TfenvOptions) Validate() error {
 }
 
 func (o *TfenvOptions) Run() error {
+	return GenerateTerraformFiles(
+		o.Config,
+		o.TerraformStateBucketName,
+	)
+
+}
+
+func GenerateTerraformFiles(project *config.Project, terraformStateBucketName string) error {
 	pterm.DefaultSection.Printfln("Starting generate terraform files")
 
 	var tf config.Terraform
-	if o.Config.Terraform != nil {
-		tf = *o.Config.Terraform["infra"]
+	if project.Terraform != nil {
+		tf = *project.Terraform["infra"]
 	}
 
-	if len(o.TerraformStateBucketName) != 0 {
-		tf.StateBucketName = o.TerraformStateBucketName
+	if len(terraformStateBucketName) != 0 {
+		tf.StateBucketName = terraformStateBucketName
 	}
 
 	if len(tf.StateBucketRegion) == 0 {
-		tf.StateBucketRegion = o.Config.AwsRegion
+		tf.StateBucketRegion = project.AwsRegion
 
 	}
 
 	backendOpts := template.BackendOpts{
-		ENV:                            o.Config.Env,
+		ENV:                            project.Env,
 		LOCALSTACK_ENDPOINT:            "",
 		TERRAFORM_STATE_BUCKET_NAME:    tf.StateBucketName,
-		TERRAFORM_STATE_KEY:            fmt.Sprintf("%v/terraform.tfstate", o.Config.Env),
+		TERRAFORM_STATE_KEY:            fmt.Sprintf("%v/terraform.tfstate", project.Env),
 		TERRAFORM_STATE_REGION:         tf.StateBucketRegion,
-		TERRAFORM_STATE_PROFILE:        o.Config.AwsProfile,
+		TERRAFORM_STATE_PROFILE:        project.AwsProfile,
 		TERRAFORM_STATE_DYNAMODB_TABLE: "tf-state-lock",
 		TERRAFORM_AWS_PROVIDER_VERSION: "",
 	}
-	envDir := o.Config.EnvDir
+	envDir := project.EnvDir
 
 	logrus.Debugf("backend opts: %s", backendOpts)
 	logrus.Debugf("ENV dir path: %s", envDir)
@@ -158,15 +161,15 @@ func (o *TfenvOptions) Run() error {
 	}
 
 	varsOpts := template.VarsOpts{
-		ENV:               o.Config.Env,
-		AWS_PROFILE:       o.Config.AwsProfile,
-		AWS_REGION:        o.Config.AwsRegion,
-		EC2_KEY_PAIR_NAME: fmt.Sprintf("%v-%v", o.Config.Env, o.Config.Namespace),
+		ENV:               project.Env,
+		AWS_PROFILE:       project.AwsProfile,
+		AWS_REGION:        project.AwsRegion,
+		EC2_KEY_PAIR_NAME: fmt.Sprintf("%v-%v", project.Env, project.Namespace),
 		ROOT_DOMAIN_NAME:  tf.RootDomainName,
-		TAG:               o.Config.Env,
+		TAG:               project.Env,
 		SSH_PUBLIC_KEY:    string(key)[:len(string(key))-1],
-		DOCKER_REGISTRY:   o.Config.DockerRegistry,
-		NAMESPACE:         o.Config.Namespace,
+		DOCKER_REGISTRY:   project.DockerRegistry,
+		NAMESPACE:         project.Namespace,
 	}
 
 	logrus.Debugf("backend opts: %s", varsOpts)

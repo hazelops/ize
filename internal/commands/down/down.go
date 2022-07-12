@@ -2,7 +2,11 @@ package down
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/hazelops/ize/internal/commands/gen"
+	"os"
+	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hazelops/ize/internal/apps"
@@ -21,6 +25,7 @@ type DownOptions struct {
 	AppName          string
 	SkipBuildAndPush bool
 	AutoApprove      bool
+	SkipGen          bool
 	ui               terminal.UI
 }
 
@@ -86,6 +91,7 @@ func NewCmdDown() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "approve deploy all")
+	cmd.Flags().BoolVar(&o.SkipGen, "skip-gen", false, "skip generating terraform files")
 
 	cmd.AddCommand(
 		NewCmdDownInfra(),
@@ -239,49 +245,79 @@ func destroyAll(ui terminal.UI, o *DownOptions) error {
 		return err
 	}
 
-	var tf terraform.Terraform
-
-	logrus.Infof("infra: %s", o.Config.Terraform["infra"])
-
-	v, err := o.Config.Session.Config.Credentials.Get()
+	err = destroyInfra(ui, *o.Config, o.SkipGen)
 	if err != nil {
-		return fmt.Errorf("can't set AWS credentials: %w", err)
-	}
-
-	env := []string{
-		fmt.Sprintf("ENV=%v", o.Config.Env),
-		fmt.Sprintf("AWS_PROFILE=%v", o.Config.Terraform["infra"].AwsProfile),
-		fmt.Sprintf("TF_LOG=%v", o.Config.TFLog),
-		fmt.Sprintf("TF_LOG_PATH=%v", o.Config.TFLogPath),
-		fmt.Sprintf("AWS_ACCESS_KEY_ID=%v", v.AccessKeyID),
-		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%v", v.SecretAccessKey),
-		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
-	}
-
-	switch o.Config.PreferRuntime {
-	case "docker":
-		tf = terraform.NewDockerTerraform(o.Config.Terraform["infra"].Version, []string{"destroy", "-auto-approve"}, env, nil, o.Config.Home, o.Config.InfraDir, o.Config.EnvDir)
-	case "native":
-		tf = terraform.NewLocalTerraform(o.Config.Terraform["infra"].Version, []string{"destroy", "-auto-approve"}, env, nil, o.Config.EnvDir)
-		err = tf.Prepare()
-		if err != nil {
-			return fmt.Errorf("can't destroy all: %w", err)
-		}
-	default:
-		return fmt.Errorf("can't supported %s runtime", o.Config.PreferRuntime)
-	}
-
-	ui.Output("Running destroy infra...", terminal.WithHeaderStyle())
-	ui.Output("Execution terraform destroy...", terminal.WithHeaderStyle())
-
-	err = tf.RunUI(ui)
-	if err != nil {
-		return fmt.Errorf("can't destroy all: %w", err)
+		return err
 	}
 
 	ui.Output("Destroy all completed!\n", terminal.WithSuccessStyle())
 
 	return nil
+}
+
+func destroyInfra(ui terminal.UI, config config.Project, skipGen bool) error {
+	if !skipGen {
+		if !checkFileExists(filepath.Join(config.EnvDir, "backend.tf")) || !checkFileExists(filepath.Join(config.EnvDir, "terraform.tfvars")) {
+			err := gen.GenerateTerraformFiles(
+				config.AwsRegion,
+				config.AwsProfile,
+				config.Env,
+				config.Namespace,
+				"",
+			)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	var tf terraform.Terraform
+
+	logrus.Infof("infra: %s", tf)
+
+	v, err := config.Session.Config.Credentials.Get()
+	if err != nil {
+		return fmt.Errorf("can't set AWS credentials: %w", err)
+	}
+
+	env := []string{
+		fmt.Sprintf("ENV=%v", config.Env),
+		fmt.Sprintf("AWS_PROFILE=%v", config.Terraform["infra"].AwsProfile),
+		fmt.Sprintf("TF_LOG=%v", config.TFLog),
+		fmt.Sprintf("TF_LOG_PATH=%v", config.TFLogPath),
+		fmt.Sprintf("AWS_ACCESS_KEY_ID=%v", v.AccessKeyID),
+		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%v", v.SecretAccessKey),
+		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
+	}
+
+	switch config.PreferRuntime {
+	case "docker":
+		tf = terraform.NewDockerTerraform(config.Terraform["infra"].Version, []string{"destroy", "-auto-approve"}, env, nil, config.Home, config.InfraDir, config.EnvDir)
+	case "native":
+		tf = terraform.NewLocalTerraform(config.Terraform["infra"].Version, []string{"destroy", "-auto-approve"}, env, nil, config.EnvDir)
+		err = tf.Prepare()
+		if err != nil {
+			return fmt.Errorf("can't destroy infra: %w", err)
+		}
+	default:
+		return fmt.Errorf("can't supported %s runtime", config.PreferRuntime)
+	}
+
+	ui.Output("Running terraform destroy...", terminal.WithHeaderStyle())
+
+	err = tf.RunUI(ui)
+	if err != nil {
+		return err
+	}
+
+	ui.Output("Terraform destroy completed!\n", terminal.WithSuccessStyle())
+
+	return nil
+}
+
+func checkFileExists(path string) bool {
+	_, err := os.Stat(path)
+	return !errors.Is(err, os.ErrNotExist)
 }
 
 func destroyApp(ui terminal.UI, o *DownOptions) error {

@@ -325,7 +325,10 @@ func deployApp(ui terminal.UI, o *Options) error {
 func deployInfra(ui terminal.UI, config *config.Project, skipGen bool) error {
 	if !skipGen {
 		if !checkFileExists(filepath.Join(config.EnvDir, "backend.tf")) || !checkFileExists(filepath.Join(config.EnvDir, "terraform.tfvars")) {
-			err := gen.NewCmdTfenv().Execute()
+			err := gen.GenerateTerraformFiles(
+				config,
+				"",
+			)
 			if err != nil {
 				return err
 			}
