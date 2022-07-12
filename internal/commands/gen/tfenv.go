@@ -75,18 +75,6 @@ func (o *TfenvOptions) Complete() error {
 
 	o.Config = cfg
 
-	return nil
-}
-
-func (o *TfenvOptions) Validate() error {
-	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("env must be specified\n")
-	}
-
-	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("namespace must be specified\n")
-	}
-
 	if len(o.TerraformStateBucketName) == 0 {
 		o.TerraformStateBucketName = fmt.Sprintf("%s-tf-state", o.Config.Namespace)
 	}
