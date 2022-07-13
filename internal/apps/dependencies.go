@@ -55,7 +55,7 @@ func InDependencyOrder(ctx context.Context, apps map[string]*interface{}, fn fun
 	return visit(ctx, apps, upDirectionTraversalConfig, fn, AppStopped)
 }
 
-// InReversDependencyOrder InReverseDependencyOrder applies the function to the apps of the project in reverse order of dependencies
+// InReverseDependencyOrder applies the function to the apps of the project in reverse order of dependencies
 func InReversDependencyOrder(ctx context.Context, apps map[string]*interface{}, fn func(context.Context, string) error) error {
 	return visit(ctx, apps, downDirectionTraversalConfig, fn, AppStarted)
 }
