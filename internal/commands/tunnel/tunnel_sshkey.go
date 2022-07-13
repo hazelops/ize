@@ -90,7 +90,7 @@ func (o *TunnelSSHKeyOptions) Run() error {
 		return fmt.Errorf("can't send ssh key: %w", err)
 	}
 
-	pterm.Success.Printfln("SSH user's public key has been sent!\n", terminal.WithSuccessStyle())
+	pterm.Success.Printfln("User SSH public key has been sent!\n", terminal.WithSuccessStyle())
 
 	return nil
 }
