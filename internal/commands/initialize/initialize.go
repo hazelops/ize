@@ -2,6 +2,7 @@ package initialize
 
 import (
 	"fmt"
+	"github.com/hazelops/ize/internal/version"
 	"os"
 	"path/filepath"
 
@@ -219,9 +220,15 @@ func internalTemplates() {
 		logrus.Fatal(err)
 	}
 
+	var internal [][]string
+	internal = append(internal, []string{"Name", "Version"})
+
 	for _, d := range dirs {
 		if d.IsDir() {
-			fmt.Println(d.Name())
+			internal = append(internal, []string{d.Name(), version.GitCommit})
 		}
 	}
+
+	pterm.DefaultTable.WithHasHeader().WithData(internal).Render()
+
 }
