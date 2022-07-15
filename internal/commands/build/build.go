@@ -3,10 +3,12 @@ package build
 import (
 	"context"
 	"fmt"
+	"github.com/hazelops/ize/internal/manager"
+	"github.com/hazelops/ize/internal/manager/alias"
+	"github.com/hazelops/ize/internal/manager/serverless"
 
-	"github.com/hazelops/ize/internal/apps"
-	"github.com/hazelops/ize/internal/apps/ecs"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/manager/ecs"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
@@ -92,34 +94,34 @@ func (o *Options) Validate() error {
 func (o *Options) Run() error {
 	ui := terminal.ConsoleUI(context.Background(), o.Config.PlainText)
 
-	var appService apps.App
+	var manager manager.Manager
 
 	if app, ok := o.Config.Serverless[o.AppName]; ok {
 		app.Name = o.AppName
-		appService = &apps.SlsService{
+		manager = &serverless.Manager{
 			Project: o.Config,
 			App:     app,
 		}
 	}
 	if app, ok := o.Config.Alias[o.AppName]; ok {
 		app.Name = o.AppName
-		appService = &apps.AliasService{
+		manager = &alias.Manager{
 			Project: o.Config,
 			App:     app,
 		}
 	}
 	if app, ok := o.Config.Ecs[o.AppName]; ok {
 		app.Name = o.AppName
-		appService = &ecs.EcsService{
+		manager = &ecs.Manager{
 			Project: o.Config,
 			App:     app,
 		}
 	} else {
-		appService = &ecs.EcsService{
+		manager = &ecs.Manager{
 			Project: o.Config,
 			App:     &config.Ecs{Name: o.AppName},
 		}
 	}
 
-	return appService.Build(ui)
+	return manager.Build(ui)
 }

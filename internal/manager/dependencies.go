@@ -1,4 +1,4 @@
-package apps
+package manager
 
 import (
 	"context"

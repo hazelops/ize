@@ -19,7 +19,7 @@ import (
 	dockerutils "github.com/hazelops/ize/internal/docker/utils"
 )
 
-func (e *EcsService) deployWithDocker(w io.Writer) error {
+func (e *Manager) deployWithDocker(w io.Writer) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return err
@@ -134,7 +134,7 @@ func (e *EcsService) deployWithDocker(w io.Writer) error {
 	}
 }
 
-func (e *EcsService) redeployWithDocker(w io.Writer) error {
+func (e *Manager) redeployWithDocker(w io.Writer) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return err

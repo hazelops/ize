@@ -23,12 +23,12 @@ import (
 
 const ecsDeployImage = "hazelops/ecs-deploy:latest"
 
-type EcsService struct {
+type Manager struct {
 	Project *config.Project
 	App     *config.Ecs
 }
 
-func (e *EcsService) prepare() {
+func (e *Manager) prepare() {
 	if e.App.Path == "" {
 		appsPath := e.Project.AppsPath
 		if !filepath.IsAbs(appsPath) {
@@ -54,7 +54,7 @@ func (e *EcsService) prepare() {
 }
 
 // Deploy deploys app container to ECS via ECS deploy
-func (e *EcsService) Deploy(ui terminal.UI) error {
+func (e *Manager) Deploy(ui terminal.UI) error {
 	e.prepare()
 
 	if e.App.Unsafe && e.Project.PreferRuntime == "native" {
@@ -99,7 +99,7 @@ func (e *EcsService) Deploy(ui terminal.UI) error {
 	return nil
 }
 
-func (e *EcsService) Redeploy(ui terminal.UI) error {
+func (e *Manager) Redeploy(ui terminal.UI) error {
 	e.prepare()
 
 	sg := ui.StepGroup()
@@ -128,7 +128,7 @@ func (e *EcsService) Redeploy(ui terminal.UI) error {
 	return nil
 }
 
-func (e *EcsService) Push(ui terminal.UI) error {
+func (e *Manager) Push(ui terminal.UI) error {
 	e.prepare()
 
 	sg := ui.StepGroup()
@@ -206,7 +206,7 @@ func (e *EcsService) Push(ui terminal.UI) error {
 	return nil
 }
 
-func (e *EcsService) Build(ui terminal.UI) error {
+func (e *Manager) Build(ui terminal.UI) error {
 	e.prepare()
 
 	sg := ui.StepGroup()
@@ -256,7 +256,7 @@ func (e *EcsService) Build(ui terminal.UI) error {
 	return nil
 }
 
-func (e *EcsService) Destroy(ui terminal.UI) error {
+func (e *Manager) Destroy(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 

@@ -15,7 +15,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
-func (e *EcsService) deployLocal(w io.Writer) error {
+func (e *Manager) deployLocal(w io.Writer) error {
 	pterm.SetDefaultOutput(w)
 
 	svc := ecssvc.New(e.Project.Session)
@@ -109,7 +109,7 @@ func (e *EcsService) deployLocal(w io.Writer) error {
 	return nil
 }
 
-func (e *EcsService) redeployLocal(w io.Writer) error {
+func (e *Manager) redeployLocal(w io.Writer) error {
 	pterm.SetDefaultOutput(w)
 
 	svc := ecssvc.New(e.Project.Session)
@@ -196,7 +196,7 @@ func getService(name string, cluster string, svc *ecssvc.ECS) (*ecssvc.DescribeS
 	return dso, nil
 }
 
-func (e *EcsService) updateTaskDefinition(sess *session.Session, td *ecssvc.TaskDefinition, serviceName string, title string) error {
+func (e *Manager) updateTaskDefinition(sess *session.Session, td *ecssvc.TaskDefinition, serviceName string, title string) error {
 	pterm.Println("Updating service")
 
 	svc := ecssvc.New(sess)

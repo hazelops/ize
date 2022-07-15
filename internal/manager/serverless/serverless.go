@@ -1,4 +1,4 @@
-package apps
+package serverless
 
 import (
 	"context"
@@ -18,12 +18,12 @@ import (
 	"github.com/hazelops/ize/pkg/terminal"
 )
 
-type SlsService struct {
+type Manager struct {
 	Project *config.Project
 	App     *config.Serverless
 }
 
-func (sls *SlsService) prepare() {
+func (sls *Manager) prepare() {
 	if sls.App.Path == "" {
 		appsPath := sls.Project.AppsPath
 		if !filepath.IsAbs(appsPath) {
@@ -49,7 +49,7 @@ func (sls *SlsService) prepare() {
 	sls.App.Env = append(sls.App.Env, "SLS_DEBUG=*")
 }
 
-func (sls *SlsService) Deploy(ui terminal.UI) error {
+func (sls *Manager) Deploy(ui terminal.UI) error {
 	sls.prepare()
 
 	sg := ui.StepGroup()
@@ -158,7 +158,7 @@ func (sls *SlsService) Deploy(ui terminal.UI) error {
 	return nil
 }
 
-func (sls *SlsService) Destroy(ui terminal.UI) error {
+func (sls *Manager) Destroy(ui terminal.UI) error {
 	sls.prepare()
 
 	sg := ui.StepGroup()
@@ -243,7 +243,7 @@ func (sls *SlsService) Destroy(ui terminal.UI) error {
 	return nil
 }
 
-func (sls *SlsService) serverless(cli *client.Client, cmd []string, step terminal.Step) error {
+func (sls *Manager) serverless(cli *client.Client, cmd []string, step terminal.Step) error {
 	command := []string{"serverless"}
 	command = append(command, cmd...)
 
@@ -319,7 +319,7 @@ msgLoop:
 	}
 }
 
-func (sls *SlsService) npm(cli *client.Client, cmd []string, s terminal.Step) error {
+func (sls *Manager) npm(cli *client.Client, cmd []string, s terminal.Step) error {
 	contConfig := &container.Config{
 		WorkingDir:   "/app",
 		Image:        fmt.Sprintf("node:%v", sls.App.NodeVersion),
@@ -395,7 +395,7 @@ msgLoop:
 	}
 }
 
-func (sls *SlsService) getHostConfig(homeDir, rootDir string) *container.HostConfig {
+func (sls *Manager) getHostConfig(homeDir, rootDir string) *container.HostConfig {
 	return &container.HostConfig{
 		AutoRemove: true,
 		Mounts: []mount.Mount{
@@ -429,14 +429,14 @@ func (sls *SlsService) getHostConfig(homeDir, rootDir string) *container.HostCon
 	}
 }
 
-func (sls *SlsService) Push(ui terminal.UI) error {
+func (sls *Manager) Push(ui terminal.UI) error {
 	return nil
 }
 
-func (sls *SlsService) Build(ui terminal.UI) error {
+func (sls *Manager) Build(ui terminal.UI) error {
 	return nil
 }
 
-func (sls *SlsService) Redeploy(ui terminal.UI) error {
+func (sls *Manager) Redeploy(ui terminal.UI) error {
 	return nil
 }

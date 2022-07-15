@@ -6,17 +6,18 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/hazelops/ize/internal/manager"
+	"github.com/hazelops/ize/internal/manager/alias"
+	"github.com/hazelops/ize/internal/manager/serverless"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/hazelops/ize/internal/apps"
-
-	"github.com/hazelops/ize/internal/apps/ecs"
 	"github.com/hazelops/ize/internal/commands/gen"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/manager/ecs"
 	"github.com/hazelops/ize/internal/terraform"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
@@ -218,47 +219,47 @@ func deployAll(ui terminal.UI, o *Options) error {
 
 	ui.Output("Deploying apps...", terminal.WithHeaderStyle())
 
-	err = apps.InDependencyOrder(aws.BackgroundContext(), o.Config.GetApps(), func(c context.Context, name string) error {
+	err = manager.InDependencyOrder(aws.BackgroundContext(), o.Config.GetApps(), func(c context.Context, name string) error {
 		o.Config.AwsProfile = o.Config.Terraform["infra"].AwsProfile
 
-		var appService apps.App
+		var manager manager.Manager
 
 		if app, ok := o.Config.Serverless[name]; ok {
 			app.Name = o.AppName
-			appService = &apps.SlsService{
+			manager = &serverless.Manager{
 				Project: o.Config,
 				App:     app,
 			}
 		}
 		if app, ok := o.Config.Alias[name]; ok {
 			app.Name = o.AppName
-			appService = &apps.AliasService{
+			manager = &alias.Manager{
 				Project: o.Config,
 				App:     app,
 			}
 		}
 		if app, ok := o.Config.Ecs[name]; ok {
 			app.Name = o.AppName
-			appService = &ecs.EcsService{
+			manager = &ecs.Manager{
 				Project: o.Config,
 				App:     app,
 			}
 		}
 
 		// build app container
-		err := appService.Build(ui)
+		err := manager.Build(ui)
 		if err != nil {
 			return fmt.Errorf("can't build app: %w", err)
 		}
 
 		// push app image
-		err = appService.Push(ui)
+		err = manager.Push(ui)
 		if err != nil {
 			return fmt.Errorf("can't push app: %w", err)
 		}
 
 		// deploy app image
-		err = appService.Deploy(ui)
+		err = manager.Deploy(ui)
 		if err != nil {
 			return fmt.Errorf("can't deploy app: %w", err)
 		}
@@ -276,49 +277,49 @@ func deployApp(ui terminal.UI, o *Options) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	var appService apps.App
+	var manager manager.Manager
 
 	if app, ok := o.Config.Serverless[o.AppName]; ok {
 		app.Name = o.AppName
-		appService = &apps.SlsService{
+		manager = &serverless.Manager{
 			Project: o.Config,
 			App:     app,
 		}
 	}
 	if app, ok := o.Config.Alias[o.AppName]; ok {
 		app.Name = o.AppName
-		appService = &apps.AliasService{
+		manager = &alias.Manager{
 			Project: o.Config,
 			App:     app,
 		}
 	}
 	if app, ok := o.Config.Ecs[o.AppName]; ok {
 		app.Name = o.AppName
-		appService = &ecs.EcsService{
+		manager = &ecs.Manager{
 			Project: o.Config,
 			App:     app,
 		}
 	} else {
-		appService = &ecs.EcsService{
+		manager = &ecs.Manager{
 			Project: o.Config,
 			App:     &config.Ecs{Name: o.AppName},
 		}
 	}
 
 	// build app container
-	err := appService.Build(ui)
+	err := manager.Build(ui)
 	if err != nil {
 		return fmt.Errorf("can't build app: %w", err)
 	}
 
 	// push app image
-	err = appService.Push(ui)
+	err = manager.Push(ui)
 	if err != nil {
 		return fmt.Errorf("can't push app: %w", err)
 	}
 
 	// deploy app image
-	err = appService.Deploy(ui)
+	err = manager.Deploy(ui)
 	if err != nil {
 		return fmt.Errorf("can't deploy app: %w", err)
 	}

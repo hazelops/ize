@@ -2,11 +2,13 @@ package deploy
 
 import (
 	"fmt"
+	"github.com/hazelops/ize/internal/manager"
+	"github.com/hazelops/ize/internal/manager/alias"
+	"github.com/hazelops/ize/internal/manager/serverless"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/hazelops/ize/internal/apps"
-	"github.com/hazelops/ize/internal/apps/ecs"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/manager/ecs"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
@@ -124,18 +126,18 @@ func (o *Options) Run() error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	var appService apps.App
+	var manager manager.Manager
 
 	if app, ok := o.Config.Serverless[o.AppName]; ok {
 		app.Name = o.AppName
-		appService = &apps.SlsService{
+		manager = &serverless.Manager{
 			Project: o.Config,
 			App:     app,
 		}
 	}
 	if app, ok := o.Config.Alias[o.AppName]; ok {
 		app.Name = o.AppName
-		appService = &apps.AliasService{
+		manager = &alias.Manager{
 			Project: o.Config,
 			App:     app,
 		}
@@ -144,12 +146,12 @@ func (o *Options) Run() error {
 		app.Name = o.AppName
 		app.TaskDefinitionRevision = o.TaskDefinitionRevision
 		app.Unsafe = o.Unsafe
-		appService = &ecs.EcsService{
+		manager = &ecs.Manager{
 			Project: o.Config,
 			App:     app,
 		}
 	} else {
-		appService = &ecs.EcsService{
+		manager = &ecs.Manager{
 			Project: o.Config,
 			App: &config.Ecs{
 				Name:                   o.AppName,
@@ -160,7 +162,7 @@ func (o *Options) Run() error {
 	}
 
 	if len(o.TaskDefinitionRevision) != 0 {
-		err := appService.Redeploy(ui)
+		err := manager.Redeploy(ui)
 		if err != nil {
 			return err
 		}
@@ -170,7 +172,7 @@ func (o *Options) Run() error {
 		return nil
 	}
 
-	err := appService.Deploy(ui)
+	err := manager.Deploy(ui)
 	if err != nil {
 		return err
 	}

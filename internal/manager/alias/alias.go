@@ -1,16 +1,16 @@
-package apps
+package alias
 
 import (
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/terminal"
 )
 
-type AliasService struct {
+type Manager struct {
 	Project *config.Project
 	App     *config.Alias
 }
 
-func (a *AliasService) Deploy(ui terminal.UI) error {
+func (a *Manager) Deploy(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
@@ -20,7 +20,7 @@ func (a *AliasService) Deploy(ui terminal.UI) error {
 	return nil
 }
 
-func (a *AliasService) Destroy(ui terminal.UI) error {
+func (a *Manager) Destroy(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
@@ -30,14 +30,14 @@ func (a *AliasService) Destroy(ui terminal.UI) error {
 	return nil
 }
 
-func (a *AliasService) Push(ui terminal.UI) error {
+func (a *Manager) Push(ui terminal.UI) error {
 	return nil
 }
 
-func (a *AliasService) Build(ui terminal.UI) error {
+func (a *Manager) Build(ui terminal.UI) error {
 	return nil
 }
 
-func (a *AliasService) Redeploy(ui terminal.UI) error {
+func (a *Manager) Redeploy(ui terminal.UI) error {
 	return nil
 }
