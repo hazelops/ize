@@ -129,12 +129,10 @@ func (o *InitOptions) Run() error {
 		return fmt.Errorf("can't init: %w", err)
 	}
 
-	fmt.Println(dir)
-
 	namespace = filepath.Base(dir)
 	err = survey.AskOne(
 		&survey.Input{
-			Message: fmt.Sprintf("Which namespace will you have?"),
+			Message: fmt.Sprintf("Namespace:"),
 			Default: namespace,
 		},
 		&namespace,
@@ -146,7 +144,7 @@ func (o *InitOptions) Run() error {
 
 	err = survey.AskOne(
 		&survey.Input{
-			Message: fmt.Sprintf("Which environments will you have?"),
+			Message: fmt.Sprintf("Environment:"),
 			Default: env,
 		},
 		&env,
@@ -203,6 +201,7 @@ func (o *InitOptions) Run() error {
 		}
 	}
 
+	pterm.Success.Printfln(`Created ize skeleton for %s in %s`, strings.Join(envList, ", "), dir)
 	return nil
 }
 

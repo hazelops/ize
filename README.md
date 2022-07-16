@@ -6,85 +6,54 @@ This tool is designed as a simple wrapper around popular tools, so they can be e
 
 It combines infra, build and deploy workflows in one and is too simple to be considered sophisticated. So let's not do it but rather embrace the simplicity and minimalism.
 
-## Workflow
-Let's imagine we're deploying a terraform-based infra and a Go-based  service named `goblin`.
-The general workflow that **❯ize** dictates is the following:
 
-### 1. Deploy infrastructure
-_Currently it supports Terraform, for which it generates a minimal backend config for terraform and runs it. Think of it as a minimalistic Terragrunt, but you can always switch to a vanilla Terraform. Check out directory structure [examples](https://github.com/hazelops/ize/tree/main/examples/simple-monorepo/.infra)._
+## Quickstart
+### Init the project from a template
+If starting from scratch, create a git repo and init a new project. Follow the setup
 ```shell
-ize deploy infra
+mkdir squirrelcorp-backend
+cd squirrelcorp-backend
+git init
+ize init --template ecs-apps-monorepo
 ```
 
-### 2. Push secrets for `goblin` to SSM
-_It uses Go AWS SDK to push secrets to SSM_
+### Set your environment config:
+_Template in this example has `testnut` as an example environment. Feel free to rename it.
 ```shell
-ize secrets push goblin
-ize secrets rm goblin
+export ENV=testnut
+export AWS_PROFILE=<name of your aws profile>
 ```
 
-### 3. Build your `goblin` application
-_It runs a docker build with all require underneath.
+### Deploy your infra 
 ```shell
-ize build goblin
+ize up infra
 ```
 
-### 4. Deploy your `goblin` application
-_It runs a simple logic of updating your task definitions to a new version (and rolling back in case ELB/ALB fails). Currently [hazelops/ecs-deploy](https://github.com/hazelops/ecs-deploy) container is used._
+### Build & deploy your apps
 ```shell
-ize deploy goblin
-```
-
-### 5. Bring up & Bring SSM tunnel
-_If you use a bastion host, you can establish a tunnel to access your private resources, like Postgres or Redis. This feature is using Amazon SSM and SSH tunneling underneath. Simple, yet effective._
-```shell
-ize tunnel up
-ize tunnel down
-```
-
-### 6. Run application inside ECS container
-_If you need to manually run application an ECS-hosted docker container you can use the following command:
-```shell
-ize exec goblin -- ps aux
+ize up squibby
+ize up goblin
 ```
 
 ## Installation
-### To install the latest version via homebrew on MacOS:
-##### 1. Install [Homebrew](https://brew.sh/)
-##### 2. Run the following commands:
+### MacOS:
+_[Homebrew](https://brew.sh/) is used on MacOS. Add a tap and install the latest stable version:_
 ```shell
 brew tap hazelops/ize
-```
-
-```shell
 brew install ize
 ```
 
-### To install the latest version via public apt repository URL (Ubuntu):
-##### 1. Add public apt repository run:
+### Ubuntu:
+_Add public apt repository, update the apt cache and install the latest stable version:_
  ```shell
 echo "deb [trusted=yes] https://apt.fury.io/hazelops/ /" | sudo tee /etc/apt/sources.list.d/fury.list
-```
-
-##### 2. After this, you should update information about repos. Run:
-```shell
 sudo apt-get update
+sudo apt-get install ize
 ```
-
-##### 3. To install the latest version of `ize` app, you should run:
-```shell
-sudo apt-get install ize 
-```
-
-##### 4. If you wish to install certain version of the `ize` you should add version like this:
- ```shell
-sudo apt-get install ize=<version>
- ```
-
 More information on [other platforms](DOCS.md#installation)
 
-### Autocomplete:
-#### MacOS & zsh:
+## Autocomplete:
+### MacOS & zsh:
 Enable autocompletion 
 ```shell
 echo "autoload -U compinit; compinit" >>  ~/.zshrc
@@ -95,3 +64,39 @@ ize gen completion zsh > /usr/local/share/zsh/site-functions/_ize
 ```
 
 More information on [other platforms & shells](DOCS.md#autocomplete)
+
+## Workflow Example
+Let's imagine we're deploying a terraform-based infra and a Go-based app named `goblin`.
+The general workflow that **❯ize** dictates is the following:
+
+### 1. Deploy infrastructure
+_Currently it supports Terraform, for which it generates a minimal backend config for terraform and runs it. Think of it as a minimalistic Terragrunt, but it's always possible switch to a vanilla Terraform. [Examples](https://github.com/hazelops/ize/tree/main/examples/simple-monorepo/.infra) are available._
+```shell
+ize up infra
+```
+
+### 2. Push `goblin` app to SSM
+_It uses Go AWS SDK to push secrets to SSM_
+```shell
+ize secrets push goblin
+```
+
+### 3. Bring up `goblin` app
+_It runs a simple logic of updating the task definitions to a new docker image (and rolling back in case ELB/ALB fails)._
+This command includes `ize build`, `ize push` and `ize deploy`, but it's possible to use them separately.
+```shell
+ize up goblin
+```
+
+### 5. Access private resources via a tunnel
+_If there is a bastion host used in the infrastructure, it's possible to establish a tunnel to access the private resources, like Postgres or Redis. This feature is using Amazon SSM and SSH tunneling underneath. Simple, yet effective._
+```shell
+ize tunnel up
+ize tunnel down
+```
+
+### 6. Run application inside the ECS container
+_To execute a command in the ECS-hosted docker container the following command can be used:
+```shell
+ize exec goblin -- ps aux
+```
