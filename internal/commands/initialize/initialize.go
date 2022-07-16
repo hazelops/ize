@@ -5,6 +5,7 @@ import (
 	"github.com/hazelops/ize/internal/version"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/hazelops/ize/examples"
