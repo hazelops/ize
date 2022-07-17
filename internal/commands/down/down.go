@@ -5,42 +5,33 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hazelops/ize/internal/commands/gen"
+	"github.com/hazelops/ize/internal/manager"
+	"github.com/hazelops/ize/internal/manager/alias"
+	"github.com/hazelops/ize/internal/manager/serverless"
 	"os"
 	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/hazelops/ize/internal/apps"
-	"github.com/hazelops/ize/internal/apps/ecs"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/manager/ecs"
 	"github.com/hazelops/ize/internal/terraform"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type DownOptions struct {
-	Config           *config.Config
+	Config           *config.Project
 	AppName          string
-	Tag              string
 	SkipBuildAndPush bool
-	Apps             Apps
-	Infra            Infra
-	App              interface{}
 	AutoApprove      bool
 	SkipGen          bool
 	ui               terminal.UI
 }
 
 type Apps map[string]*interface{}
-
-type Infra struct {
-	Version string `mapstructure:"terraform_version"`
-	Region  string `mapstructure:"aws_region"`
-	Profile string `mapstructure:"aws_profile"`
-}
 
 var downLongDesc = templates.LongDesc(`
 	Destroy infrastructure or application.
@@ -119,28 +110,25 @@ func (o *DownOptions) Complete(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		o.Config, err = config.GetConfig()
-		viper.BindPFlags(cmd.Flags())
 		if err != nil {
 			return fmt.Errorf("can't load options for a command: %w", err)
 		}
 
-		viper.UnmarshalKey("app", &o.Apps)
-		viper.UnmarshalKey("infra.terraform", &o.Infra)
-
-		for _, v := range o.Apps {
-			fmt.Println(*v)
+		if o.Config.Terraform == nil {
+			o.Config.Terraform = map[string]*config.Terraform{}
+			o.Config.Terraform["infra"] = &config.Terraform{}
 		}
 
-		if len(o.Infra.Profile) == 0 {
-			o.Infra.Profile = o.Config.AwsProfile
+		if len(o.Config.Terraform["infra"].AwsProfile) == 0 {
+			o.Config.Terraform["infra"].AwsProfile = o.Config.AwsProfile
 		}
 
-		if len(o.Infra.Region) == 0 {
-			o.Infra.Region = o.Config.AwsRegion
+		if len(o.Config.Terraform["infra"].AwsRegion) == 0 {
+			o.Config.Terraform["infra"].AwsProfile = o.Config.AwsRegion
 		}
 
-		if len(o.Infra.Version) == 0 {
-			o.Infra.Version = viper.GetString("terraform_version")
+		if len(o.Config.Terraform["infra"].Version) == 0 {
+			o.Config.Terraform["infra"].Version = o.Config.TerraformVersion
 		}
 	} else {
 		o.Config, err = config.GetConfig()
@@ -148,13 +136,10 @@ func (o *DownOptions) Complete(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("can't load options for a command: %w", err)
 		}
 
-		viper.BindPFlags(cmd.Flags())
 		o.AppName = cmd.Flags().Args()[0]
-		viper.UnmarshalKey(fmt.Sprintf("app.%s", o.AppName), &o.App)
 	}
 
-	o.Tag = viper.GetString("tag")
-	o.ui = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
+	o.ui = terminal.ConsoleUI(context.Background(), o.Config.PlainText)
 
 	return nil
 }
@@ -201,10 +186,6 @@ func validate(o *DownOptions) error {
 		return fmt.Errorf("can't validate options: namespace must be specified")
 	}
 
-	if len(o.Tag) == 0 {
-		return fmt.Errorf("can't validate options: tag must be specified")
-	}
-
 	if len(o.AppName) == 0 {
 		return fmt.Errorf("can't validate options: app name be specified")
 	}
@@ -221,39 +202,46 @@ func validateAll(o *DownOptions) error {
 		return fmt.Errorf("can't validate options: namespace must be specified")
 	}
 
-	if len(o.Tag) == 0 {
-		return fmt.Errorf("can't validate options: tag must be specified")
-	}
-
 	return nil
 }
 
 func destroyAll(ui terminal.UI, o *DownOptions) error {
+
 	ui.Output("Destroying apps...", terminal.WithHeaderStyle())
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	err := apps.InReversDependencyOrder(aws.BackgroundContext(), o.Apps, func(c context.Context, name string) error {
-		o.Config.AwsProfile = o.Infra.Profile
+	err := manager.InReversDependencyOrder(aws.BackgroundContext(), o.Config.GetApps(), func(c context.Context, name string) error {
+		o.Config.AwsProfile = o.Config.Terraform["infra"].AwsProfile
 
-		at := (*o.Apps[name]).(map[string]interface{})["type"].(string)
+		var manager manager.Manager
 
-		var deployment apps.App
-
-		switch at {
-		case "ecs":
-			deployment = ecs.NewECSApp(name, *o.Apps[name])
-		case "serverless":
-			deployment = apps.NewServerlessApp(name, *o.Apps[name])
-		case "alias":
-			deployment = apps.NewAliasApp(name)
-		default:
-			return fmt.Errorf("%s apps are not supported in this command", at)
+		if app, ok := o.Config.Serverless[name]; ok {
+			app.Name = o.AppName
+			manager = &serverless.Manager{
+				Project: o.Config,
+				App:     app,
+			}
+		}
+		if app, ok := o.Config.Alias[name]; ok {
+			app.Name = o.AppName
+			manager = &alias.Manager{
+				Project: o.Config,
+				App:     app,
+			}
+		}
+		if app, ok := o.Config.Ecs[name]; ok {
+			app.Name = o.AppName
+			manager = &ecs.Manager{
+				Project: o.Config,
+				App:     app,
+			}
 		}
 
-		err := deployment.Destroy(ui)
+		// destroy
+		err := manager.Destroy(ui)
 		if err != nil {
-			return err
+			return fmt.Errorf("can't destroy app: %w", err)
 		}
 
 		return nil
@@ -262,7 +250,7 @@ func destroyAll(ui terminal.UI, o *DownOptions) error {
 		return err
 	}
 
-	err = destroyInfra(ui, o.Infra, *o.Config, o.SkipGen)
+	err = destroyInfra(ui, o.Config, o.SkipGen)
 	if err != nil {
 		return err
 	}
@@ -272,14 +260,11 @@ func destroyAll(ui terminal.UI, o *DownOptions) error {
 	return nil
 }
 
-func destroyInfra(ui terminal.UI, infra Infra, config config.Config, skipGen bool) error {
+func destroyInfra(ui terminal.UI, config *config.Project, skipGen bool) error {
 	if !skipGen {
-		if !checkFileExists(filepath.Join(viper.GetString("ENV_DIR"), "backend.tf")) || !checkFileExists(filepath.Join(viper.GetString("ENV_DIR"), "terraform.tfvars")) {
+		if !checkFileExists(filepath.Join(config.EnvDir, "backend.tf")) || !checkFileExists(filepath.Join(config.EnvDir, "terraform.tfvars")) {
 			err := gen.GenerateTerraformFiles(
-				config.AwsRegion,
-				config.AwsProfile,
-				config.Env,
-				config.Namespace,
+				config,
 				"",
 			)
 			if err != nil {
@@ -290,7 +275,7 @@ func destroyInfra(ui terminal.UI, infra Infra, config config.Config, skipGen boo
 
 	var tf terraform.Terraform
 
-	logrus.Infof("infra: %s", infra)
+	logrus.Infof("infra: %s", tf)
 
 	v, err := config.Session.Config.Credentials.Get()
 	if err != nil {
@@ -299,22 +284,25 @@ func destroyInfra(ui terminal.UI, infra Infra, config config.Config, skipGen boo
 
 	env := []string{
 		fmt.Sprintf("ENV=%v", config.Env),
-		fmt.Sprintf("AWS_PROFILE=%v", infra.Profile),
-		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
+		fmt.Sprintf("AWS_PROFILE=%v", config.Terraform["infra"].AwsProfile),
+		fmt.Sprintf("TF_LOG=%v", config.TFLog),
+		fmt.Sprintf("TF_LOG_PATH=%v", config.TFLogPath),
 		fmt.Sprintf("AWS_ACCESS_KEY_ID=%v", v.AccessKeyID),
 		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%v", v.SecretAccessKey),
 		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
 	}
 
-	if config.IsDockerRuntime {
-		tf = terraform.NewDockerTerraform(infra.Version, []string{"destroy", "-auto-approve"}, env, nil)
-	} else {
-		tf = terraform.NewLocalTerraform(infra.Version, []string{"destroy", "-auto-approve"}, env, nil)
+	switch config.PreferRuntime {
+	case "docker":
+		tf = terraform.NewDockerTerraform(config.Terraform["infra"].Version, []string{"destroy", "-auto-approve"}, env, nil, config.Home, config.InfraDir, config.EnvDir)
+	case "native":
+		tf = terraform.NewLocalTerraform(config.Terraform["infra"].Version, []string{"destroy", "-auto-approve"}, env, nil, config.EnvDir)
 		err = tf.Prepare()
 		if err != nil {
 			return fmt.Errorf("can't destroy infra: %w", err)
 		}
+	default:
+		return fmt.Errorf("can't supported %s runtime", config.PreferRuntime)
 	}
 
 	ui.Output("Running terraform destroy...", terminal.WithHeaderStyle())
@@ -339,32 +327,36 @@ func destroyApp(ui terminal.UI, o *DownOptions) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	var appType string
+	var manager manager.Manager
 
-	app, ok := o.App.(map[string]interface{})
-	if !ok {
-		appType = "ecs"
+	if app, ok := o.Config.Serverless[o.AppName]; ok {
+		app.Name = o.AppName
+		manager = &serverless.Manager{
+			Project: o.Config,
+			App:     app,
+		}
+	}
+	if app, ok := o.Config.Alias[o.AppName]; ok {
+		app.Name = o.AppName
+		manager = &alias.Manager{
+			Project: o.Config,
+			App:     app,
+		}
+	}
+	if app, ok := o.Config.Ecs[o.AppName]; ok {
+		app.Name = o.AppName
+		manager = &ecs.Manager{
+			Project: o.Config,
+			App:     app,
+		}
 	} else {
-		appType, ok = app["type"].(string)
-		if !ok {
-			appType = "ecs"
+		manager = &ecs.Manager{
+			Project: o.Config,
+			App:     &config.Ecs{Name: o.AppName},
 		}
 	}
 
-	var deployment apps.App
-
-	switch appType {
-	case "ecs":
-		deployment = ecs.NewECSApp(o.AppName, o.App)
-	case "serverless":
-		deployment = apps.NewServerlessApp(o.AppName, o.App)
-	case "alias":
-		deployment = apps.NewAliasApp(o.AppName)
-	default:
-		return fmt.Errorf("%s apps are not supported in this command", appType)
-	}
-
-	err := deployment.Destroy(ui)
+	err := manager.Destroy(ui)
 	if err != nil {
 		return fmt.Errorf("can't down: %w", err)
 	}

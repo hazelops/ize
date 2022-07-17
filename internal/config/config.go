@@ -85,7 +85,7 @@ func CheckRequirements(options ...Option) error {
 	return nil
 }
 
-func GetConfig() (*Config, error) {
+func GetConfig() (*Project, error) {
 	switch viper.GetString("log-level") {
 	case "info":
 		logrus.SetLevel(logrus.InfoLevel)
@@ -105,23 +105,31 @@ func GetConfig() (*Config, error) {
 		logrus.SetLevel(logrus.FatalLevel)
 	}
 
+	err := ConvertApps()
+	if err != nil {
+		return nil, err
+	}
+
+	err = ConvertInfra()
+	if err != nil {
+		return nil, err
+	}
+
+	err = ConvertTunnel()
+	if err != nil {
+		return nil, err
+	}
+
+	err = schema.Validate(viper.AllSettings())
+	if err != nil {
+		return nil, err
+	}
+
 	logrus.Debug("config file used:", viper.ConfigFileUsed())
 
-	cfg := &Config{}
+	cfg := &Project{}
 
 	viper.Unmarshal(&cfg)
-
-	if len(cfg.AwsProfile) == 0 {
-		return nil, fmt.Errorf("AWS profile must be specified using flags, env or config file")
-	}
-
-	if len(cfg.AwsRegion) == 0 {
-		return nil, fmt.Errorf("AWS region must be specified using flags, env or config file")
-	}
-
-	if len(cfg.Namespace) == 0 {
-		return nil, fmt.Errorf("namespace must be specified using flags, env or config file")
-	}
 
 	sess, err := utils.GetSession(&utils.SessionConfig{
 		Region:  cfg.AwsRegion,
@@ -140,35 +148,16 @@ func GetConfig() (*Config, error) {
 		return nil, err
 	}
 
-	viper.SetDefault("DOCKER_REGISTRY", fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, viper.GetString("aws_region")))
+	if len(cfg.DockerRegistry) == 0 {
+		cfg.DockerRegistry = fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, cfg.AwsRegion)
+	}
 	// Reset env directory to default because env may change
-	viper.SetDefault("TF_LOG_PATH", fmt.Sprintf("%v/tflog.txt", viper.Get("ENV_DIR")))
+	if len(cfg.DockerRegistry) == 0 {
+		cfg.TFLogPath = fmt.Sprintf("%v/tflog.txt", cfg.EnvDir)
+	}
 
-	plainText := viper.GetBool("plain-text") || viper.GetBool("plain_text")
-
-	if plainText {
+	if cfg.PlainText {
 		pterm.DisableStyling()
-	}
-
-	cfg.IsPlainText = plainText
-
-	if viper.GetString("PREFER_RUNTIME") == "docker" {
-		cfg.IsDockerRuntime = true
-	}
-
-	err = ConvertApps()
-	if err != nil {
-		return nil, err
-	}
-
-	err = ConvertInfra()
-	if err != nil {
-		return nil, err
-	}
-
-	err = schema.Validate(viper.AllSettings())
-	if err != nil {
-		return nil, err
 	}
 
 	return cfg, nil
@@ -186,6 +175,7 @@ func InitConfig() {
 	// TODO: those static defaults should probably go to a separate package and/or function. Also would include image names and such.
 	viper.SetDefault("TERRAFORM_VERSION", "1.1.3")
 	viper.SetDefault("PREFER_RUNTIME", "native")
+	viper.SetDefault("CUSTOM_PROMPT", false)
 
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -457,6 +447,19 @@ func ConvertInfra() error {
 
 	err := viper.MergeConfigMap(map[string]interface{}{
 		"terraform.infra": tf,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ConvertTunnel() error {
+	tunnel := viper.GetStringMap("infra.tunnel")
+
+	err := viper.MergeConfigMap(map[string]interface{}{
+		"tunnel": tunnel,
 	})
 	if err != nil {
 		return err

@@ -8,12 +8,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/hazelops/ize/internal/aws/utils"
+	"github.com/hazelops/ize/internal/config"
 
 	"github.com/hazelops/ize/internal/version"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func NewDebugCmd() *cobra.Command {
@@ -22,6 +21,11 @@ func NewDebugCmd() *cobra.Command {
 		Short: "Show debug information",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
+
+			c, err := config.GetConfig()
+			if err != nil {
+				return err
+			}
 
 			cwd, err := os.Getwd()
 			if err != nil {
@@ -33,20 +37,20 @@ func NewDebugCmd() *cobra.Command {
 			pterm.DefaultSection.Println("IZE Info")
 
 			dt.WithData(pterm.TableData{
-				{"ENV", viper.GetString("env")},
-				{"NAMESPACE", viper.GetString("namespace")},
-				{"TAG", viper.GetString("tag")},
-				{"INFRA DIR", viper.GetString("infra_dir")},
+				{"ENV", c.Env},
+				{"NAMESPACE", c.Namespace},
+				{"TAG", c.Tag},
+				{"INFRA DIR", c.InfraDir},
 				{"PWD", cwd},
 				{"IZE VERSION", version.Version},
 				{"GIT REVISION", version.GitCommit},
-				{"ENV DIR", viper.GetString("env_dir")},
-				{"PREFER_RUNTIME", viper.GetString("prefer_runtime")},
+				{"ENV DIR", c.EnvDir},
+				{"PREFER_RUNTIME", c.PreferRuntime},
 			}).WithLeftAlignment().Render()
 
 			pterm.DefaultSection.Println("Terraform Info")
 			dt.WithData(pterm.TableData{
-				{"TERRAFORM_VERSION", viper.GetString("terraform_version")},
+				{"TERRAFORM_VERSION", c.TerraformVersion},
 			}).WithLeftAlignment().Render()
 
 			pterm.DefaultSection.Println("System Info")
@@ -58,44 +62,31 @@ func NewDebugCmd() *cobra.Command {
 
 			pterm.DefaultSection.Println("AWS Environment Info")
 
-			if len(viper.GetString("aws_profile")) > 0 {
-				sess, err := utils.GetSession(&utils.SessionConfig{
-					Region:  viper.GetString("aws_region"),
-					Profile: viper.GetString("aws_profile"),
-				})
-				if aerr, ok := err.(awserr.Error); ok {
-					switch aerr.Code() {
-					case "NoCredentialProviders":
-						return fmt.Errorf("Error estabilishing a session with AWS. Please make sure your credentials are valid. Using aws_profile: %s", viper.GetString("aws_profile"))
-					default:
-						return err
-					}
-				}
-
-				resp, err := sts.New(sess).GetCallerIdentity(
+			if len(c.AwsProfile) > 0 {
+				resp, err := sts.New(c.Session).GetCallerIdentity(
 					&sts.GetCallerIdentityInput{},
 				)
 				if err != nil {
 					return err
 				}
 
-				guo, err := iam.New(sess).GetUser(&iam.GetUserInput{})
+				guo, err := iam.New(c.Session).GetUser(&iam.GetUserInput{})
 				if aerr, ok := err.(awserr.Error); ok {
 					switch aerr.Code() {
 					case "NoSuchEntity":
-						return fmt.Errorf("error obtaining AWS user with aws_profile=%s: username %s is not found in account %s", viper.GetString("aws_profile"), *guo.User.UserName, *resp.Account)
+						return fmt.Errorf("error obtaining AWS user with aws_profile=%s: username %s is not found in account %s", c.AwsProfile, *guo.User.UserName, *resp.Account)
 					default:
 						return err
 					}
 				}
 
-				luto, err := iam.New(sess).ListUserTags(&iam.ListUserTagsInput{
+				luto, err := iam.New(c.Session).ListUserTags(&iam.ListUserTagsInput{
 					UserName: guo.User.UserName,
 				})
 				if aerr, ok := err.(awserr.Error); ok {
 					switch aerr.Code() {
 					case "NoSuchEntity":
-						return fmt.Errorf("error obtaining AWS user with aws_profile=%s: username %s is not found in account %s", viper.GetString("aws_profile"), *guo.User.UserName, *resp.Account)
+						return fmt.Errorf("error obtaining AWS user with aws_profile=%s: username %s is not found in account %s", c.AwsProfile, *guo.User.UserName, *resp.Account)
 					default:
 						return err
 					}
@@ -110,7 +101,7 @@ func NewDebugCmd() *cobra.Command {
 				}
 
 				dt.WithData(pterm.TableData{
-					{"AWS PROFILE", viper.GetString("aws_profile")},
+					{"AWS PROFILE", c.AwsProfile},
 					{"AWS USER", *guo.User.UserName},
 					{"AWS ACCOUNT", *resp.Account},
 				}).WithLeftAlignment().Render()
@@ -120,12 +111,10 @@ func NewDebugCmd() *cobra.Command {
 						{"AWS_DEV_ENV_NAME", devEnvName},
 					}).WithLeftAlignment().Render()
 				}
-
 			} else {
-
 				pterm.Println("No AWS profile credentials detected. Parameters used:")
 				dt.WithData(pterm.TableData{
-					{"AWS PROFILE", viper.GetString("aws_profile")},
+					{"AWS PROFILE", c.AwsProfile},
 				}).WithLeftAlignment().Render()
 			}
 

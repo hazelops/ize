@@ -2,8 +2,6 @@ package console
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ecs"
@@ -14,16 +12,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type ConsoleOptions struct {
-	Config       *config.Config
+type Options struct {
+	Config       *config.Project
 	AppName      string
 	EcsCluster   string
 	Task         string
 	CustomPrompt bool
 }
 
-func NewConsoleFlags() *ConsoleOptions {
-	return &ConsoleOptions{}
+func NewConsoleFlags() *Options {
+	return &Options{}
 }
 
 func NewCmdConsole() *cobra.Command {
@@ -36,7 +34,7 @@ func NewCmdConsole() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			err := o.Complete(cmd, args)
+			err := o.Complete(cmd)
 			if err != nil {
 				return err
 			}
@@ -62,7 +60,7 @@ func NewCmdConsole() *cobra.Command {
 	return cmd
 }
 
-func (o *ConsoleOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *Options) Complete(cmd *cobra.Command) error {
 	if err := config.CheckRequirements(config.WithSSMPlugin()); err != nil {
 		return err
 	}
@@ -78,7 +76,7 @@ func (o *ConsoleOptions) Complete(cmd *cobra.Command, args []string) error {
 	}
 
 	if !o.CustomPrompt {
-		o.CustomPrompt = viper.GetBool("CUSTOM_PROMPT")
+		o.CustomPrompt = o.Config.CustomPrompt
 	}
 
 	o.AppName = cmd.Flags().Args()[0]
@@ -86,7 +84,7 @@ func (o *ConsoleOptions) Complete(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (o *ConsoleOptions) Validate() error {
+func (o *Options) Validate() error {
 	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("can't validate: env must be specified")
 	}
@@ -102,7 +100,7 @@ func (o *ConsoleOptions) Validate() error {
 	return nil
 }
 
-func (o *ConsoleOptions) Run() error {
+func (o *Options) Run() error {
 	appName := fmt.Sprintf("%s-%s", o.Config.Env, o.AppName)
 
 	logrus.Infof("app name: %s, cluster name: %s", appName, o.EcsCluster)

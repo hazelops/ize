@@ -17,7 +17,6 @@ import (
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/oklog/ulid"
-	"github.com/spf13/viper"
 )
 
 type Builder struct {
@@ -36,12 +35,11 @@ func NewBuilder(buildArgs map[string]*string, tags []string, dockerfile string, 
 	}
 }
 
-func (b *Builder) Build(ui terminal.UI, s terminal.Step) error {
+func (b *Builder) Build(ui terminal.UI, s terminal.Step, contextDir string) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return fmt.Errorf("unable to create Docker client: %s", err)
 	}
-	contextDir := viper.GetString("ROOT_DIR")
 
 	dockerfile := b.Dockerfile
 	if dockerfile == "" {

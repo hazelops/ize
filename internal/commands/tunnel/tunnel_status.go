@@ -10,7 +10,7 @@ import (
 )
 
 type TunnelStatusOptions struct {
-	Config *config.Config
+	Config *config.Project
 	UI     terminal.UI
 }
 
@@ -27,7 +27,7 @@ func NewCmdTunnelStatus() *cobra.Command {
 		Long:  "Tunnel running status",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			err := o.Complete(cmd, args)
+			err := o.Complete()
 			if err != nil {
 				return err
 			}
@@ -37,7 +37,7 @@ func NewCmdTunnelStatus() *cobra.Command {
 				return err
 			}
 
-			err = o.Run(cmd)
+			err = o.Run()
 			if err != nil {
 				return err
 			}
@@ -49,14 +49,14 @@ func NewCmdTunnelStatus() *cobra.Command {
 	return cmd
 }
 
-func (o *TunnelStatusOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *TunnelStatusOptions) Complete() error {
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return fmt.Errorf("can't load options for command: %w", err)
 	}
 
 	o.Config = cfg
-	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
+	o.UI = terminal.ConsoleUI(context.Background(), o.Config.PlainText)
 
 	return nil
 }
@@ -69,12 +69,12 @@ func (o *TunnelStatusOptions) Validate() error {
 	return nil
 }
 
-func (o *TunnelStatusOptions) Run(cmd *cobra.Command) error {
+func (o *TunnelStatusOptions) Run() error {
 	ui := o.UI
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	isUp, err := checkTunnel()
+	isUp, err := checkTunnel(o.Config.EnvDir)
 	if err != nil {
 		return fmt.Errorf("can't get tunnel status: %w", err)
 	}

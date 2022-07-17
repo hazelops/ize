@@ -18,12 +18,10 @@ import (
 	"github.com/hazelops/ize/internal/docker/utils"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 	t "golang.org/x/crypto/ssh/terminal"
 )
 
 const (
-	ansi        = `\x1B(?:[@-Z\\-_]|\[[0-?]*[-\]*[@-~])`
 	defaultName = "ize-terraform"
 )
 
@@ -35,9 +33,9 @@ func cleanupOldContainers(cli *client.Client) error {
 		return err
 	}
 
-	for _, container := range containers {
-		if strings.Contains(container.Names[0], defaultName) {
-			err = cli.ContainerRemove(context.Background(), container.ID, types.ContainerRemoveOptions{})
+	for _, c := range containers {
+		if strings.Contains(c.Names[0], defaultName) {
+			err = cli.ContainerRemove(context.Background(), c.ID, types.ContainerRemoveOptions{})
 			if err != nil {
 				return err
 			}
@@ -48,18 +46,24 @@ func cleanupOldContainers(cli *client.Client) error {
 }
 
 type docker struct {
-	version string
-	command []string
-	env     []string
-	output  io.Writer
+	version  string
+	command  []string
+	env      []string
+	output   io.Writer
+	home     string
+	infraDir string
+	envDir   string
 }
 
-func NewDockerTerraform(version string, command []string, env []string, out io.Writer) *docker {
+func NewDockerTerraform(version string, command []string, env []string, out io.Writer, home, infraDir, envDir string) *docker {
 	return &docker{
-		version: version,
-		command: command,
-		env:     env,
-		output:  out,
+		version:  version,
+		command:  command,
+		env:      env,
+		output:   out,
+		home:     home,
+		infraDir: infraDir,
+		envDir:   envDir,
 	}
 }
 
@@ -155,7 +159,7 @@ func (d *docker) RunUI(ui terminal.UI) error {
 		AttachStdout: true,
 		AttachStderr: true,
 		OpenStdin:    true,
-		WorkingDir:   fmt.Sprintf("%v", viper.Get("ENV_DIR")),
+		WorkingDir:   fmt.Sprintf("%v", d.envDir),
 		Env:          d.env,
 	}
 
@@ -164,17 +168,17 @@ func (d *docker) RunUI(ui terminal.UI) error {
 		Mounts: []mount.Mount{
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%v", viper.Get("ENV_DIR")),
-				Target: fmt.Sprintf("%v", viper.Get("ENV_DIR")),
+				Source: fmt.Sprintf("%v", d.envDir),
+				Target: fmt.Sprintf("%v", d.envDir),
 			},
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%v", viper.Get("INFRA_DIR")),
-				Target: fmt.Sprintf("%v", viper.Get("INFRA_DIR")),
+				Source: fmt.Sprintf("%v", d.infraDir),
+				Target: fmt.Sprintf("%v", d.infraDir),
 			},
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%v/.aws", viper.Get("HOME")),
+				Source: fmt.Sprintf("%v/.aws", d.home),
 				Target: "/.aws",
 			},
 		},
@@ -291,7 +295,7 @@ func (d *docker) Run() error {
 		AttachStdout: true,
 		AttachStderr: true,
 		OpenStdin:    true,
-		WorkingDir:   fmt.Sprintf("%v", viper.Get("ENV_DIR")),
+		WorkingDir:   fmt.Sprintf("%v", d.envDir),
 		Env:          d.env,
 	}
 
@@ -300,17 +304,17 @@ func (d *docker) Run() error {
 		Mounts: []mount.Mount{
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%v", viper.Get("ENV_DIR")),
-				Target: fmt.Sprintf("%v", viper.Get("ENV_DIR")),
+				Source: fmt.Sprintf("%v", d.envDir),
+				Target: fmt.Sprintf("%v", d.envDir),
 			},
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%v", viper.Get("INFRA_DIR")),
-				Target: fmt.Sprintf("%v", viper.Get("INFRA_DIR")),
+				Source: fmt.Sprintf("%v", d.infraDir),
+				Target: fmt.Sprintf("%v", d.infraDir),
 			},
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%v/.aws", viper.Get("HOME")),
+				Source: fmt.Sprintf("%v/.aws", d.home),
 				Target: "/.aws",
 			},
 		},

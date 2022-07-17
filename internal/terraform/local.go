@@ -4,15 +4,15 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"os/exec"
-	"os/signal"
-	"syscall"
 	"log"
 	"os"
+	"os/exec"
+	"os/signal"
 	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 
 	"time"
 
@@ -20,7 +20,6 @@ import (
 	"github.com/hazelops/ize/pkg/term"
 	"github.com/hazelops/ize/pkg/terminal"
 	tfswitcher "github.com/psihachina/terraform-switcher/lib"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -33,19 +32,25 @@ type local struct {
 	env     []string
 	output  io.Writer
 	tfpath  string
+	dir     string
 }
 
-func NewLocalTerraform(version string, command []string, env []string, out io.Writer) *local {
+func NewLocalTerraform(version string, command []string, env []string, out io.Writer, dir string) *local {
 	return &local{
 		version: version,
 		command: command,
 		env:     env,
 		output:  out,
+		dir:     dir,
 	}
 }
 
 func (l *local) Run() error {
-	err := term.New(term.WithDir(viper.GetString("ENV_DIR"))).InteractiveRun(l.tfpath, l.command)
+	if len(l.dir) == 0 {
+		l.dir = "."
+	}
+
+	err := term.New(term.WithDir(l.dir)).InteractiveRun(l.tfpath, l.command)
 	if err != nil {
 		return err
 	}
@@ -128,8 +133,12 @@ func (l *local) RunUI(ui terminal.UI) error {
 		stdout = l.output
 	}
 
+	if len(l.dir) == 0 {
+		l.dir = "."
+	}
+
 	cmd := exec.Command(l.tfpath, l.command...)
-	cmd.Dir = viper.GetString("ENV_DIR")
+	cmd.Dir = l.dir
 	_, _, err := runCommand(cmd, stdout)
 
 	if err != nil {

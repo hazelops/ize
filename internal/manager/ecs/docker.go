@@ -3,6 +3,7 @@ package ecs
 import (
 	"context"
 	"fmt"
+	ecssvc "github.com/aws/aws-sdk-go/service/ecs"
 	"io"
 	"os"
 	"strconv"
@@ -16,11 +17,9 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
 	dockerutils "github.com/hazelops/ize/internal/docker/utils"
-
-	"github.com/spf13/viper"
 )
 
-func (e *ecs) deployWithDocker(w io.Writer) error {
+func (e *Manager) deployWithDocker(w io.Writer) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return err
@@ -59,17 +58,17 @@ func (e *ecs) deployWithDocker(w io.Writer) error {
 	}
 
 	cmd := []string{"ecs", "deploy",
-		"--profile", e.AwsProfile,
-		"--region", e.AwsRegion,
-		e.Cluster,
-		fmt.Sprintf("%s-%s", viper.GetString("env"), e.Name),
-		"--image", e.Name,
-		e.Image,
+		"--profile", e.Project.AwsProfile,
+		"--region", e.Project.AwsRegion,
+		e.App.Cluster,
+		fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name),
+		"--image", e.App.Name,
+		e.App.Image,
 		"--diff",
-		"--timeout", strconv.Itoa(e.Timeout),
+		"--timeout", strconv.Itoa(e.App.Timeout),
 		"--rollback",
-		"-e", e.Name,
-		"DD_VERSION", e.Tag,
+		"-e", e.App.Name,
+		"DD_VERSION", e.Project.Tag,
 	}
 
 	cfg := container.Config{
@@ -81,7 +80,7 @@ func (e *ecs) deployWithDocker(w io.Writer) error {
 		Tty:          true,
 		Image:        ecsDeployImage,
 		User:         fmt.Sprintf("%v:%v", os.Getuid(), os.Getgid()),
-		WorkingDir:   fmt.Sprintf("%v", viper.Get("ENV_DIR")),
+		WorkingDir:   fmt.Sprintf("%v", e.Project.EnvDir),
 		Cmd:          cmd,
 	}
 
@@ -90,13 +89,13 @@ func (e *ecs) deployWithDocker(w io.Writer) error {
 		Mounts: []mount.Mount{
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%v/.aws", viper.Get("HOME")),
+				Source: fmt.Sprintf("%v/.aws", e.Project.Home),
 				Target: "/.aws",
 			},
 		},
 	}
 
-	cr, err := cli.ContainerCreate(context.Background(), &cfg, &hostconfig, &network.NetworkingConfig{}, nil, e.Name)
+	cr, err := cli.ContainerCreate(context.Background(), &cfg, &hostconfig, &network.NetworkingConfig{}, nil, e.App.Name)
 	if err != nil {
 		return err
 	}
@@ -135,7 +134,7 @@ func (e *ecs) deployWithDocker(w io.Writer) error {
 	}
 }
 
-func (e *ecs) redeployWithDocker(w io.Writer) error {
+func (e *Manager) redeployWithDocker(w io.Writer) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return err
@@ -173,41 +172,41 @@ func (e *ecs) redeployWithDocker(w io.Writer) error {
 		}
 	}
 
-	name := fmt.Sprintf("%s-%s", viper.GetString("env"), e.Name)
+	name := fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name)
 
 	var td string
 
-	switch e.TaskDefinitionRevision {
+	switch e.App.TaskDefinitionRevision {
 	case "latest":
 		td = name
 	case "current":
-		dso, err := e.getService(name)
+		dso, err := getService(name, e.App.Cluster, ecssvc.New(e.Project.Session))
 		if err != nil {
 			return err
 		}
 
 		td = *dso.Services[0].TaskDefinition
 	default:
-		r, err := strconv.Atoi(e.TaskDefinitionRevision)
+		r, err := strconv.Atoi(e.App.TaskDefinitionRevision)
 		if err == nil && r > 0 {
-			td = fmt.Sprintf("%s:%s", name, e.TaskDefinitionRevision)
+			td = fmt.Sprintf("%s:%s", name, e.App.TaskDefinitionRevision)
 		} else {
-			return fmt.Errorf("invalid task definition revision: %s", e.TaskDefinitionRevision)
+			return fmt.Errorf("invalid task definition revision: %s", e.App.TaskDefinitionRevision)
 		}
 	}
 
 	cmd := []string{"ecs", "deploy",
-		"--profile", e.AwsProfile,
-		"--region", e.AwsRegion,
-		e.Cluster,
+		"--profile", e.Project.AwsProfile,
+		"--region", e.Project.AwsRegion,
+		e.App.Cluster,
 		name,
 		"--task", td,
 		"--diff",
-		"--timeout", strconv.Itoa(e.Timeout),
+		"--timeout", strconv.Itoa(e.App.Timeout),
 		"--rollback",
 		"--no-deregister",
-		"-e", e.Name,
-		"DD_VERSION", e.Tag,
+		"-e", e.App.Name,
+		"DD_VERSION", e.Project.Tag,
 	}
 
 	cfg := container.Config{
@@ -219,7 +218,7 @@ func (e *ecs) redeployWithDocker(w io.Writer) error {
 		Tty:          true,
 		Image:        ecsDeployImage,
 		User:         fmt.Sprintf("%v:%v", os.Getuid(), os.Getgid()),
-		WorkingDir:   fmt.Sprintf("%v", viper.Get("ENV_DIR")),
+		WorkingDir:   fmt.Sprintf("%v", e.Project.EnvDir),
 		Cmd:          cmd,
 	}
 
@@ -228,13 +227,13 @@ func (e *ecs) redeployWithDocker(w io.Writer) error {
 		Mounts: []mount.Mount{
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%v/.aws", viper.Get("HOME")),
+				Source: fmt.Sprintf("%v/.aws", e.Project.Home),
 				Target: "/.aws",
 			},
 		},
 	}
 
-	cr, err := cli.ContainerCreate(context.Background(), &cfg, &hostconfig, &network.NetworkingConfig{}, nil, e.Name)
+	cr, err := cli.ContainerCreate(context.Background(), &cfg, &hostconfig, &network.NetworkingConfig{}, nil, e.App.Name)
 	if err != nil {
 		return err
 	}

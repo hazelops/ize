@@ -11,11 +11,10 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type TunnelDownOptions struct {
-	Config *config.Config
+	Config *config.Project
 }
 
 func NewTunnelDownOptions() *TunnelDownOptions {
@@ -32,7 +31,7 @@ func NewCmdTunnelDown() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
-			err := o.Complete(cmd, args)
+			err := o.Complete()
 			if err != nil {
 				return err
 			}
@@ -42,7 +41,7 @@ func NewCmdTunnelDown() *cobra.Command {
 				return err
 			}
 
-			err = o.Run(cmd)
+			err = o.Run()
 			if err != nil {
 				return err
 			}
@@ -54,7 +53,7 @@ func NewCmdTunnelDown() *cobra.Command {
 	return cmd
 }
 
-func (o *TunnelDownOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *TunnelDownOptions) Complete() error {
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return fmt.Errorf("can't load options for a command: %w", err)
@@ -73,14 +72,14 @@ func (o *TunnelDownOptions) Validate() error {
 	return nil
 }
 
-func (o *TunnelDownOptions) Run(cmd *cobra.Command) error {
+func (o *TunnelDownOptions) Run() error {
 	c := exec.Command(
 		"ssh", "-S", "bastion.sock", "-O", "exit", "",
 	)
 	out := &bytes.Buffer{}
 	c.Stdout = out
 	c.Stderr = out
-	c.Dir = viper.GetString("ENV_DIR")
+	c.Dir = o.Config.EnvDir
 
 	err := c.Run()
 	if err != nil {

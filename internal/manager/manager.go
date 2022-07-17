@@ -1,8 +1,10 @@
-package apps
+package manager
 
-import "github.com/hazelops/ize/pkg/terminal"
+import (
+	"github.com/hazelops/ize/pkg/terminal"
+)
 
-type App interface {
+type Manager interface {
 	Deploy(ui terminal.UI) error
 	Destroy(ui terminal.UI) error
 	Build(ui terminal.UI) error

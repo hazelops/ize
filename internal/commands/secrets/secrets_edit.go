@@ -11,11 +11,10 @@ import (
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type SecretsEditOptions struct {
-	Config   *config.Config
+	Config   *config.Project
 	AppName  string
 	FilePath string
 }
@@ -46,7 +45,7 @@ func NewCmdSecretsEdit() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
-			err := o.Complete(cmd, args)
+			err := o.Complete(cmd)
 			if err != nil {
 				return err
 			}
@@ -70,7 +69,7 @@ func NewCmdSecretsEdit() *cobra.Command {
 	return cmd
 }
 
-func (o *SecretsEditOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *SecretsEditOptions) Complete(cmd *cobra.Command) error {
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return err
@@ -80,7 +79,7 @@ func (o *SecretsEditOptions) Complete(cmd *cobra.Command, args []string) error {
 	o.AppName = cmd.Flags().Args()[0]
 
 	if o.FilePath == "" {
-		o.FilePath = fmt.Sprintf("%s/%s/%s.json", viper.GetString("ENV_DIR"), "secrets", o.AppName)
+		o.FilePath = fmt.Sprintf("%s/%s/%s.json", o.Config.EnvDir, "secrets", o.AppName)
 	}
 
 	return nil
@@ -100,7 +99,7 @@ func (o *SecretsEditOptions) Run() error {
 		return fmt.Errorf("can't secrets edit: %w", err)
 	}
 
-	checkSecretFolder()
+	checkSecretFolder(o.Config.EnvDir)
 
 	f, err := os.OpenFile(absPath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0660)
 	if err != nil {
@@ -141,8 +140,8 @@ func (o *SecretsEditOptions) Run() error {
 	return nil
 }
 
-func checkSecretFolder() {
-	secretsFolder := filepath.Join(viper.GetString("ENV_DIR"), "secrets")
+func checkSecretFolder(dir string) {
+	secretsFolder := filepath.Join(dir, "secrets")
 	_, err := os.Stat(secretsFolder)
 	if os.IsNotExist(err) {
 		os.MkdirAll(secretsFolder, 0775)

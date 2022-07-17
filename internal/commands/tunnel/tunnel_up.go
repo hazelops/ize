@@ -14,7 +14,7 @@ import (
 )
 
 type TunnelUpOptions struct {
-	Config                *config.Config
+	Config                *config.Project
 	PrivateKeyFile        string
 	BastionHostID         string
 	ForwardHost           []string
@@ -35,7 +35,7 @@ func NewCmdTunnelUp() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			cmd.SilenceUsage = true
-			err := o.Complete(cmd, args)
+			err := o.Complete()
 			if err != nil {
 				return err
 			}
@@ -45,7 +45,7 @@ func NewCmdTunnelUp() *cobra.Command {
 				return err
 			}
 
-			err = o.Run(cmd)
+			err = o.Run()
 			if err != nil {
 				return err
 			}
@@ -62,7 +62,7 @@ func NewCmdTunnelUp() *cobra.Command {
 	return cmd
 }
 
-func (o *TunnelUpOptions) Complete(md *cobra.Command, args []string) error {
+func (o *TunnelUpOptions) Complete() error {
 	if err := config.CheckRequirements(config.WithSSMPlugin()); err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (o *TunnelUpOptions) Complete(md *cobra.Command, args []string) error {
 
 	o.Config = cfg
 
-	isUp, err := checkTunnel()
+	isUp, err := checkTunnel(o.Config.EnvDir)
 	if err != nil {
 		return fmt.Errorf("can't run tunnel up: %w", err)
 	}
@@ -100,7 +100,7 @@ func (o *TunnelUpOptions) Complete(md *cobra.Command, args []string) error {
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) == 0 {
-		bastionHostID, forwardHost, err := writeSSHConfigFromSSM(o.Config.Session, o.Config.Env)
+		bastionHostID, forwardHost, err := writeSSHConfigFromSSM(o.Config.Session, o.Config.Env, o.Config.EnvDir)
 		if err != nil {
 			return err
 		}
@@ -109,7 +109,7 @@ func (o *TunnelUpOptions) Complete(md *cobra.Command, args []string) error {
 		o.ForwardHost = forwardHost
 		pterm.Success.Println("Tunnel forwarding configuration obtained from SSM")
 	} else {
-		err := writeSSHConfigFromConfig(o.ForwardHost)
+		err := writeSSHConfigFromConfig(o.ForwardHost, o.Config.EnvDir)
 		if err != nil {
 			return err
 		}
@@ -134,8 +134,8 @@ func (o *TunnelUpOptions) Validate() error {
 	return nil
 }
 
-func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
-	sshConfigPath := fmt.Sprintf("%s/ssh.config", viper.GetString("ENV_DIR"))
+func (o *TunnelUpOptions) Run() error {
+	sshConfigPath := fmt.Sprintf("%s/ssh.config", o.Config.EnvDir)
 
 	if err := setAWSCredentials(o.Config.Session); err != nil {
 		return fmt.Errorf("can't run tunnel up: %w", err)
@@ -152,7 +152,7 @@ func (o *TunnelUpOptions) Run(cmd *cobra.Command) error {
 
 	c := exec.Command("ssh", args...)
 
-	c.Dir = viper.GetString("ENV_DIR")
+	c.Dir = o.Config.EnvDir
 
 	_, _, code, err := runCommand(c)
 	if err != nil {

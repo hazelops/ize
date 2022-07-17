@@ -3,22 +3,19 @@ package up
 import (
 	"context"
 	"fmt"
-	"strings"
-
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 )
 
 type UpInfraOptions struct {
-	Config  *config.Config
-	Type    string
-	Infra   Infra
-	SkipGen bool
-	UI      terminal.UI
+	Config     *config.Project
+	SkipGen    bool
+	AwsProfile string
+	AwsRegion  string
+	Version    string
+	UI         terminal.UI
 }
 
 var upInfraLongDesc = templates.LongDesc(`
@@ -51,7 +48,7 @@ func NewCmdUpInfra() *cobra.Command {
 		Example: upInfraExample,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			err := o.Complete(cmd, args)
+			err := o.Complete()
 			if err != nil {
 				return err
 			}
@@ -61,7 +58,7 @@ func NewCmdUpInfra() *cobra.Command {
 				return err
 			}
 
-			err = o.Run(cmd)
+			err = o.Run()
 			if err != nil {
 				return err
 			}
@@ -71,24 +68,14 @@ func NewCmdUpInfra() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&o.SkipGen, "skip-gen", false, "skip generating terraform files")
-	cmd.Flags().StringVar(&o.Infra.Version, "infra.terraform.version", "", "set terraform version")
-	cmd.Flags().StringVar(&o.Infra.Region, "infra.terraform.aws-region", "", "set aws region")
-	cmd.Flags().StringVar(&o.Infra.Profile, "infra.terraform.aws-profile", "", "set aws profile")
+	cmd.Flags().StringVar(&o.Version, "infra.terraform.version", "", "set terraform version")
+	cmd.Flags().StringVar(&o.AwsRegion, "infra.terraform.aws-region", "", "set aws region")
+	cmd.Flags().StringVar(&o.AwsProfile, "infra.terraform.aws-profile", "", "set aws profile")
 
 	return cmd
 }
 
-func BindFlags(flags *pflag.FlagSet) {
-	replacer := strings.NewReplacer("-", "_")
-
-	flags.VisitAll(func(flag *pflag.Flag) {
-		if err := viper.BindPFlag(replacer.Replace(flag.Name), flag); err != nil {
-			panic("unable to bind flag " + flag.Name + ": " + err.Error())
-		}
-	})
-}
-
-func (o *UpInfraOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *UpInfraOptions) Complete() error {
 	var err error
 
 	o.Config, err = config.GetConfig()
@@ -96,23 +83,36 @@ func (o *UpInfraOptions) Complete(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("can't deploy your stack: %w", err)
 	}
 
-	BindFlags(cmd.Flags())
-
-	viper.UnmarshalKey("infra.terraform", &o.Infra)
-
-	if len(o.Infra.Profile) == 0 {
-		o.Infra.Profile = o.Config.AwsProfile
+	if o.Config.Terraform == nil {
+		o.Config.Terraform = map[string]*config.Terraform{}
+		o.Config.Terraform["infra"] = &config.Terraform{}
 	}
 
-	if len(o.Infra.Region) == 0 {
-		o.Infra.Region = o.Config.AwsRegion
+	if len(o.AwsProfile) != 0 {
+		o.Config.Terraform["infra"].AwsProfile = o.AwsProfile
 	}
 
-	if len(o.Infra.Version) == 0 {
-		o.Infra.Version = viper.GetString("terraform_version")
+	if len(o.Config.Terraform["infra"].AwsProfile) == 0 {
+		o.Config.Terraform["infra"].AwsProfile = o.Config.AwsProfile
 	}
 
-	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
+	if len(o.AwsProfile) != 0 {
+		o.Config.Terraform["infra"].AwsRegion = o.AwsRegion
+	}
+
+	if len(o.Config.Terraform["infra"].AwsRegion) == 0 {
+		o.Config.Terraform["infra"].AwsRegion = o.Config.AwsRegion
+	}
+
+	if len(o.Version) != 0 {
+		o.Config.Terraform["infra"].Version = o.Version
+	}
+
+	if len(o.Config.Terraform["infra"].Version) == 0 {
+		o.Config.Terraform["infra"].Version = o.Config.TerraformVersion
+	}
+
+	o.UI = terminal.ConsoleUI(context.Background(), o.Config.PlainText)
 
 	return nil
 }
@@ -129,8 +129,8 @@ func (o *UpInfraOptions) Validate() error {
 	return nil
 }
 
-func (o *UpInfraOptions) Run(cmd *cobra.Command) error {
+func (o *UpInfraOptions) Run() error {
 	ui := o.UI
 
-	return deployInfra(ui, o.Infra, *o.Config, o.SkipGen)
+	return deployInfra(ui, o.Config, o.SkipGen)
 }
