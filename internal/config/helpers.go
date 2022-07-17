@@ -2,15 +2,14 @@ package config
 
 import (
 	"fmt"
+	"github.com/go-ini/ini"
+	"github.com/pterm/pterm"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
-	"strings"
-
-	"github.com/pterm/pterm"
 )
 
 func CheckCommand(command string, subcommand []string) (string, error) {
@@ -32,12 +31,12 @@ func ShowUpgradeCommand() error {
 	case "darwin":
 		pterm.Warning.Println("Use the command to update\n:\tbrew upgrade ize")
 	case "linux":
-		distroName, err := getLinuxDistoName()
+		distroName, err := ReadOSRelease("/etc/os-release")
 		if err != nil {
 			return err
 		}
-		switch distroName {
-		case "Ubuntu":
+		switch distroName["ID"] {
+		case "ubuntu":
 			pterm.Warning.Println("Use the command to update:\n\tapt update && apt install ize")
 		default:
 			pterm.Warning.Println("See https://github.com/hazelops/ize/blob/main/DOCS.md#installation")
@@ -78,7 +77,7 @@ func downloadSSMAgentPlugin() error {
 
 		defer file.Close()
 	case "linux":
-		distroName, err := getLinuxDistoName()
+		distroName, err := ReadOSRelease("/etc/os-release")
 		if err != nil {
 			return err
 		}
@@ -103,11 +102,14 @@ func downloadSSMAgentPlugin() error {
 			},
 		}
 
-		if distroName == "Ubuntu" || distroName == "Debian" {
+		switch distroName["ID"] {
+		case "ubuntu", "debian":
 			file, err := os.Create("session-manager-plugin.deb")
 			if err != nil {
 				log.Fatal(err)
 			}
+
+			defer file.Close()
 
 			resp, err := client.Get(fmt.Sprintf(ssmLinuxUrl, "ubuntu", arch, ".deb"))
 			if err != nil {
@@ -120,13 +122,13 @@ func downloadSSMAgentPlugin() error {
 			if err != nil {
 				return err
 			}
-
-			defer file.Close()
-		} else {
+		default:
 			file, err := os.Create("session-manager-plugin.rpm")
 			if err != nil {
 				log.Fatal(err)
 			}
+
+			defer file.Close()
 
 			resp, err := client.Get(fmt.Sprintf(ssmLinuxUrl, "linux", arch, ".rpm"))
 			if err != nil {
@@ -153,15 +155,15 @@ func cleanupSSMAgent() error {
 	if runtime.GOOS == "darwin" {
 		command = []string{"rm", "-f", "sessionmanager-bundle sessionmanager-bundle.zip"}
 	} else if runtime.GOOS == "linux" {
-		command = []string{"rm", "-f", "session-manager-plugin.rpm"}
-
-		distrName, err := getLinuxDistoName()
+		distroName, err := ReadOSRelease("/etc/os-release")
 		if err != nil {
 			return err
 		}
-
-		if distrName == "Ubuntu" || distrName == "Debian" {
+		switch distroName["ID"] {
+		case "ubuntu", "debian":
 			command = []string{"rm", "-rf", "session-manager-plugin.deb"}
+		default:
+			command = []string{"rm", "-f", "session-manager-plugin.rpm"}
 		}
 	}
 
@@ -183,12 +185,17 @@ func installSSMAgent() error {
 	} else if runtime.GOOS == "linux" {
 		command = []string{"sudo", "yum", "install", "-y", "-q", "session-manager-plugin.deb"}
 
-		distrName, err := getLinuxDistoName()
+		distroName, err := ReadOSRelease("/etc/os-release")
 		if err != nil {
 			return err
 		}
-		if distrName == "Ubuntu" || distrName == "Debian" {
+		switch distroName["ID"] {
+		case "ubuntu", "debian":
 			command = []string{"sudo", "dpkg", "-i", "session-manager-plugin.deb"}
+		case "fedora":
+			command = []string{"sudo", "dnf", "install", "session-manager-plugin.rpm"}
+		case "rhel":
+			command = []string{"sudo", "yum", "install", "session-manager-plugin.rpm"}
 		}
 	} else {
 		return fmt.Errorf("automatic installation of SSM Agent for your OS is not supported")
@@ -206,18 +213,14 @@ func installSSMAgent() error {
 	return nil
 }
 
-func getLinuxDistoName() (string, error) {
-	f, err := os.Open("/etc/issue")
+func ReadOSRelease(configfile string) (map[string]string, error) {
+	cfg, err := ini.Load(configfile)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	b, err := io.ReadAll(f)
-	if err != nil {
-		return "", err
-	}
+	ConfigParams := make(map[string]string)
+	ConfigParams["ID"] = cfg.Section("").Key("ID").String()
 
-	disto := strings.Split(string(b), " ")[0]
-
-	return disto, nil
+	return ConfigParams, nil
 }

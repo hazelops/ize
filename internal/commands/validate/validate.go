@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"fmt"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/schema"
 	"github.com/pterm/pterm"
@@ -21,6 +22,7 @@ func NewValidateCmd() *cobra.Command {
 			}
 
 			err = schema.Validate(viper.AllSettings())
+			fmt.Println(viper.AllSettings())
 
 			if err != nil {
 				return err

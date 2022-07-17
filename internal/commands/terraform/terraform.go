@@ -9,11 +9,10 @@ import (
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-type TerraformOptions struct {
-	Config  *config.Config
+type Options struct {
+	Config  *config.Project
 	Version string
 	Command []string
 	Local   bool
@@ -42,8 +41,8 @@ var terraformExample = templates.Examples(`
 	ize -e dev -p default -r us-east-1 -n hazelops --prefer-runtime=docker terraform --version 1.0.10 init -input=true
 `)
 
-func NewTerraformFlags() *TerraformOptions {
-	return &TerraformOptions{}
+func NewTerraformFlags() *Options {
+	return &Options{}
 }
 
 func NewCmdTerraform() *cobra.Command {
@@ -58,7 +57,7 @@ func NewCmdTerraform() *cobra.Command {
 		DisableFlagsInUseLine: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			err := o.Complete(cmd, args)
+			err := o.Complete()
 			if err != nil {
 				return err
 			}
@@ -80,9 +79,9 @@ func NewCmdTerraform() *cobra.Command {
 	return cmd
 }
 
-func (o *TerraformOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *Options) Complete() error {
 	var (
-		cfg *config.Config
+		cfg *config.Project
 		err error
 	)
 
@@ -96,14 +95,14 @@ func (o *TerraformOptions) Complete(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (o *TerraformOptions) Validate() error {
+func (o *Options) Validate() error {
 	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("env must be specified\n")
 	}
 	return nil
 }
 
-func (o *TerraformOptions) Run(args []string) error {
+func (o *Options) Run(args []string) error {
 	var tf terraform.Terraform
 
 	v, err := o.Config.Session.Config.Credentials.Get()
@@ -115,26 +114,32 @@ func (o *TerraformOptions) Run(args []string) error {
 		fmt.Sprintf("ENV=%v", o.Config.Env),
 		fmt.Sprintf("USER=%v", os.Getenv("USER")),
 		fmt.Sprintf("AWS_PROFILE=%v", o.Config.AwsProfile),
-		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
+		fmt.Sprintf("TF_LOG=%v", o.Config.TFLog),
+		fmt.Sprintf("TF_LOG_PATH=%v", o.Config.TFLogPath),
 		fmt.Sprintf("AWS_ACCESS_KEY_ID=%v", v.AccessKeyID),
 		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%v", v.SecretAccessKey),
 		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
 	}
 
-	o.Version = viper.GetString("infra.terraform.version")
-	if o.Version == "" {
-		o.Version = viper.GetString("terraform_version")
+	if o.Config.Terraform != nil {
+		o.Version = o.Config.Terraform["infra"].Version
 	}
 
-	if o.Config.IsDockerRuntime {
-		tf = terraform.NewDockerTerraform(o.Version, args, env, nil)
-	} else {
-		tf = terraform.NewLocalTerraform(o.Version, args, env, nil)
+	if o.Version == "" {
+		o.Version = o.Config.TerraformVersion
+	}
+
+	switch o.Config.PreferRuntime {
+	case "docker":
+		tf = terraform.NewDockerTerraform(o.Version, args, env, nil, o.Config.Home, o.Config.InfraDir, o.Config.EnvDir)
+	case "native":
+		tf = terraform.NewLocalTerraform(o.Version, args, env, nil, o.Config.EnvDir)
 		err = tf.Prepare()
 		if err != nil {
 			return err
 		}
+	default:
+		return fmt.Errorf("can't supported %s runtime", o.Config.PreferRuntime)
 	}
 
 	logrus.Debug("starting terraform")

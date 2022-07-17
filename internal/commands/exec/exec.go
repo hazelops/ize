@@ -16,7 +16,7 @@ import (
 )
 
 type ExecOptions struct {
-	Config     *config.Config
+	Config     *config.Project
 	AppName    string
 	EcsCluster string
 	Command    string
@@ -54,7 +54,7 @@ func NewCmdExec() *cobra.Command {
 				return err
 			}
 
-			err = o.Run(cmd)
+			err = o.Run()
 			if err != nil {
 				return err
 			}
@@ -106,7 +106,7 @@ func (o *ExecOptions) Validate() error {
 	return nil
 }
 
-func (o *ExecOptions) Run(cmd *cobra.Command) error {
+func (o *ExecOptions) Run() error {
 	appName := fmt.Sprintf("%s-%s", o.Config.Env, o.AppName)
 
 	logrus.Infof("app name: %s, cluster name: %s", appName, o.EcsCluster)

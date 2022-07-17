@@ -9,7 +9,7 @@ import (
 )
 
 type MfaOptions struct {
-	Config *config.Config
+	Config *config.Project
 }
 
 func NewMfaFlags() *MfaOptions {
@@ -24,7 +24,7 @@ func NewCmdMfa() *cobra.Command {
 		Short: "Generate a list of exports for your shell to use ize with MFA-enabled AWS account",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			err := o.Complete(cmd, args)
+			err := o.Complete()
 			if err != nil {
 				return err
 			}
@@ -41,7 +41,7 @@ func NewCmdMfa() *cobra.Command {
 	return cmd
 }
 
-func (o *MfaOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *MfaOptions) Complete() error {
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return err

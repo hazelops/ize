@@ -2,21 +2,22 @@ package deploy
 
 import (
 	"fmt"
+	"github.com/hazelops/ize/internal/manager"
+	"github.com/hazelops/ize/internal/manager/alias"
+	"github.com/hazelops/ize/internal/manager/serverless"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/hazelops/ize/internal/apps"
-	"github.com/hazelops/ize/internal/apps/ecs"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/manager/ecs"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-type DeployOptions struct {
-	Config                 *config.Config
+type Options struct {
+	Config                 *config.Project
 	AppName                string
-	Tag                    string
 	Image                  string
 	App                    interface{}
 	TaskDefinitionRevision string
@@ -46,8 +47,8 @@ var deployExample = templates.Examples(`
 	ize deploy <app name> --task-definition-revision <task definition revision>
 `)
 
-func NewDeployFlags() *DeployOptions {
-	return &DeployOptions{}
+func NewDeployFlags() *Options {
+	return &Options{}
 }
 
 func NewCmdDeploy() *cobra.Command {
@@ -62,7 +63,7 @@ func NewCmdDeploy() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
-			err := o.Complete(cmd, args)
+			err := o.Complete(cmd)
 			if err != nil {
 				return err
 			}
@@ -87,7 +88,7 @@ func NewCmdDeploy() *cobra.Command {
 	return cmd
 }
 
-func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *Options) Complete(cmd *cobra.Command) error {
 	var err error
 
 	o.Config, err = config.GetConfig()
@@ -99,22 +100,16 @@ func (o *DeployOptions) Complete(cmd *cobra.Command, args []string) error {
 	o.AppName = cmd.Flags().Args()[0]
 	viper.UnmarshalKey(fmt.Sprintf("app.%s", o.AppName), &o.App)
 
-	o.Tag = viper.GetString("tag")
-
 	return nil
 }
 
-func (o *DeployOptions) Validate() error {
+func (o *Options) Validate() error {
 	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("can't validate options: env must be specified")
 	}
 
 	if len(o.Config.Namespace) == 0 {
 		return fmt.Errorf("can't validate options: namespace must be specified")
-	}
-
-	if len(o.Tag) == 0 {
-		return fmt.Errorf("can't validate options: tag must be specified")
 	}
 
 	if len(o.AppName) == 0 {
@@ -124,43 +119,50 @@ func (o *DeployOptions) Validate() error {
 	return nil
 }
 
-func (o *DeployOptions) Run() error {
-	ui := terminal.ConsoleUI(aws.BackgroundContext(), o.Config.IsPlainText)
+func (o *Options) Run() error {
+	ui := terminal.ConsoleUI(aws.BackgroundContext(), o.Config.PlainText)
 
 	ui.Output("Deploying %s app...\n", o.AppName, terminal.WithHeaderStyle())
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	var appType string
+	var manager manager.Manager
 
-	app, ok := o.App.(map[string]interface{})
-	if !ok {
-		appType = "ecs"
+	if app, ok := o.Config.Serverless[o.AppName]; ok {
+		app.Name = o.AppName
+		manager = &serverless.Manager{
+			Project: o.Config,
+			App:     app,
+		}
+	}
+	if app, ok := o.Config.Alias[o.AppName]; ok {
+		app.Name = o.AppName
+		manager = &alias.Manager{
+			Project: o.Config,
+			App:     app,
+		}
+	}
+	if app, ok := o.Config.Ecs[o.AppName]; ok {
+		app.Name = o.AppName
+		app.TaskDefinitionRevision = o.TaskDefinitionRevision
+		app.Unsafe = o.Unsafe
+		manager = &ecs.Manager{
+			Project: o.Config,
+			App:     app,
+		}
 	} else {
-		appType, ok = app["type"].(string)
-		if !ok {
-			appType = "ecs"
+		manager = &ecs.Manager{
+			Project: o.Config,
+			App: &config.Ecs{
+				Name:                   o.AppName,
+				TaskDefinitionRevision: o.TaskDefinitionRevision,
+				Unsafe:                 o.Unsafe,
+			},
 		}
 	}
 
-	var deployment apps.App
-
-	o.App.(map[string]interface{})["unsafe"] = o.Unsafe
-
-	switch appType {
-	case "ecs":
-		o.App.(map[string]interface{})["task_definition_revision"] = o.TaskDefinitionRevision
-		deployment = ecs.NewECSApp(o.AppName, o.App)
-	case "serverless":
-		deployment = apps.NewServerlessApp(o.AppName, o.App)
-	case "alias":
-		deployment = apps.NewAliasApp(o.AppName)
-	default:
-		return fmt.Errorf("%s apps are not supported in this command", appType)
-	}
-
 	if len(o.TaskDefinitionRevision) != 0 {
-		err := deployment.Redeploy(ui)
+		err := manager.Redeploy(ui)
 		if err != nil {
 			return err
 		}
@@ -170,7 +172,7 @@ func (o *DeployOptions) Run() error {
 		return nil
 	}
 
-	err := deployment.Deploy(ui)
+	err := manager.Deploy(ui)
 	if err != nil {
 		return err
 	}

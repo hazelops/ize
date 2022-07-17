@@ -6,45 +6,36 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/hazelops/ize/internal/manager"
+	"github.com/hazelops/ize/internal/manager/alias"
+	"github.com/hazelops/ize/internal/manager/serverless"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/hazelops/ize/internal/apps"
-	"github.com/hazelops/ize/internal/apps/ecs"
 	"github.com/hazelops/ize/internal/commands/gen"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/manager/ecs"
 	"github.com/hazelops/ize/internal/terraform"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-type UpOptions struct {
-	Config           *config.Config
+type Options struct {
+	Config           *config.Project
 	AppName          string
-	Tag              string
 	SkipBuildAndPush bool
 	SkipGen          bool
-	Apps             map[string]*interface{}
-	Infra            Infra
-	App              interface{}
 	AutoApprove      bool
 	UI               terminal.UI
 }
 
 type Apps map[string]*interface{}
-
-type Infra struct {
-	Version string `mapstructure:"version"`
-	Region  string `mapstructure:"aws_region"`
-	Profile string `mapstructure:"aws_profile"`
-}
 
 var upLongDesc = templates.LongDesc(`
 	Deploy infrastructure or service.
@@ -68,8 +59,8 @@ var upExample = templates.Examples(`
 	ize up <app name>
 `)
 
-func NewUpFlags() *UpOptions {
-	return &UpOptions{}
+func NewUpFlags() *Options {
+	return &Options{}
 }
 
 func NewCmdUp() *cobra.Command {
@@ -117,7 +108,7 @@ func NewCmdUp() *cobra.Command {
 	return cmd
 }
 
-func (o *UpOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *Options) Complete(cmd *cobra.Command, args []string) error {
 	var err error
 
 	if len(args) == 0 {
@@ -125,24 +116,25 @@ func (o *UpOptions) Complete(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		o.Config, err = config.GetConfig()
-		viper.BindPFlags(cmd.Flags())
 		if err != nil {
 			return fmt.Errorf("can't deploy your stack: %w", err)
 		}
 
-		viper.UnmarshalKey("app", &o.Apps)
-		viper.UnmarshalKey("infra.terraform", &o.Infra)
-
-		if len(o.Infra.Profile) == 0 {
-			o.Infra.Profile = o.Config.AwsProfile
+		if o.Config.Terraform == nil {
+			o.Config.Terraform = map[string]*config.Terraform{}
+			o.Config.Terraform["infra"] = &config.Terraform{}
 		}
 
-		if len(o.Infra.Region) == 0 {
-			o.Infra.Region = o.Config.AwsRegion
+		if len(o.Config.Terraform["infra"].AwsProfile) == 0 {
+			o.Config.Terraform["infra"].AwsProfile = o.Config.AwsProfile
 		}
 
-		if len(o.Infra.Version) == 0 {
-			o.Infra.Version = viper.GetString("terraform_version")
+		if len(o.Config.Terraform["infra"].AwsRegion) == 0 {
+			o.Config.Terraform["infra"].AwsProfile = o.Config.AwsRegion
+		}
+
+		if len(o.Config.Terraform["infra"].Version) == 0 {
+			o.Config.Terraform["infra"].Version = o.Config.TerraformVersion
 		}
 	} else {
 		o.Config, err = config.GetConfig()
@@ -150,18 +142,15 @@ func (o *UpOptions) Complete(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("can't deploy your stack: %w", err)
 		}
 
-		viper.BindPFlags(cmd.Flags())
 		o.AppName = cmd.Flags().Args()[0]
-		viper.UnmarshalKey(fmt.Sprintf("app.%s", o.AppName), &o.App)
 	}
 
-	o.Tag = viper.GetString("tag")
-	o.UI = terminal.ConsoleUI(context.Background(), o.Config.IsPlainText)
+	o.UI = terminal.ConsoleUI(context.Background(), o.Config.PlainText)
 
 	return nil
 }
 
-func (o *UpOptions) Validate() error {
+func (o *Options) Validate() error {
 	if o.AppName == "" {
 		err := validateAll(o)
 		if err != nil {
@@ -177,7 +166,7 @@ func (o *UpOptions) Validate() error {
 	return nil
 }
 
-func (o *UpOptions) Run() error {
+func (o *Options) Run() error {
 	ui := o.UI
 	if o.AppName == "" {
 		err := deployAll(ui, o)
@@ -194,17 +183,13 @@ func (o *UpOptions) Run() error {
 	return nil
 }
 
-func validate(o *UpOptions) error {
+func validate(o *Options) error {
 	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("can't validate options: env must be specified")
 	}
 
 	if len(o.Config.Namespace) == 0 {
 		return fmt.Errorf("can't validate options: namespace must be specified")
-	}
-
-	if len(o.Tag) == 0 {
-		return fmt.Errorf("can't validate options: tag must be specified")
 	}
 
 	if len(o.AppName) == 0 {
@@ -214,7 +199,7 @@ func validate(o *UpOptions) error {
 	return nil
 }
 
-func validateAll(o *UpOptions) error {
+func validateAll(o *Options) error {
 	if len(o.Config.Env) == 0 {
 		return fmt.Errorf("can't validate options: env must be specified")
 	}
@@ -223,114 +208,118 @@ func validateAll(o *UpOptions) error {
 		return fmt.Errorf("can't validate options: namespace must be specified")
 	}
 
-	if len(o.Tag) == 0 {
-		return fmt.Errorf("can't validate options: tag must be specified")
-	}
-
 	return nil
 }
 
-func deployAll(ui terminal.UI, o *UpOptions) error {
-	err := deployInfra(ui, o.Infra, *o.Config, o.SkipGen)
+func deployAll(ui terminal.UI, o *Options) error {
+	err := deployInfra(ui, o.Config, o.SkipGen)
 	if err != nil {
 		return err
 	}
 
-	logrus.Debug(o.Apps)
-
 	ui.Output("Deploying apps...", terminal.WithHeaderStyle())
 
-	err = apps.InDependencyOrder(aws.BackgroundContext(), o.Apps, func(c context.Context, name string) error {
-		o.Config.AwsProfile = o.Infra.Profile
+	err = manager.InDependencyOrder(aws.BackgroundContext(), o.Config.GetApps(), func(c context.Context, name string) error {
+		o.Config.AwsProfile = o.Config.Terraform["infra"].AwsProfile
 
-		at := (*o.Apps[name]).(map[string]interface{})["type"].(string)
+		var manager manager.Manager
 
-		var app apps.App
-
-		switch at {
-		case "ecs":
-			app = ecs.NewECSApp(name, *o.Apps[name])
-		case "serverless":
-			app = apps.NewServerlessApp(name, *o.Apps[name])
-		case "alias":
-			app = apps.NewAliasApp(name)
-		default:
-			return fmt.Errorf("%s apps are not supported in this command", at)
+		if app, ok := o.Config.Serverless[name]; ok {
+			app.Name = o.AppName
+			manager = &serverless.Manager{
+				Project: o.Config,
+				App:     app,
+			}
+		}
+		if app, ok := o.Config.Alias[name]; ok {
+			app.Name = o.AppName
+			manager = &alias.Manager{
+				Project: o.Config,
+				App:     app,
+			}
+		}
+		if app, ok := o.Config.Ecs[name]; ok {
+			app.Name = o.AppName
+			manager = &ecs.Manager{
+				Project: o.Config,
+				App:     app,
+			}
 		}
 
 		// build app container
-		err := app.Build(ui)
+		err := manager.Build(ui)
 		if err != nil {
 			return fmt.Errorf("can't build app: %w", err)
 		}
 
 		// push app image
-		err = app.Push(ui)
+		err = manager.Push(ui)
 		if err != nil {
 			return fmt.Errorf("can't push app: %w", err)
 		}
 
 		// deploy app image
-		err = app.Deploy(ui)
+		err = manager.Deploy(ui)
 		if err != nil {
 			return fmt.Errorf("can't deploy app: %w", err)
 		}
 
 		return nil
 	})
-	if err != nil {
-		return err
-	}
 
 	ui.Output("Deploy all completed!\n", terminal.WithSuccessStyle())
 
 	return nil
 }
 
-func deployApp(ui terminal.UI, o *UpOptions) error {
+func deployApp(ui terminal.UI, o *Options) error {
 	ui.Output("Deploying %s app...\n", o.AppName, terminal.WithHeaderStyle())
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	var appType string
+	var manager manager.Manager
 
-	a, ok := o.App.(map[string]interface{})
-	if !ok {
-		appType = "ecs"
+	if app, ok := o.Config.Serverless[o.AppName]; ok {
+		app.Name = o.AppName
+		manager = &serverless.Manager{
+			Project: o.Config,
+			App:     app,
+		}
+	}
+	if app, ok := o.Config.Alias[o.AppName]; ok {
+		app.Name = o.AppName
+		manager = &alias.Manager{
+			Project: o.Config,
+			App:     app,
+		}
+	}
+	if app, ok := o.Config.Ecs[o.AppName]; ok {
+		app.Name = o.AppName
+		manager = &ecs.Manager{
+			Project: o.Config,
+			App:     app,
+		}
 	} else {
-		appType, ok = a["type"].(string)
-		if !ok {
-			appType = "ecs"
+		manager = &ecs.Manager{
+			Project: o.Config,
+			App:     &config.Ecs{Name: o.AppName},
 		}
 	}
 
-	var app apps.App
-
-	switch appType {
-	case "ecs":
-		app = ecs.NewECSApp(o.AppName, o.App)
-	case "serverless":
-		app = apps.NewServerlessApp(o.AppName, o.App)
-	case "alias":
-		app = apps.NewAliasApp(o.AppName)
-	default:
-		return fmt.Errorf("%s apps are not supported in this command", appType)
-	}
-
 	// build app container
-	err := app.Build(ui)
+	err := manager.Build(ui)
 	if err != nil {
 		return fmt.Errorf("can't build app: %w", err)
 	}
 
 	// push app image
-	err = app.Push(ui)
+	err = manager.Push(ui)
 	if err != nil {
 		return fmt.Errorf("can't push app: %w", err)
 	}
 
 	// deploy app image
-	err = app.Deploy(ui)
+	err = manager.Deploy(ui)
 	if err != nil {
 		return fmt.Errorf("can't deploy app: %w", err)
 	}
@@ -340,14 +329,11 @@ func deployApp(ui terminal.UI, o *UpOptions) error {
 	return nil
 }
 
-func deployInfra(ui terminal.UI, infra Infra, config config.Config, skipGen bool) error {
+func deployInfra(ui terminal.UI, config *config.Project, skipGen bool) error {
 	if !skipGen {
-		if !checkFileExists(filepath.Join(viper.GetString("ENV_DIR"), "backend.tf")) || !checkFileExists(filepath.Join(viper.GetString("ENV_DIR"), "terraform.tfvars")) {
+		if !checkFileExists(filepath.Join(config.EnvDir, "backend.tf")) || !checkFileExists(filepath.Join(config.EnvDir, "terraform.tfvars")) {
 			err := gen.GenerateTerraformFiles(
-				config.AwsRegion,
-				config.AwsProfile,
-				config.Env,
-				config.Namespace,
+				config,
 				"",
 			)
 			if err != nil {
@@ -358,7 +344,7 @@ func deployInfra(ui terminal.UI, infra Infra, config config.Config, skipGen bool
 
 	var tf terraform.Terraform
 
-	logrus.Infof("infra: %s", infra)
+	logrus.Infof("infra: %s", config.Terraform["infra"])
 
 	v, err := config.Session.Config.Credentials.Get()
 	if err != nil {
@@ -367,25 +353,28 @@ func deployInfra(ui terminal.UI, infra Infra, config config.Config, skipGen bool
 
 	env := []string{
 		fmt.Sprintf("ENV=%v", config.Env),
-		fmt.Sprintf("AWS_PROFILE=%v", infra.Profile),
-		fmt.Sprintf("TF_LOG=%v", viper.Get("TF_LOG")),
-		fmt.Sprintf("TF_LOG_PATH=%v", viper.Get("TF_LOG_PATH")),
+		fmt.Sprintf("AWS_PROFILE=%v", config.Terraform["infra"].AwsProfile),
+		fmt.Sprintf("TF_LOG=%v", config.TFLog),
+		fmt.Sprintf("TF_LOG_PATH=%v", config.TFLogPath),
 		fmt.Sprintf("AWS_ACCESS_KEY_ID=%v", v.AccessKeyID),
 		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%v", v.SecretAccessKey),
 		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
 	}
 
-	if config.IsDockerRuntime {
-		tf = terraform.NewDockerTerraform(infra.Version, []string{"init", "-input=true"}, env, nil)
-	} else {
-		tf = terraform.NewLocalTerraform(infra.Version, []string{"init", "-input=true"}, env, nil)
+	switch config.PreferRuntime {
+	case "docker":
+		tf = terraform.NewDockerTerraform(config.Terraform["infra"].Version, []string{"init", "-input=true"}, env, nil, config.Home, config.InfraDir, config.EnvDir)
+	case "native":
+		tf = terraform.NewLocalTerraform(config.Terraform["infra"].Version, []string{"init", "-input=true"}, env, nil, config.EnvDir)
 		err = tf.Prepare()
 		if err != nil {
 			return fmt.Errorf("can't deploy all: %w", err)
 		}
+	default:
+		return fmt.Errorf("can't supported %s runtime", config.PreferRuntime)
 	}
 
-	ui.Output(fmt.Sprintf("[%s] Running deploy infra...", viper.Get("ENV")), terminal.WithHeaderStyle())
+	ui.Output(fmt.Sprintf("[%s] Running deploy infra...", config.Env), terminal.WithHeaderStyle())
 	ui.Output("Execution terraform init...", terminal.WithHeaderStyle())
 
 	err = tf.RunUI(ui)
@@ -395,7 +384,7 @@ func deployInfra(ui terminal.UI, infra Infra, config config.Config, skipGen bool
 
 	ui.Output("Execution terraform plan...", terminal.WithHeaderStyle())
 
-	outPath := fmt.Sprintf("%s/.terraform/tfplan", viper.GetString("ENV_DIR"))
+	outPath := fmt.Sprintf("%s/.terraform/tfplan", config.EnvDir)
 
 	//terraform plan run options
 	tf.NewCmd([]string{"plan", fmt.Sprintf("-out=%s", outPath)})
@@ -440,7 +429,7 @@ func deployInfra(ui terminal.UI, infra Infra, config config.Config, skipGen bool
 
 	ssm.New(config.Session).PutParameter(&ssm.PutParameterInput{
 		Name:      &name,
-		Value:     aws.String(string(sDec)),
+		Value:     aws.String(sDec),
 		Type:      aws.String(ssm.ParameterTypeSecureString),
 		Overwrite: aws.Bool(true),
 		Tier:      aws.String("Intelligent-Tiering"),

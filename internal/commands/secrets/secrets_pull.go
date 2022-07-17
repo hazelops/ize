@@ -11,11 +11,10 @@ import (
 	"github.com/hazelops/ize/internal/config"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type SecretsPullOptions struct {
-	Config      *config.Config
+	Config      *config.Project
 	AppName     string
 	Backend     string
 	FilePath    string
@@ -38,7 +37,7 @@ func NewCmdSecretsPull() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
-			err := o.Complete(cmd, args)
+			err := o.Complete(cmd)
 			if err != nil {
 				return err
 			}
@@ -65,7 +64,7 @@ func NewCmdSecretsPull() *cobra.Command {
 	return cmd
 }
 
-func (o *SecretsPullOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *SecretsPullOptions) Complete(cmd *cobra.Command) error {
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return err
@@ -75,7 +74,7 @@ func (o *SecretsPullOptions) Complete(cmd *cobra.Command, args []string) error {
 	o.AppName = cmd.Flags().Args()[0]
 
 	if o.FilePath == "" {
-		o.FilePath = fmt.Sprintf("%s/%s/%s.json", viper.GetString("ENV_DIR"), "secrets", o.AppName)
+		o.FilePath = fmt.Sprintf("%s/%s/%s.json", o.Config.EnvDir, "secrets", o.AppName)
 	}
 
 	if o.SecretsPath == "" {

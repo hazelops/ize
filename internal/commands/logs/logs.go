@@ -15,7 +15,7 @@ import (
 )
 
 type LogsOptions struct {
-	Config     *config.Config
+	Config     *config.Project
 	AppName    string
 	EcsCluster string
 }
@@ -33,7 +33,7 @@ func NewCmdLogs() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			err := o.Complete(cmd, args)
+			err := o.Complete(cmd)
 			if err != nil {
 				return err
 			}
@@ -57,7 +57,7 @@ func NewCmdLogs() *cobra.Command {
 	return cmd
 }
 
-func (o *LogsOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *LogsOptions) Complete(cmd *cobra.Command) error {
 	if err := config.CheckRequirements(config.WithSSMPlugin()); err != nil {
 		return err
 	}
