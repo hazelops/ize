@@ -154,7 +154,7 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 		AWS_REGION:        project.AwsRegion,
 		EC2_KEY_PAIR_NAME: fmt.Sprintf("%v-%v", project.Env, project.Namespace),
 		ROOT_DOMAIN_NAME:  tf.RootDomainName,
-		TAG:               project.Env,
+		TAG:               project.Tag,
 		SSH_PUBLIC_KEY:    string(key)[:len(string(key))-1],
 		DOCKER_REGISTRY:   project.DockerRegistry,
 		NAMESPACE:         project.Namespace,
