@@ -120,6 +120,11 @@ func GetConfig() (*Project, error) {
 		return nil, err
 	}
 
+	err = SetTag()
+	if err != nil {
+		return nil, err
+	}
+
 	err = schema.Validate(viper.AllSettings())
 	if err != nil {
 		return nil, err
@@ -161,6 +166,22 @@ func GetConfig() (*Project, error) {
 	}
 
 	return cfg, nil
+}
+
+func SetTag() error {
+	out, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output()
+	if err != nil {
+		if viper.GetString("ENV") == "" {
+			pterm.Warning.Printfln("Can't read ENV, please set the value via --env flag or env variable")
+		} else {
+			viper.SetDefault("TAG", viper.GetString("ENV"))
+			pterm.Warning.Printfln("Could not run git rev-parse, the default tag was set: %s", viper.GetString("TAG"))
+		}
+	} else {
+		viper.SetDefault("TAG", strings.Trim(string(out), "\n"))
+	}
+
+	return err
 }
 
 func InitConfig() {
@@ -217,18 +238,6 @@ func InitConfig() {
 		if err := viper.Unmarshal(&cfg); err != nil {
 			logrus.Fatalln(err)
 		}
-	}
-
-	out, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output()
-	if err != nil {
-		if viper.GetString("ENV") == "" {
-			pterm.Warning.Printfln("Can't read ENV, please set the value via --env flag or env variable")
-		} else {
-			viper.SetDefault("TAG", viper.GetString("ENV"))
-			pterm.Warning.Printfln("Could not run git rev-parse, the default tag was set: %s", viper.GetString("TAG"))
-		}
-	} else {
-		viper.SetDefault("TAG", strings.Trim(string(out), "\n"))
 	}
 
 	viper.SetDefault("TF_LOG", "")
