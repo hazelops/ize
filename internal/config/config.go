@@ -168,6 +168,7 @@ func InitConfig() {
 	viper.AutomaticEnv()
 
 	viper.BindEnv("ENV", "ENV")
+	viper.BindEnv("TAG", "TAG")
 	viper.BindEnv("AWS_PROFILE", "AWS_PROFILE")
 	viper.BindEnv("AWS_REGION", "AWS_REGION")
 	viper.BindEnv("NAMESPACE", "NAMESPACE")
