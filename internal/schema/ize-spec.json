@@ -296,13 +296,13 @@
         }
     },
     "required": [
+        "env",
         "aws_profile",
         "aws_region",
-        "env",
+        "namespace",
         "env_dir",
         "home",
         "infra_dir",
-        "namespace",
         "prefer_runtime",
         "root_dir"
     ],
