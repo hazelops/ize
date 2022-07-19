@@ -54,3 +54,8 @@ jobs:
         prerelease: true
         body: |
           Most recent dev release
+
+    - name: Sleep for 7 minutes
+      uses: whatnick/wait-action@master
+      with:
+        time: '7m'

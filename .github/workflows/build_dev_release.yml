@@ -1,4 +1,7 @@
 name: "Build & Publish dev Release"
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 on:
   release:
     types: [created]

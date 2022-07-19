@@ -79,3 +79,9 @@ publishers:
       - ize-dev
     dir: "{{ dir .ArtifactPath }}"
     cmd: curl -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/hazelops/
+
+archives:
+  -
+  format_overrides:
+    - goos: windows
+      format: zip
