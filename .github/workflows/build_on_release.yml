@@ -1,5 +1,7 @@
 name: "Build IZE on release"
-
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 on:
   release:
     types: [created]
@@ -70,12 +72,14 @@ jobs:
         user_email: 'ize@hazelops.com'
         user_name: 'ize'
         commit_message: 'Add commands from Ize'
+
   create-jira-release:
     needs: Build
     runs-on: ubuntu-latest
     steps:
       - name: create release
         uses: Rorychan/jira-releases-action@v1
+        continue-on-error: true
         with:
           jira-server: 'https://hazelops.atlassian.net'
           jira-email: 'dmitry@hazelops.com'
@@ -83,3 +87,8 @@ jobs:
           project-name: 'IZE'
           release-name: ${{ github.event.release.name }}
           is-released: true
+
+      - name: Sleep for 7 minutes
+        uses: whatnick/wait-action@master
+        with:
+          time: '7m'
