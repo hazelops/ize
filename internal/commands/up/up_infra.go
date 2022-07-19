@@ -78,6 +78,10 @@ func NewCmdUpInfra() *cobra.Command {
 func (o *UpInfraOptions) Complete() error {
 	var err error
 
+	if err := config.CheckRequirements(config.WithIzeStructure(), config.WithConfigFile()); err != nil {
+		return err
+	}
+
 	o.Config, err = config.GetConfig()
 	if err != nil {
 		return fmt.Errorf("can't deploy your stack: %w", err)

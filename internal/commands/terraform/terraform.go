@@ -85,6 +85,10 @@ func (o *Options) Complete() error {
 		err error
 	)
 
+	if err = config.CheckRequirements(config.WithIzeStructure(), config.WithConfigFile()); err != nil {
+		return err
+	}
+
 	cfg, err = config.GetConfig()
 	if err != nil {
 		return err
