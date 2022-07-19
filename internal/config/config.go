@@ -476,7 +476,11 @@ func structToMap(item interface{}) map[string]interface{} {
 
 	for i := 0; i < v.NumField(); i++ {
 		if !v.Field(i).IsZero() {
-			res[strings.ToLower(typeOfOpts.Field(i).Name)] = v.Field(i).Interface()
+			key := strings.Split(typeOfOpts.Field(i).Tag.Get("mapstructure"), ",")[0]
+			if len(key) == 0 {
+				key = strings.ToLower(typeOfOpts.Field(i).Name)
+			}
+			res[key] = v.Field(i).Interface()
 		}
 	}
 
