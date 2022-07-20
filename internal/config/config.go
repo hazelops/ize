@@ -293,7 +293,7 @@ func checkStructure() {
 	}
 
 	if !isStructured {
-		pterm.Warning.Println("is not an ize-structured repository")
+		pterm.Warning.Println("is not an ize-structured directory. Please run ize init or cd into an ize-structured directory.")
 	}
 }
 
