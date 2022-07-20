@@ -48,6 +48,10 @@ func (e *Manager) prepare() {
 		e.App.Cluster = fmt.Sprintf("%s-%s", e.Project.Env, e.Project.Namespace)
 	}
 
+	if len(e.App.DockerRegistry) == 0 {
+		e.App.DockerRegistry = e.Project.DockerRegistry
+	}
+
 	if e.App.Timeout == 0 {
 		e.App.Timeout = 300
 	}
@@ -74,7 +78,7 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 
 	if e.App.Image == "" {
 		e.App.Image = fmt.Sprintf("%s/%s:%s",
-			e.Project.DockerRegistry,
+			e.App.DockerRegistry,
 			fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name),
 			fmt.Sprintf("%s-%s", e.Project.Env, "latest"))
 	}
@@ -190,9 +194,7 @@ func (e *Manager) Push(ui terminal.UI) error {
 	token := base64.URLEncoding.EncodeToString(authBytes)
 
 	tagLatest := fmt.Sprintf("%s-latest", e.Project.Env)
-
-	dockerRegistry := e.Project.DockerRegistry
-	imageUri := fmt.Sprintf("%s/%s", dockerRegistry, image)
+	imageUri := fmt.Sprintf("%s/%s", e.App.DockerRegistry, image)
 
 	r := docker.NewRegistry(*repository.RepositoryUri, token)
 
@@ -215,9 +217,8 @@ func (e *Manager) Build(ui terminal.UI) error {
 	s := sg.Add("%s: building app container...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
-	registry := e.Project.DockerRegistry
 	image := fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name)
-	imageUri := fmt.Sprintf("%s/%s", registry, image)
+	imageUri := fmt.Sprintf("%s/%s", e.App.DockerRegistry, image)
 
 	relProjectPath, err := filepath.Rel(e.Project.RootDir, e.App.Path)
 	if err != nil {
