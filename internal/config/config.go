@@ -38,9 +38,16 @@ type Config struct {
 type requiments struct {
 	configFile bool
 	smplugin   bool
+	structure  bool
 }
 
 type Option func(*requiments)
+
+func WithIzeStructure() Option {
+	return func(r *requiments) {
+		r.structure = true
+	}
+}
 
 func WithConfigFile() Option {
 	return func(r *requiments) {
@@ -58,6 +65,10 @@ func CheckRequirements(options ...Option) error {
 	r := requiments{}
 	for _, opt := range options {
 		opt(&r)
+	}
+
+	if r.structure {
+		checkStructure()
 	}
 
 	if r.smplugin {
@@ -268,6 +279,32 @@ func checkDocker() error {
 	}
 
 	return nil
+}
+
+func checkStructure() {
+	var isStructured bool = true
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		logrus.Fatalln("can't initialize config: %w", err)
+	}
+
+	_, err = os.Stat(filepath.Join(cwd, ".ize"))
+	if os.IsNotExist(err) {
+		isStructured = false
+	} else {
+		isStructured = true
+	}
+
+	if os.IsNotExist(err) {
+		isStructured = false
+	} else {
+		isStructured = true
+	}
+
+	if !isStructured {
+		pterm.Warning.Println("is not an ize-structured directory. Please run ize init or cd into an ize-structured directory.")
+	}
 }
 
 func checkSessionManagerPlugin() error {
