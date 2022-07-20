@@ -47,8 +47,6 @@ func (e *Manager) deployLocal(w io.Writer) error {
 
 	var image string
 
-	pterm.Println(dtdo.TaskDefinition.ContainerDefinitions)
-
 	for i := 0; i < len(dtdo.TaskDefinition.ContainerDefinitions); i++ {
 		container := dtdo.TaskDefinition.ContainerDefinitions[i]
 
