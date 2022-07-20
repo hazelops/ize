@@ -30,10 +30,11 @@ func NewCmdSecretsPull() *cobra.Command {
 	o := NewSecretsPullFlags()
 
 	cmd := &cobra.Command{
-		Use:   "pull",
-		Short: "Pull secrets to a a local file (like SSM)",
-		Long:  "This command pulles secrets from a key-value storage to a local file (like SSM)",
-		Args:  cobra.MinimumNArgs(1),
+		Use:               "pull",
+		Short:             "Pull secrets to a a local file (like SSM)",
+		Long:              "This command pulles secrets from a key-value storage to a local file (like SSM)",
+		Args:              cobra.MinimumNArgs(1),
+		ValidArgsFunction: config.GetApps,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 

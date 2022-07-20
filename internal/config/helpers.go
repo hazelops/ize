@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/go-ini/ini"
 	"github.com/pterm/pterm"
+	"github.com/spf13/cobra"
 	"io"
 	"log"
 	"net/http"
@@ -223,4 +224,26 @@ func ReadOSRelease(configfile string) (map[string]string, error) {
 	ConfigParams["ID"] = cfg.Section("").Key("ID").String()
 
 	return ConfigParams, nil
+}
+
+func GetApps(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	var apps []string
+
+	dir, _ := os.ReadDir("./apps")
+
+	if dir != nil {
+		for _, entry := range dir {
+			apps = append(apps, entry.Name())
+		}
+	}
+
+	dir, _ = os.ReadDir("./projects")
+
+	if dir != nil {
+		for _, entry := range dir {
+			apps = append(apps, entry.Name())
+		}
+	}
+
+	return apps, cobra.ShellCompDirectiveNoFileComp
 }

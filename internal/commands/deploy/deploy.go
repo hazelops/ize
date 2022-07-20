@@ -2,13 +2,12 @@ package deploy
 
 import (
 	"fmt"
-	"github.com/hazelops/ize/internal/manager"
-	"github.com/hazelops/ize/internal/manager/alias"
-	"github.com/hazelops/ize/internal/manager/serverless"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/manager"
+	"github.com/hazelops/ize/internal/manager/alias"
 	"github.com/hazelops/ize/internal/manager/ecs"
+	"github.com/hazelops/ize/internal/manager/serverless"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
@@ -55,11 +54,12 @@ func NewCmdDeploy() *cobra.Command {
 	o := NewDeployFlags()
 
 	cmd := &cobra.Command{
-		Use:     "deploy [flags] <app name>",
-		Example: deployExample,
-		Short:   "Manage deployments",
-		Long:    deployLongDesc,
-		Args:    cobra.MaximumNArgs(1),
+		Use:               "deploy [flags] <app name>",
+		Example:           deployExample,
+		Short:             "Manage deployments",
+		Long:              deployLongDesc,
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: config.GetApps,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 

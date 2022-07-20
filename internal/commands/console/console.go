@@ -28,10 +28,11 @@ func NewCmdConsole() *cobra.Command {
 	o := NewConsoleFlags()
 
 	cmd := &cobra.Command{
-		Use:   "console [app-name]",
-		Short: "Connect to a container in the ECS",
-		Long:  "Connect to a container of the app via AWS SSM.\nTakes app name that is running on ECS as an argument",
-		Args:  cobra.MinimumNArgs(1),
+		Use:               "console [app-name]",
+		Short:             "Connect to a container in the ECS",
+		Long:              "Connect to a container of the app via AWS SSM.\nTakes app name that is running on ECS as an argument",
+		Args:              cobra.MinimumNArgs(1),
+		ValidArgsFunction: config.GetApps,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			err := o.Complete(cmd)
