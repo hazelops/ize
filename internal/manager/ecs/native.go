@@ -46,18 +46,21 @@ func (e *Manager) deployLocal(w io.Writer) error {
 	oldTaskDef := *dtdo.TaskDefinition
 
 	var image string
+
 	for i := 0; i < len(dtdo.TaskDefinition.ContainerDefinitions); i++ {
 		container := dtdo.TaskDefinition.ContainerDefinitions[i]
-		if *container.Name == e.App.Name {
-			image = e.App.Image
-			pterm.Printfln(`Changed image of container "%s" to : "%s" (was: "%s")`, *container.Name, image, *container.Image)
-			container.Image = &image
-		} else if len(e.Project.Tag) != 0 {
-			name := strings.Split(*container.Image, ":")[0]
-			image = fmt.Sprintf("%s:%s", name, e.Project.Tag)
-			pterm.Printfln(`Changed image of container "%s" to : "%s" (was: "%s")`, *container.Name, image, *container.Image)
-			container.Image = &image
 
+		// We are changing the image/tag only for the app-specific container (not sidecars)
+		if *container.Name == e.App.Name {
+			if len(e.Project.Tag) != 0 {
+				name := strings.Split(*container.Image, ":")[0]
+				image = fmt.Sprintf("%s:%s", name, e.Project.Tag)
+			} else {
+				image = e.App.Image
+			}
+
+			pterm.Printfln(`Changed image of container "%s" to : "%s" (was: "%s")`, *container.Name, image, *container.Image)
+			container.Image = &image
 		}
 	}
 
