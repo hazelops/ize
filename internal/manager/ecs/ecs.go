@@ -227,6 +227,7 @@ func (e *Manager) Build(ui terminal.UI) error {
 
 	buildArgs := map[string]*string{
 		"PROJECT_PATH": &relProjectPath,
+		"APP_PATH":     &relProjectPath,
 		"APP_NAME":     &e.App.Name,
 	}
 
