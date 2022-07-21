@@ -73,6 +73,25 @@ jobs:
         user_name: 'ize'
         commit_message: 'Add commands from Ize'
 
+  code-coverage-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Test
+        run: go test -v ./... -race -coverprofile=coverage.out -covermode=atomic
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+
   create-jira-release:
     needs: Build
     runs-on: ubuntu-latest
@@ -87,7 +106,6 @@ jobs:
           project-name: 'IZE'
           release-name: ${{ github.event.release.name }}
           is-released: true
-
       - name: Sleep for 7 minutes
         uses: whatnick/wait-action@master
         with:
