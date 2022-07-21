@@ -1,5 +1,5 @@
 [![Build & Publish dev Release](https://github.com/hazelops/ize/actions/workflows/build_dev_release.yml/badge.svg)](https://github.com/hazelops/ize/actions/workflows/build_dev_release.yml)
-
+[![codecov](https://codecov.io/gh/hazelops/ize/branch/main/graph/badge.svg?token=L7EWRF5NHG)](https://codecov.io/gh/hazelops/ize)
 
 ![](https://ize.sh/social-preview.png)
 # ❯ ize:
