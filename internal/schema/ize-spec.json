@@ -30,7 +30,14 @@
             "type": "string"
         },
         "plain_text": {
-            "type": "boolean"
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "boolean"
+                }
+            ]
         },
         "prefer_runtime": {
             "type": "string"
