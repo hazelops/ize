@@ -16,11 +16,12 @@ import (
 )
 
 type ExecOptions struct {
-	Config     *config.Project
-	AppName    string
-	EcsCluster string
-	Command    string
-	Task       string
+	Config        *config.Project
+	AppName       string
+	EcsCluster    string
+	Command       string
+	Task          string
+	ContainerName string
 }
 
 var execExample = templates.Examples(`
@@ -65,6 +66,7 @@ func NewCmdExec() *cobra.Command {
 
 	cmd.Flags().StringVar(&o.EcsCluster, "ecs-cluster", "", "set ECS cluster name")
 	cmd.Flags().StringVar(&o.Task, "task", "", "set task id")
+	cmd.Flags().StringVar(&o.ContainerName, "container-name", "", "set container name")
 
 	return cmd
 }
@@ -86,6 +88,10 @@ func (o *ExecOptions) Complete(cmd *cobra.Command, args []string, argsLenAtDash 
 
 	o.AppName = cmd.Flags().Args()[0]
 
+	if len(o.ContainerName) == 0 {
+		o.ContainerName = o.AppName
+	}
+
 	o.Command = strings.Join(args[argsLenAtDash:], " ")
 
 	return nil
@@ -103,6 +109,11 @@ func (o *ExecOptions) Validate() error {
 	if len(o.AppName) == 0 {
 		return fmt.Errorf("can't validate: app name must be specified")
 	}
+
+	if len(o.Command) == 0 {
+		return fmt.Errorf("can't validate: command must be specified")
+	}
+
 	return nil
 }
 
