@@ -220,21 +220,21 @@ func destroyAll(ui terminal.UI, o *DownOptions) error {
 		var manager manager.Manager
 
 		if app, ok := o.Config.Serverless[name]; ok {
-			app.Name = o.AppName
+			app.Name = name
 			manager = &serverless.Manager{
 				Project: o.Config,
 				App:     app,
 			}
 		}
 		if app, ok := o.Config.Alias[name]; ok {
-			app.Name = o.AppName
+			app.Name = name
 			manager = &alias.Manager{
 				Project: o.Config,
 				App:     app,
 			}
 		}
 		if app, ok := o.Config.Ecs[name]; ok {
-			app.Name = o.AppName
+			app.Name = name
 			manager = &ecs.Manager{
 				Project: o.Config,
 				App:     app,

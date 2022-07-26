@@ -230,21 +230,21 @@ func deployAll(ui terminal.UI, o *Options) error {
 		var manager manager.Manager
 
 		if app, ok := o.Config.Serverless[name]; ok {
-			app.Name = o.AppName
+			app.Name = name
 			manager = &serverless.Manager{
 				Project: o.Config,
 				App:     app,
 			}
 		}
 		if app, ok := o.Config.Alias[name]; ok {
-			app.Name = o.AppName
+			app.Name = name
 			manager = &alias.Manager{
 				Project: o.Config,
 				App:     app,
 			}
 		}
 		if app, ok := o.Config.Ecs[name]; ok {
-			app.Name = o.AppName
+			app.Name = name
 			manager = &ecs.Manager{
 				Project: o.Config,
 				App:     app,
@@ -271,6 +271,9 @@ func deployAll(ui terminal.UI, o *Options) error {
 
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	ui.Output("Deploy all completed!\n", terminal.WithSuccessStyle())
 
