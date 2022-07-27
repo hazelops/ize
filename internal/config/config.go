@@ -133,7 +133,7 @@ func GetConfig() (*Project, error) {
 
 	err = SetTag()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can't set tag: %w", err)
 	}
 
 	err = schema.Validate(viper.AllSettings())
@@ -192,7 +192,7 @@ func SetTag() error {
 		viper.SetDefault("TAG", strings.Trim(string(out), "\n"))
 	}
 
-	return err
+	return nil
 }
 
 func InitConfig() {
@@ -209,6 +209,7 @@ func InitConfig() {
 	viper.SetDefault("TERRAFORM_VERSION", "1.1.3")
 	viper.SetDefault("PREFER_RUNTIME", "native")
 	viper.SetDefault("CUSTOM_PROMPT", false)
+	viper.SetDefault("PLAIN_TEXT", false)
 
 	home, err := os.UserHomeDir()
 	if err != nil {
