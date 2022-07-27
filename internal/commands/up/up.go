@@ -67,11 +67,12 @@ func NewCmdUp() *cobra.Command {
 	o := NewUpFlags()
 
 	cmd := &cobra.Command{
-		Use:     "up [flags] <app name>",
-		Example: upExample,
-		Short:   "Bring full application up from the bottom to the top.",
-		Long:    upLongDesc,
-		Args:    cobra.MaximumNArgs(1),
+		Use:               "up [flags] <app name>",
+		Example:           upExample,
+		Short:             "Bring full application up from the bottom to the top.",
+		Long:              upLongDesc,
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: config.GetApps,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			if len(args) == 0 && !o.AutoApprove {

@@ -61,11 +61,12 @@ func NewCmdDown() *cobra.Command {
 	o := NewDownFlags()
 
 	cmd := &cobra.Command{
-		Use:     "down [flags] [app name]",
-		Example: downExample,
-		Short:   "Destroy application",
-		Long:    downLongDesc,
-		Args:    cobra.MaximumNArgs(1),
+		Use:               "down [flags] [app name]",
+		Example:           downExample,
+		Short:             "Destroy application",
+		Long:              downLongDesc,
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: config.GetApps,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			if len(args) == 0 && !o.AutoApprove {

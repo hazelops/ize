@@ -44,11 +44,12 @@ func NewCmdBuild() *cobra.Command {
 	o := NewBuildFlags()
 
 	cmd := &cobra.Command{
-		Use:     "build [flags] <app name>",
-		Example: buildExample,
-		Short:   "build apps",
-		Long:    buildLongDesc,
-		Args:    cobra.MaximumNArgs(1),
+		Use:               "build [flags] <app name>",
+		Example:           buildExample,
+		Short:             "build apps",
+		Long:              buildLongDesc,
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: config.GetApps,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 

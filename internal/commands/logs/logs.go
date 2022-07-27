@@ -28,9 +28,10 @@ func NewCmdLogs() *cobra.Command {
 	o := NewLogsFlags()
 
 	cmd := &cobra.Command{
-		Use:   "logs [app-name]",
-		Short: "Stream logs of container in the ECS",
-		Args:  cobra.MinimumNArgs(1),
+		Use:               "logs [app-name]",
+		Short:             "Stream logs of container in the ECS",
+		Args:              cobra.MinimumNArgs(1),
+		ValidArgsFunction: config.GetApps,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			err := o.Complete(cmd)

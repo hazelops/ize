@@ -37,11 +37,12 @@ func NewCmdSecretsEdit() *cobra.Command {
 	o := NewSecretsEditFlags()
 
 	cmd := &cobra.Command{
-		Use:     "edit <app>",
-		Example: secretsEditExample,
-		Short:   "Edit secrets file",
-		Long:    "This command open secrets file in default text editor",
-		Args:    cobra.MinimumNArgs(1),
+		Use:               "edit <app>",
+		Example:           secretsEditExample,
+		Short:             "Edit secrets file",
+		Long:              "This command open secrets file in default text editor",
+		Args:              cobra.MinimumNArgs(1),
+		ValidArgsFunction: config.GetApps,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
