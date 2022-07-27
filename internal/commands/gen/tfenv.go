@@ -116,6 +116,7 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 		TERRAFORM_STATE_PROFILE:        project.AwsProfile,
 		TERRAFORM_STATE_DYNAMODB_TABLE: "tf-state-lock",
 		TERRAFORM_AWS_PROVIDER_VERSION: "",
+		NAMESPACE:                      project.Namespace,
 	}
 	envDir := project.EnvDir
 
