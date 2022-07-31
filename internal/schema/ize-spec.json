@@ -222,6 +222,10 @@
                 },
                 "docker_registry"  : {
                     "type": "string"
+                },
+                "skip_deploy": {
+                    "type": "boolean",
+                    "description": "skip deploy app"
                 }
             },
             "additionalProperties": false
@@ -250,6 +254,10 @@
                 },
                 "docker_registry"  : {
                     "type": "string"
+                },
+                "skip_deploy": {
+                    "type": "boolean",
+                    "description": "skip deploy app"
                 }
             },
             "additionalProperties": false
