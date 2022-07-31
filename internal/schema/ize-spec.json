@@ -3,58 +3,76 @@
     "type": "object",
     "properties": {
         "aws_profile": {
-            "type": "string"
+            "type": "string",
+            "description": "AWS profile"
         },
         "aws_region": {
-            "type": "string"
+            "type": "string",
+            "description": "AWS region"
         },
         "config_file": {
-            "type": "string"
+            "type": "string",
+            "description": "path to config file"
         },
         "env": {
-            "type": "string"
+            "type": "string",
+            "description": "environment"
         },
         "env_dir": {
-            "type": "string"
+            "type": "string",
+            "description": "environment directory"
         },
         "home": {
-            "type": "string"
+            "type": "string",
+            "description": "user home directory"
         },
         "infra_dir": {
-            "type": "string"
+            "type": "string",
+            "description": "infrastructure directory"
         },
         "log_level": {
-            "type": "string"
+            "type": "string",
+            "description": "log level"
         },
         "namespace": {
-            "type": "string"
+            "type": "string",
+            "description": "namespace"
         },
         "plain_text": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "plain text"
         },
         "prefer_runtime": {
-            "type": "string"
+            "type": "string",
+            "description": "prefer runtime"
         },
         "apps_path": {
-            "type": "string"
+            "type": "string",
+            "description": "path to apps directory"
         },
         "root_dir": {
-            "type": "string"
+            "type": "string",
+            "description": "project directory"
         },
         "terraform_version": {
-            "type": "string"
+            "type": "string",
+            "description": "terraform version"
         },
         "docker_registry": {
-            "type": "string"
+            "type": "string",
+            "description": "docker registry"
         },
         "tf_log_path": {
-            "type": "string"
+            "type": "string",
+            "description": "path to terraform log"
         },
         "tag": {
-            "type": "string"
+            "type": "string",
+            "description": "tag"
         },
         "tf_log": {
-            "type": "string"
+            "type": "string",
+            "description": "terraform log"
         },
         "custom_prompt": {
             "anyOf": [
@@ -64,7 +82,8 @@
                 {
                     "type": "boolean"
                 }
-            ]
+            ],
+            "description": "custom prompt for apps"
         },
         "tunnel": {
             "type": "object",
@@ -79,6 +98,7 @@
                     }
                 }
             },
+            "description": "tunnel configuration",
             "additionalProperties": false
         },
         "app": {
@@ -89,6 +109,7 @@
                     "$ref": "#/definitions/app"
                 }
             },
+            "description": "apps configuration",
             "additionalProperties": false
         },
         "ecs": {
@@ -99,6 +120,7 @@
                     "$ref": "#/definitions/ecs"
                 }
             },
+            "description": "ecs apps configuration",
             "additionalProperties": false
         },
         "serverless": {
@@ -109,6 +131,7 @@
                     "$ref": "#/definitions/serverless"
                 }
             },
+            "description": "serverless apps configuration",
             "additionalProperties": false
         },
         "terraform": {
@@ -119,6 +142,7 @@
                     "$ref": "#/definitions/terraform"
                 }
             },
+            "description": "terraform configuration",
             "additionalProperties": false
         },
         "infra": {
@@ -146,6 +170,7 @@
                             "type": "string"
                         }
                     },
+                    "description": "infrastructure configuration",
                     "additionalProperties": false
                 },
                 "tunnel": {
@@ -161,12 +186,14 @@
                             }
                         }
                     },
+                    "description": "tunnel configuration",
                     "additionalProperties": false
                 }
             },
             "required": [
                 "terraform"
-            ]
+            ],
+            "description": "infrastructure configuration"
         }
     },
     "definitions": {
@@ -175,48 +202,63 @@
             "type": "object",
             "properties": {
                 "type": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "app type"
                 },
                 "file": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "path to serverless file"
                 },
                 "node_version": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "node version"
                 },
                 "create_domain" : {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "description": "create domain"
                 },
                 "path"   : {
-                    "type": "string"
+                    "type": "string",
+                    "description": "path to app directory"
                 },
                 "sls_node_module_cache_mount"   : {
-                    "type": "string"
+                    "type": "string",
+                    "description": "sls node module cache mount"
                 },
                 "env"  : {
                     "type": "array",
                     "items": {
-                        "type": "string"
-                    }
+                        "type": "string",
+                        "description": "environment"
+                    },
+                    "description": "environments"
                 },
                 "unsafe": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "description": "unsafe mode (fast deploy)"
                 },
                 "image" : {
-                    "type": "string"
+                    "type": "string",
+                    "description": "docker image"
                 },
                 "cluster"   : {
-                    "type": "string"
+                    "type": "string",
+                    "description": "ECS cluster"
                 },
                 "task_definition_revision"   : {
-                    "type": "string"
+                    "type": "string",
+                    "description": "task definition revision"
                 },
                 "timeout"  : {
-                    "type": "string"
+                    "type": "string",
+                    "description": "timeout"
                 },
                 "docker_registry"  : {
-                    "type": "string"
+                    "type": "string",
+                    "description": "docker registry"
                 }
             },
+            "description": "app configuration",
             "additionalProperties": false
         },
         "ecs": {
@@ -224,27 +266,35 @@
             "type": "object",
             "properties": {
                 "path": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "path to ecs app folder"
                 },
                 "unsafe": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "description": "unsafe mode (fast deploy)"
                 },
                 "image" : {
-                    "type": "string"
+                    "type": "string",
+                    "description": "docker image"
                 },
                 "cluster"   : {
-                    "type": "string"
+                    "type": "string",
+                    "description": "ECS cluster"
                 },
-                "task_definition_revision"   : {
-                    "type": "string"
+                "task_definition_revision" : {
+                    "type": "string",
+                    "description": "task definition revision"
                 },
-                "timeout"  : {
-                    "type": "string"
+                "timeout" : {
+                    "type": "string",
+                    "description": "timeout"
                 },
                 "docker_registry"  : {
-                    "type": "string"
+                    "type": "string",
+                    "description": "docker registry"
                 }
             },
+            "description": "ecs app configuration",
             "additionalProperties": false
         },
         "serverless": {
@@ -252,27 +302,35 @@
             "type": "object",
             "properties": {
                 "file": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "path to serverless file"
                 },
                 "node_version": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "node version"
                 },
                 "create_domain" : {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "description": "create domain"
                 },
                 "path"   : {
-                    "type": "string"
+                    "type": "string",
+                    "description": "path to serverless app folder"
                 },
                 "sls_node_module_cache_mount"   : {
-                    "type": "string"
+                    "type": "string",
+                    "description": "sls node module cache mount"
                 },
                 "env"  : {
                     "type": "array",
                     "items": {
-                        "type": "string"
-                    }
+                        "type": "string",
+                        "description": "environment"
+                    },
+                    "description": "environments"
                 }
             },
+            "description": "serverless app configuration",
             "additionalProperties": false
         },
         "terraform": {
@@ -280,24 +338,31 @@
             "type": "object",
             "properties": {
                 "version": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "terraform version"
                 },
                 "state_bucket_region": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "terraform state bucket region"
                 },
                 "state_bucket_name" : {
-                    "type": "string"
+                    "type": "string",
+                    "description": "terraform state bucket name"
                 },
                 "root_domain_name"   : {
-                    "type": "string"
+                    "type": "string",
+                    "description": "root domain name"
                 },
                 "aws_region"   : {
-                    "type": "string"
+                    "type": "string",
+                    "description": "AWS region"
                 },
                 "aws_profile"  : {
-                    "type": "string"
+                    "type": "string",
+                    "description": "AWS profile"
                 }
             },
+            "description": "terraform configuration",
             "additionalProperties": false
         }
     },
