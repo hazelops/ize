@@ -39,7 +39,14 @@
             "description": "namespace"
         },
         "plain_text": {
-            "type": "boolean",
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "boolean"
+                }
+            ],
             "description": "plain text"
         },
         "prefer_runtime": {

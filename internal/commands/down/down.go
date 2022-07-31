@@ -61,11 +61,12 @@ func NewCmdDown() *cobra.Command {
 	o := NewDownFlags()
 
 	cmd := &cobra.Command{
-		Use:     "down [flags] [app name]",
-		Example: downExample,
-		Short:   "Destroy application",
-		Long:    downLongDesc,
-		Args:    cobra.MaximumNArgs(1),
+		Use:               "down [flags] [app name]",
+		Example:           downExample,
+		Short:             "Destroy application",
+		Long:              downLongDesc,
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: config.GetApps,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			if len(args) == 0 && !o.AutoApprove {
@@ -220,21 +221,21 @@ func destroyAll(ui terminal.UI, o *DownOptions) error {
 		var manager manager.Manager
 
 		if app, ok := o.Config.Serverless[name]; ok {
-			app.Name = o.AppName
+			app.Name = name
 			manager = &serverless.Manager{
 				Project: o.Config,
 				App:     app,
 			}
 		}
 		if app, ok := o.Config.Alias[name]; ok {
-			app.Name = o.AppName
+			app.Name = name
 			manager = &alias.Manager{
 				Project: o.Config,
 				App:     app,
 			}
 		}
 		if app, ok := o.Config.Ecs[name]; ok {
-			app.Name = o.AppName
+			app.Name = name
 			manager = &ecs.Manager{
 				Project: o.Config,
 				App:     app,

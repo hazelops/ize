@@ -45,11 +45,12 @@ func NewCmdPush() *cobra.Command {
 	o := NewPushFlags()
 
 	cmd := &cobra.Command{
-		Use:     "push [flags] <app name>",
-		Example: pushExample,
-		Short:   "push app's image",
-		Long:    pushLongDesc,
-		Args:    cobra.MaximumNArgs(1),
+		Use:               "push [flags] <app name>",
+		Example:           pushExample,
+		Short:             "push app's image",
+		Long:              pushLongDesc,
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: config.GetApps,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 

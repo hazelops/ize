@@ -13,11 +13,12 @@ import (
 )
 
 type Options struct {
-	Config       *config.Project
-	AppName      string
-	EcsCluster   string
-	Task         string
-	CustomPrompt bool
+	Config        *config.Project
+	AppName       string
+	EcsCluster    string
+	Task          string
+	CustomPrompt  bool
+	ContainerName string
 }
 
 func NewConsoleFlags() *Options {
@@ -28,10 +29,11 @@ func NewCmdConsole() *cobra.Command {
 	o := NewConsoleFlags()
 
 	cmd := &cobra.Command{
-		Use:   "console [app-name]",
-		Short: "Connect to a container in the ECS",
-		Long:  "Connect to a container of the app via AWS SSM.\nTakes app name that is running on ECS as an argument",
-		Args:  cobra.MinimumNArgs(1),
+		Use:               "console [app-name]",
+		Short:             "Connect to a container in the ECS",
+		Long:              "Connect to a container of the app via AWS SSM.\nTakes app name that is running on ECS as an argument",
+		Args:              cobra.MinimumNArgs(1),
+		ValidArgsFunction: config.GetApps,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			err := o.Complete(cmd)
@@ -54,6 +56,7 @@ func NewCmdConsole() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.EcsCluster, "ecs-cluster", "", "set ECS cluster name")
+	cmd.Flags().StringVar(&o.ContainerName, "container-name", "", "set container name")
 	cmd.Flags().StringVar(&o.Task, "task", "", "set task id")
 	cmd.Flags().BoolVar(&o.CustomPrompt, "custom-prompt", false, "enable custom prompt in the console")
 
@@ -80,6 +83,10 @@ func (o *Options) Complete(cmd *cobra.Command) error {
 	}
 
 	o.AppName = cmd.Flags().Args()[0]
+
+	if len(o.ContainerName) == 0 {
+		o.ContainerName = o.AppName
+	}
 
 	return nil
 }
@@ -145,7 +152,7 @@ func (o *Options) Run() error {
 	}
 
 	out, err := ecsSvc.ExecuteCommand(&ecs.ExecuteCommandInput{
-		Container:   &o.AppName,
+		Container:   &o.ContainerName,
 		Interactive: aws.Bool(true),
 		Cluster:     &o.EcsCluster,
 		Task:        &o.Task,
@@ -163,7 +170,7 @@ func (o *Options) Run() error {
 	s.Success()
 
 	ssmCmd := ssmsession.NewSSMPluginCommand(o.Config.AwsRegion)
-	ssmCmd.Start((out.Session))
+	ssmCmd.Start(out.Session)
 	if err != nil {
 		return err
 	}
