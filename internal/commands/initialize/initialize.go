@@ -2,6 +2,7 @@ package initialize
 
 import (
 	"fmt"
+	"github.com/hazelops/ize/internal/schema"
 	"github.com/hazelops/ize/internal/version"
 	"os"
 	"path/filepath"
@@ -18,9 +19,10 @@ import (
 )
 
 type InitOptions struct {
-	Output   string
-	Template string
-	ShowList bool
+	Output       string
+	Template     string
+	ShowList     bool
+	SkipExamples bool
 }
 
 var initLongDesc = templates.LongDesc(`
@@ -64,7 +66,7 @@ func NewCmdInit() *cobra.Command {
 				return err
 			}
 
-			err = o.Validate(cmd)
+			err = o.Validate()
 			if err != nil {
 				return err
 			}
@@ -80,6 +82,7 @@ func NewCmdInit() *cobra.Command {
 
 	cmd.Flags().StringVar(&o.Template, "template", "", "set template (url or internal)")
 	cmd.Flags().BoolVar(&o.ShowList, "list", false, "show list of examples")
+	cmd.Flags().BoolVar(&o.SkipExamples, "skip-examples", false, "generate ize.toml without commented examples")
 
 	return cmd
 }
@@ -93,7 +96,7 @@ func (o *InitOptions) Complete(cmd *cobra.Command) error {
 	return nil
 }
 
-func (o *InitOptions) Validate(cmd *cobra.Command) error {
+func (o *InitOptions) Validate() error {
 	return nil
 }
 
@@ -195,23 +198,28 @@ func (o *InitOptions) Run() error {
 			raw[k] = v
 		}
 
-		viper.MergeConfigMap(raw)
-		err = viper.WriteConfigAs(filepath.Join(envPath, "ize.toml"))
-		if err != nil {
-			return fmt.Errorf("can't write config: %w", err)
+		if o.SkipExamples {
+			err := viper.MergeConfigMap(raw)
+			if err != nil {
+				return err
+			}
+
+			err = viper.WriteConfigAs(filepath.Join(envPath, "ize.toml"))
+			if err != nil {
+				return fmt.Errorf("can't write config: %w", err)
+			}
+		} else {
+			err = writeConfig(filepath.Join(envPath, "ize.toml"), cfg)
+			if err != nil {
+				return fmt.Errorf("can't write config: %w", err)
+			}
 		}
+
+		return nil
 	}
 
 	pterm.Success.Printfln(`Created ize skeleton for %s in %s`, strings.Join(envList, ", "), dir)
 	return nil
-}
-
-type ConfigOpts struct {
-	Env               string
-	Aws_profile       string
-	Aws_region        string
-	Terraform_version string
-	Namespace         string
 }
 
 func internalTemplates() {
@@ -231,4 +239,75 @@ func internalTemplates() {
 
 	pterm.DefaultTable.WithHasHeader().WithData(internal).Render()
 
+}
+
+func writeConfig(path string, existsValues map[string]string) error {
+	allSettings := schema.GetJsonSchema()
+
+	var str string
+
+	str += getProperties(allSettings, existsValues)
+
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	_, err = f.WriteString(str)
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
+func getProperties(settings interface{}, existsValues map[string]string) string {
+	var strRoot string
+	var strBlocks string
+
+	properties, ok := settings.(map[string]interface{})["properties"]
+	if ok {
+		propertiesMap, ok := properties.(map[string]interface{})
+		if ok {
+			for pn, pv := range propertiesMap {
+				pm, ok := pv.(map[string]interface{})
+				if ok {
+					_, ok := pm["patternProperties"].(map[string]interface{})
+					if ok {
+						pd, ok := settings.(map[string]interface{})["definitions"].(map[string]interface{})[pn]
+						desc := ""
+						if ok {
+							if pn == "app" {
+								desc = "\t# deprecated"
+							}
+							strBlocks += fmt.Sprintf("\n#[%s.<name>]%s\n", pn, desc)
+							strBlocks += getProperties(pd, map[string]string{})
+						}
+					}
+					pt, ok := pm["type"].(string)
+					if !ok {
+						pt = "boolean"
+					}
+					pd := pm["description"].(string)
+					switch pt {
+					case "string":
+						v, ok := existsValues[pn]
+						if ok {
+							strRoot += fmt.Sprintf("%-30s\t#%s\n", fmt.Sprintf("%s=\"%s\"", pn, v), pd)
+						} else {
+							strRoot += fmt.Sprintf("#%-30s\t#%s\n", fmt.Sprintf("%s=\"%s\"", pn, v), pd)
+						}
+					case "boolean":
+						strRoot += fmt.Sprintf("#%-30s\t#%s\n", fmt.Sprintf("%s=false", pn), pd)
+					}
+				}
+			}
+		}
+	}
+
+	strRoot += strBlocks
+
+	return strRoot
 }
