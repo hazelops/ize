@@ -103,7 +103,7 @@ scoop:
 
   # Folder inside the repository to put the scoop.
   # Default is the root folder.
-  folder: latest
+#  folder: latest
 
   # Git author used to commit to the repository.
   # Defaults are shown.
