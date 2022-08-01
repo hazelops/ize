@@ -64,18 +64,20 @@ You must install Scoop (command-line installer for Windows). To install Scoop se
 
 To install `ize` with Scoop:
 
-1. Add bucket with the ize source:
+1. Install `git` with Scoop
+```shell
+scoop install git
+```
+2. Add bucket with the `ize` source:
 
 ```shell
-scoop bucket add hazelops/scoop-ize
+scoop bucket add ize https://github.com/hazelops/scoop-ize.git
 ```
 2. Install ize:
 
 ```shell
 scoop install ize
 ```
-
-
 
 
 ### Installation from source:
