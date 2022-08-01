@@ -58,6 +58,26 @@ sudo apt-get install ize=<version>
 sudo apt-get purge ize
 ```
 
+### Installation via Scoop (Windows only)
+#### Prerequisites:
+You must install Scoop (command-line installer for Windows). To install Scoop see the following [manual](https://github.com/ScoopInstaller/Scoop#installation)
+
+To install `ize` with Scoop:
+
+1. Add bucket with the ize source:
+
+```shell
+scoop bucket add hazelops/scoop-ize
+```
+2. Install ize:
+
+```shell
+scoop install ize
+```
+
+
+
+
 ### Installation from source:
 #### Prerequisites:
 - GO version should be 1.16+

@@ -128,7 +128,7 @@ scoop:
 
   # Your app's license
   # Default is empty.
-  license: MIT
+  license: Apache License 2.0
 
   # Setting this will prevent goreleaser to actually try to commit the updated
   # manifest leaving the responsibility of publishing it to the user.
