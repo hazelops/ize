@@ -115,6 +115,12 @@ func (o *DownOptions) Complete(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("can't load options for a command: %w", err)
 		}
 
+		if o.Config.Serverless != nil {
+			if err = config.CheckRequirements(config.WithNVM()); err != nil {
+				return err
+			}
+		}
+
 		if o.Config.Terraform == nil {
 			o.Config.Terraform = map[string]*config.Terraform{}
 			o.Config.Terraform["infra"] = &config.Terraform{}
@@ -138,6 +144,12 @@ func (o *DownOptions) Complete(cmd *cobra.Command, args []string) error {
 		o.Config, err = config.GetConfig()
 		if err != nil {
 			return fmt.Errorf("can't load options for a command: %w", err)
+		}
+
+		if o.Config.Serverless != nil {
+			if err = config.CheckRequirements(config.WithNVM()); err != nil {
+				return err
+			}
 		}
 
 		o.AppName = cmd.Flags().Args()[0]
