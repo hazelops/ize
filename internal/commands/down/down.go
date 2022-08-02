@@ -333,6 +333,11 @@ func destroyApp(ui terminal.UI, o *DownOptions) error {
 
 	var manager manager.Manager
 
+	manager = &ecs.Manager{
+		Project: o.Config,
+		App:     &config.Ecs{Name: o.AppName},
+	}
+
 	if app, ok := o.Config.Serverless[o.AppName]; ok {
 		app.Name = o.AppName
 		manager = &serverless.Manager{
@@ -352,11 +357,6 @@ func destroyApp(ui terminal.UI, o *DownOptions) error {
 		manager = &ecs.Manager{
 			Project: o.Config,
 			App:     app,
-		}
-	} else {
-		manager = &ecs.Manager{
-			Project: o.Config,
-			App:     &config.Ecs{Name: o.AppName},
 		}
 	}
 

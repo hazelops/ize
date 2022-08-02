@@ -1,0 +1,12 @@
+{
+  "name": "pecan",
+  "version": "1.0.0",
+  "description": "Simple USD to EUR,RUB,BYN converter",
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "serverless-attach-managed-policy": "0.0.7",
+    "serverless-domain-manager": "^4.2.2",
+    "serverless": "1.83.0"
+  }
+}

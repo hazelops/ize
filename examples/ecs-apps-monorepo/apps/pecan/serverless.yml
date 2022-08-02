@@ -1,0 +1,45 @@
+service: pecan
+
+frameworkVersion: ">=1.2.0 <2.0.0"
+
+provider:
+  name: aws
+  runtime: python3.7
+  stage: ${opt:env}
+  region: ${opt:region}
+  profile: ${opt:profile}
+
+  iamManagedPolicies:
+    - "arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy"
+
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "logs:CreateLogStream"
+        - "logs:PutLogEvents"
+      Resource:
+        - "arn:aws:logs:*:*:log-group:/aws/lambda-insights:*"
+
+functions:
+  get_rate:
+    handler: handler.endpoint
+    events:
+      - http:
+          path: rate
+          method: get
+    request:
+       template:
+         application/json: '{ "usd_amount": "$input.params(''usd_amount'')" }'
+    layers:
+      - arn:aws:lambda:us-east-1:580247275435:layer:LambdaInsightsExtension:14
+
+plugins:
+  - serverless-attach-managed-policy
+#  - serverless-domain-manager
+
+custom:
+  customDomain:
+#    domainName: ${self:service}.${opt:env}.nutcorp.net
+    basePath: ${opt:env}
+    stage: ${self:provider.stage}
+    createRoute53Record: true

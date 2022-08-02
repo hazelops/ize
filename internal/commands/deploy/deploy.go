@@ -132,6 +132,15 @@ func (o *Options) Run() error {
 
 	var manager manager.Manager
 
+	manager = &ecs.Manager{
+		Project: o.Config,
+		App: &config.Ecs{
+			Name:                   o.AppName,
+			TaskDefinitionRevision: o.TaskDefinitionRevision,
+			Unsafe:                 o.Unsafe,
+		},
+	}
+
 	if app, ok := o.Config.Serverless[o.AppName]; ok {
 		app.Name = o.AppName
 		manager = &serverless.Manager{
@@ -153,15 +162,6 @@ func (o *Options) Run() error {
 		manager = &ecs.Manager{
 			Project: o.Config,
 			App:     app,
-		}
-	} else {
-		manager = &ecs.Manager{
-			Project: o.Config,
-			App: &config.Ecs{
-				Name:                   o.AppName,
-				TaskDefinitionRevision: o.TaskDefinitionRevision,
-				Unsafe:                 o.Unsafe,
-			},
 		}
 	}
 
