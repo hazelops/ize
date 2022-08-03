@@ -277,6 +277,10 @@
                 "docker_registry"  : {
                     "type": "string",
                     "description": "(optional) Docker registry can be set here. By default it uses ECR repo with the name of the service."
+                },
+                "skip_deploy": {
+                    "type": "boolean",
+                    "description": "skip deploy app"
                 }
             },
             "description": "App configuration.",
@@ -313,6 +317,10 @@
                 "docker_registry"  : {
                     "type": "string",
                     "description": "(optional) Docker registry can be set here. By default it uses ECR repo with the name of the service."
+                },
+                "skip_deploy": {
+                    "type": "boolean",
+                    "description": "skip deploy app"
                 }
             },
             "description": "Ecs app configuration.",

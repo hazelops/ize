@@ -59,6 +59,16 @@ func (e *Manager) prepare() {
 
 // Deploy deploys app container to ECS via ECS deploy
 func (e *Manager) Deploy(ui terminal.UI) error {
+	sg := ui.StepGroup()
+	defer sg.Wait()
+
+	if e.App.SkipDeploy {
+		s := sg.Add("%s: deploy will be skipped", e.App.Name)
+		defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
+		s.Done()
+		return nil
+	}
+
 	e.prepare()
 
 	if e.App.Unsafe && e.Project.PreferRuntime == "native" {
@@ -69,9 +79,6 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 			- Healthy Threshold Count: 2
 			- Unhealthy Threshold Count: 2`))
 	}
-
-	sg := ui.StepGroup()
-	defer sg.Wait()
 
 	s := sg.Add("%s: deploying app container...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
