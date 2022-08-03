@@ -74,7 +74,7 @@ func CheckRequirements(options ...Option) error {
 		opt(&r)
 	}
 
-	if r.structure {
+	if r.nvm {
 		err := checkNVM()
 		if err != nil {
 			return err
@@ -82,7 +82,9 @@ func CheckRequirements(options ...Option) error {
 	}
 
 	if r.structure {
-		checkStructure()
+		if !isStructured() {
+			pterm.Warning.Println("is not an ize-structured directory. Please run ize init or cd into an ize-structured directory.")
+		}
 	}
 
 	if r.smplugin {
@@ -153,7 +155,7 @@ func GetConfig() (*Project, error) {
 		return nil, err
 	}
 
-	err = SetTag()
+	SetTag()
 	if err != nil {
 		return nil, fmt.Errorf("can't set tag: %w", err)
 	}
@@ -201,7 +203,7 @@ func GetConfig() (*Project, error) {
 	return cfg, nil
 }
 
-func SetTag() error {
+func SetTag() {
 	out, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output()
 	if err != nil {
 		if viper.GetString("ENV") == "" {
@@ -213,8 +215,6 @@ func SetTag() error {
 	} else {
 		viper.SetDefault("TAG", strings.Trim(string(out), "\n"))
 	}
-
-	return nil
 }
 
 func InitConfig() {
@@ -304,8 +304,8 @@ func checkDocker() error {
 	return nil
 }
 
-func checkStructure() {
-	var isStructured bool = true
+func isStructured() bool {
+	var isStructured = false
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -313,21 +313,16 @@ func checkStructure() {
 	}
 
 	_, err = os.Stat(filepath.Join(cwd, ".ize"))
-	if os.IsNotExist(err) {
-		isStructured = false
-	} else {
+	if !os.IsNotExist(err) {
 		isStructured = true
 	}
 
-	if os.IsNotExist(err) {
-		isStructured = false
-	} else {
+	_, err = os.Stat(filepath.Join(cwd, ".infra"))
+	if !os.IsNotExist(err) {
 		isStructured = true
 	}
 
-	if !isStructured {
-		pterm.Warning.Println("is not an ize-structured directory. Please run ize init or cd into an ize-structured directory.")
-	}
+	return isStructured
 }
 
 func checkSessionManagerPlugin() error {
