@@ -316,6 +316,7 @@ func getPublicKey(path string) string {
 }
 
 func getHosts(config string) [][]string {
+	// This regexp reads ssh.conf configuration so we can display it nicely in the UI
 	re, err := regexp.Compile(`LocalForward\s(?P<localPort>\d+)\s(?P<remoteHost>.+):(?P<remotePort>\d+)`)
 	if err != nil {
 		log.Fatal(fmt.Errorf("can't get forward config: %w", err))
