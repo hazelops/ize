@@ -12,8 +12,8 @@ def endpoint(event, context):
     body = {
         "USD": amount,
         "EUR": rdata['eur']['rate']*amount,
-        "RUB": rdata['rub']['rate']*amount,
-        "BYN": rdata['byn']['rate']*amount,
+        "CHF": rdata['chf']['rate']*amount,
+        "JPY": rdata['jpy']['rate']*amount,
     }
 
     response = {

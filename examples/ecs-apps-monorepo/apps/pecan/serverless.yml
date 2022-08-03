@@ -5,7 +5,7 @@ frameworkVersion: ">=1.2.0 <2.0.0"
 provider:
   name: aws
   runtime: python3.7
-  stage: ${opt:env}
+  stage: ${opt:stage}
   region: ${opt:region}
   profile: ${opt:profile}
 
@@ -31,15 +31,8 @@ functions:
        template:
          application/json: '{ "usd_amount": "$input.params(''usd_amount'')" }'
     layers:
+      # Lambda Insights per https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Lambda-Insights-extension-versionsx86-64.html
       - arn:aws:lambda:us-east-1:580247275435:layer:LambdaInsightsExtension:14
 
 plugins:
   - serverless-attach-managed-policy
-#  - serverless-domain-manager
-
-custom:
-  customDomain:
-#    domainName: ${self:service}.${opt:env}.nutcorp.net
-    basePath: ${opt:env}
-    stage: ${self:provider.stage}
-    createRoute53Record: true
