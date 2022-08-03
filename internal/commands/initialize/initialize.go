@@ -6,6 +6,7 @@ import (
 	"github.com/hazelops/ize/internal/version"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -113,7 +114,7 @@ func (o *InitOptions) Run() error {
 	}
 
 	namespace := ""
-	envList := []string{}
+	var envList []string
 
 	env := os.Getenv("ENV")
 	if len(env) == 0 {
@@ -274,15 +275,16 @@ func getProperties(settings interface{}, existsValues map[string]string) string 
 			for pn, pv := range propertiesMap {
 				pm, ok := pv.(map[string]interface{})
 				if ok {
-					_, ok := pm["patternProperties"].(map[string]interface{})
+					_, ok := pm["deprecationMessage"]
+					if ok {
+						continue
+					}
+					_, ok = pm["patternProperties"].(map[string]interface{})
 					if ok {
 						pd, ok := settings.(map[string]interface{})["definitions"].(map[string]interface{})[pn]
 						desc := ""
 						if ok {
-							if pn == "app" {
-								desc = "\t# deprecated"
-							}
-							strBlocks += fmt.Sprintf("\n#[%s.<name>]%s\n", pn, desc)
+							strBlocks += fmt.Sprintf("\n# [%s.<name>]%s\n", pn, desc)
 							strBlocks += getProperties(pd, map[string]string{})
 						}
 					}
@@ -294,20 +296,35 @@ func getProperties(settings interface{}, existsValues map[string]string) string 
 					switch pt {
 					case "string":
 						v, ok := existsValues[pn]
-						if ok {
-							strRoot += fmt.Sprintf("%-30s\t#%s\n", fmt.Sprintf("%s=\"%s\"", pn, v), pd)
+						if ok && pn != "env" {
+							strRoot += fmt.Sprintf("%-36s\t#%s\n", fmt.Sprintf("%s = \"%s\"", pn, v), pd)
 						} else {
-							strRoot += fmt.Sprintf("#%-30s\t#%s\n", fmt.Sprintf("%s=\"%s\"", pn, v), pd)
+							strRoot += fmt.Sprintf("#%-36s\t#%s\n", fmt.Sprintf("%s = \"%s\"", pn, v), pd)
 						}
 					case "boolean":
-						strRoot += fmt.Sprintf("#%-30s\t#%s\n", fmt.Sprintf("%s=false", pn), pd)
+						strRoot += fmt.Sprintf("#%-36s\t#%s\n", fmt.Sprintf("%s = false", pn), pd)
 					}
 				}
 			}
 		}
 	}
 
+	lines := strings.Split(strRoot, "\n")
+	sort.Sort(parametersSort(lines))
+	strRoot = strings.Join(lines, "\n")
+
 	strRoot += strBlocks
 
 	return strRoot
 }
+
+type parametersSort []string
+
+func (p parametersSort) Less(i, j int) bool {
+	if len(p[i]) == 0 {
+		return false
+	}
+	return (p[i][0]) != '#' || strings.Contains(p[i], "required")
+}
+func (p parametersSort) Len() int      { return len(p) }
+func (p parametersSort) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
