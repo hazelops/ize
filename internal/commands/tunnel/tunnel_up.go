@@ -263,6 +263,7 @@ type terraformOutput struct {
 }
 
 func sendSSHPublicKey(bastionID string, key string, sess *session.Session) error {
+	// This command is executed in the bastion host and it checks if our public key is present. If it's not it uploads it to _authorized_keys file.
 	command := fmt.Sprintf(
 		`grep -qR "%s" /home/ubuntu/.ssh/authorized_keys || echo "%s" >> /home/ubuntu/.ssh/authorized_keys`,
 		key, key,
