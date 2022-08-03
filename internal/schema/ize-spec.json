@@ -4,75 +4,75 @@
     "properties": {
         "aws_profile": {
             "type": "string",
-            "description": "AWS profile"
+            "description": "(optional) AWS Profile can be specified here (but normally it's specified via AWS_PROFILE env var)"
         },
         "aws_region": {
             "type": "string",
-            "description": "AWS region"
+            "description": "(required) AWS Region of this environment should be specified here. Can be overriden by AWS_PROFILE env var or --aws-region flag."
         },
         "config_file": {
             "type": "string",
-            "description": "path to config file"
+            "description": "(optional) Path to ize.toml config file can be specified, but normally it's read from the environment's directory automatically."
         },
         "env": {
             "type": "string",
-            "description": "environment"
+            "description": "(optional) Environment name can be specified here. Normally it should be passed via `ENV` variable or --env flag."
         },
         "env_dir": {
             "type": "string",
-            "description": "environment directory"
+            "description": "(optional) Environment directory can be specified here. Normally it's calculated automatically based on the directory structure convention."
         },
         "home": {
             "type": "string",
-            "description": "user home directory"
+            "description": "(optional) User home directory can be specified here. Normally $HOME is used."
         },
-        "infra_dir": {
+        "ize_dir": {
             "type": "string",
-            "description": "infrastructure directory"
+            "description": "(optional) Ize directory can be specified here. Normally it's assumed to be .infra or .ize in the current repo."
         },
         "log_level": {
             "type": "string",
-            "description": "log level"
+            "description": "(optional) Log level can be specified here. Possible levels: info, debug, trace, panic, warn, error, fatal(default). Can be overridden via IZE_LOG_LEVEL env var or via --log-level flag."
         },
         "namespace": {
             "type": "string",
-            "description": "namespace"
+            "description": "(required) Namespace of the project can be specified here. It is used as a base for all naming. It can be overridden by NAMESPACE env var or --namespace flag."
         },
         "plain_text": {
             "type": "boolean",
-            "description": "plain text"
+            "description": "(optional) Plain text output can be enabled here. Default is false. Can be overridden by IZE_PLAIN_TEXT env var or --plain-text flag."
         },
         "prefer_runtime": {
             "type": "string",
-            "description": "prefer runtime"
+            "description": "(optional) Prefer a specific runtime. (native or docker) (default 'native')"
         },
         "apps_path": {
             "type": "string",
-            "description": "path to apps directory"
+            "description": "(optional) Path to apps directory can be set. By default apps are searched in 'apps' and 'projects' directories. This is needed in case your repo structure is not purely ize-structured (let's say you have 'src' repo in your dotnet app, as an example)"
         },
         "root_dir": {
             "type": "string",
-            "description": "project directory"
+            "description": "(optional) Project directory can be set here. By default it's the current directory, but in case you prefer to run ize from the outside of repo it may be useful (uncommon)."
         },
         "terraform_version": {
             "type": "string",
-            "description": "terraform version"
+            "description": "(optional) Terraform version can be set here. 1.1.3 by default"
         },
         "docker_registry": {
             "type": "string",
-            "description": "docker registry"
+            "description": "(optional) Docker registry can be set here. By default it uses ECR repo with the name of the service."
         },
         "tf_log_path": {
             "type": "string",
-            "description": "path to terraform log"
+            "description": "(optional) TF_LOG_PATH can be set here."
         },
         "tag": {
             "type": "string",
-            "description": "tag"
+            "description": "(optional) Tag can be set statically. Normally it is being constructed automatically based on the git revision."
         },
         "tf_log": {
             "type": "string",
-            "description": "terraform log"
+            "description": "(optional) Terraform TF_LOG can be set here.  Can be TRACE, DEBUG, INFO, WARN or ERROR."
         },
         "custom_prompt": {
             "anyOf": [
@@ -83,25 +83,28 @@
                     "type": "boolean"
                 }
             ],
-            "description": "custom prompt for apps"
+            "description": "(optional) Custom prompt can be enabled here for all console connections. Default: false."
         },
         "tunnel": {
             "type": "object",
             "properties": {
                 "bastion_instance_id": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Bastion instance ID."
                 },
                 "forward_host": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "Forward host."
                     }
                 }
             },
-            "description": "tunnel configuration",
+            "description": "Tunnel configuration.",
             "additionalProperties": false
         },
         "app": {
+            "deprecationMessage": "app block is deprecated",
             "id": "#/properties/app",
             "type": "object",
             "patternProperties": {
@@ -109,7 +112,7 @@
                     "$ref": "#/definitions/app"
                 }
             },
-            "description": "apps configuration",
+            "description": "Apps configuration.",
             "additionalProperties": false
         },
         "ecs": {
@@ -120,7 +123,7 @@
                     "$ref": "#/definitions/ecs"
                 }
             },
-            "description": "ecs apps configuration",
+            "description": "Ecs apps configuration.",
             "additionalProperties": false
         },
         "serverless": {
@@ -131,7 +134,7 @@
                     "$ref": "#/definitions/serverless"
                 }
             },
-            "description": "serverless apps configuration",
+            "description": "Serverless apps configuration.",
             "additionalProperties": false
         },
         "terraform": {
@@ -142,62 +145,72 @@
                     "$ref": "#/definitions/terraform"
                 }
             },
-            "description": "terraform configuration",
+            "description": "Terraform configuration.",
             "additionalProperties": false
         },
         "infra": {
             "type": "object",
+            "deprecationMessage": "infra block is deprecated",
             "properties": {
                 "terraform": {
                     "type": "object",
                     "properties": {
                         "version": {
-                            "type": "string"
+                            "type": "string",
+                            "description": "(optional) Terraform version can be set here. 1.1.3 by default."
                         },
                         "state_bucket_region": {
-                            "type": "string"
+                            "type": "string",
+                            "description": "(optional) Terraform state bucket region can be specified here. Normally AWS_REGION is used here. Can be overriden via env vars or flags."
                         },
-                        "state_bucket_name": {
-                            "type": "string"
+                        "state_bucket_name" : {
+                            "type": "string",
+                            "description": "(optional) Terraform state bucket name can be specified here. Normally it's generated and defaults to <NAMESPACE>-tf-state"
                         },
-                        "root_domain_name": {
-                            "type": "string"
+                        "root_domain_name"   : {
+                            "type": "string",
+                            "description": "(optional) Root domain name can be set here. This is the main domain that will be passed to the terraform. Generally if your app lives at 'api.dev.nutcorp.net' the root domain is `nutcorp.net`"
                         },
-                        "aws_region": {
-                            "type": "string"
+                        "aws_region"   : {
+                            "type": "string",
+                            "description": "(optional) Terraform-specific AWS Region of this environment should be specified here. Normally global AWS_REGION is used."
                         },
-                        "aws_profile": {
-                            "type": "string"
+                        "aws_profile"  : {
+                            "type": "string",
+                            "description": "(optional) Terraform-specific AWS profile (optional) can be specified here (but normally it should be inherited from a global AWS_PROFILE)."
                         }
                     },
-                    "description": "infrastructure configuration",
+                    "description": "Infrastructure configuration.",
                     "additionalProperties": false
                 },
                 "tunnel": {
                     "type": "object",
                     "properties": {
                         "bastion_instance_id": {
-                            "type": "string"
+                            "type": "string",
+                            "description": "Bastion instance ID."
                         },
                         "forward_host": {
                             "type": "array",
                             "items": {
-                                "type": "string"
+                                "type": "string",
+                                "description": "Forward host."
                             }
                         }
                     },
-                    "description": "tunnel configuration",
+                    "description": "Tunnel configuration.",
                     "additionalProperties": false
                 }
             },
             "required": [
                 "terraform"
             ],
-            "description": "infrastructure configuration"
+            "description": "Infrastructure configuration."
         }
     },
     "definitions": {
         "app": {
+            "deprecationMessage": "app block is deprecated",
             "id": "#/definitions/app",
             "type": "object",
             "properties": {
@@ -207,23 +220,23 @@
                 },
                 "file": {
                     "type": "string",
-                    "description": "path to serverless file"
+                    "description": "(optional) Path to serverless file can be specified here. Normally it's serverless.yml in the app directory."
                 },
                 "node_version": {
                     "type": "string",
-                    "description": "node version"
+                    "description": "(optional) Node version that will be used by nvm can be specified here that. Default is v14."
                 },
                 "create_domain" : {
                     "type": "boolean",
-                    "description": "create domain"
+                    "description": "(optional) Create domain for the serverless domain manager during the deployment."
                 },
                 "path"   : {
                     "type": "string",
-                    "description": "path to app directory"
+                    "description": "(optional) Path to ecs app folder can be specified here. By default it's derived from apps path and app name."
                 },
-                "sls_node_module_cache_mount"   : {
+                "sls_node_modules_cache_mount"   : {
                     "type": "string",
-                    "description": "sls node module cache mount"
+                    "description": "(optional) SLS node_modules cache mount path can be specified here. It's used to store cache during CI/CD process."
                 },
                 "env"  : {
                     "type": "array",
@@ -235,30 +248,30 @@
                 },
                 "unsafe": {
                     "type": "boolean",
-                    "description": "unsafe mode (fast deploy)"
+                    "description": "(optional) Enables unsafe mode that increases deploy time on a cost of shorter healtchecks."
                 },
                 "image" : {
                     "type": "string",
-                    "description": "docker image"
+                    "description": "(optional) Docker image can be specified here. By default it's derived from the app name."
                 },
                 "cluster"   : {
                     "type": "string",
-                    "description": "ECS cluster"
+                    "description": "(optional) ECS cluster can be specified here. By default it's derived from env & namespace"
                 },
                 "task_definition_revision"   : {
                     "type": "string",
-                    "description": "task definition revision"
+                    "description": "(optional) Task definition revision can be specified here. By default latest revision is used to perform a deployment. Normally this parameter can be used via cli during specific deployment needs."
                 },
                 "timeout"  : {
                     "type": "string",
-                    "description": "timeout"
+                    "description": "(optional) ECS deployment timeout can be specified here."
                 },
                 "docker_registry"  : {
                     "type": "string",
-                    "description": "docker registry"
+                    "description": "(optional) Docker registry can be set here. By default it uses ECR repo with the name of the service."
                 }
             },
-            "description": "app configuration",
+            "description": "App configuration.",
             "additionalProperties": false
         },
         "ecs": {
@@ -267,34 +280,34 @@
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "path to ecs app folder"
+                    "description": "(optional) Path to ecs app folder can be specified here. By default it's derived from apps path and app name."
                 },
                 "unsafe": {
                     "type": "boolean",
-                    "description": "unsafe mode (fast deploy)"
+                    "description": "(optional) Enables unsafe mode that increases deploy time on a cost of shorter healtchecks."
                 },
                 "image" : {
                     "type": "string",
-                    "description": "docker image"
+                    "description": "(optional) Docker image can be specified here. By default it's derived from the app name."
                 },
                 "cluster"   : {
                     "type": "string",
-                    "description": "ECS cluster"
+                    "description": "(optional) ECS cluster can be specified here. By default it's derived from env & namespace"
                 },
                 "task_definition_revision" : {
                     "type": "string",
-                    "description": "task definition revision"
+                    "description": "(optional) Task definition revision can be specified here. By default latest revision is used to perform a deployment. Normally this parameter can be used via cli during specific deployment needs."
                 },
                 "timeout" : {
                     "type": "string",
-                    "description": "timeout"
+                    "description": "(optional) ECS deployment timeout can be specified here."
                 },
                 "docker_registry"  : {
                     "type": "string",
-                    "description": "docker registry"
+                    "description": "(optional) Docker registry can be set here. By default it uses ECR repo with the name of the service."
                 }
             },
-            "description": "ecs app configuration",
+            "description": "Ecs app configuration.",
             "additionalProperties": false
         },
         "serverless": {
@@ -303,23 +316,23 @@
             "properties": {
                 "file": {
                     "type": "string",
-                    "description": "path to serverless file"
+                    "description": "(optional) Path to serverless file can be specified here. Normally it's serverless.yml in the app directory."
                 },
                 "node_version": {
                     "type": "string",
-                    "description": "node version"
+                    "description": "(optional) Node version that will be used by nvm can be specified here that. Default is v14."
                 },
                 "create_domain" : {
                     "type": "boolean",
-                    "description": "create domain"
+                    "description": "(optional) Create domain for the serverless domain manager during the deployment."
                 },
                 "path"   : {
                     "type": "string",
-                    "description": "path to serverless app folder"
+                    "description": "(optional) Path to the serverless app directory can be specified here. Normally it's derived from app directory and app name."
                 },
-                "sls_node_module_cache_mount"   : {
+                "sls_node_modules_cache_mount"   : {
                     "type": "string",
-                    "description": "sls node module cache mount"
+                    "description": "(optional) SLS node_modules cache mount path can be specified here. It's used to store cache during CI/CD process."
                 },
                 "env"  : {
                     "type": "array",
@@ -330,7 +343,7 @@
                     "description": "environments"
                 }
             },
-            "description": "serverless app configuration",
+            "description": "Serverless app configuration.",
             "additionalProperties": false
         },
         "terraform": {
@@ -339,30 +352,30 @@
             "properties": {
                 "version": {
                     "type": "string",
-                    "description": "terraform version"
+                    "description": "(optional) Terraform version can be set here. 1.1.3 by default."
                 },
                 "state_bucket_region": {
                     "type": "string",
-                    "description": "terraform state bucket region"
+                    "description": "(optional) Terraform state bucket region can be specified here. Normally AWS_REGION is used here. Can be overriden via env vars or flags."
                 },
                 "state_bucket_name" : {
                     "type": "string",
-                    "description": "terraform state bucket name"
+                    "description": "(optional) Terraform state bucket name can be specified here. Normally it's generated and defaults to <NAMESPACE>-tf-state"
                 },
                 "root_domain_name"   : {
                     "type": "string",
-                    "description": "root domain name"
+                    "description": "(optional) Root domain name can be set here. This is the main domain that will be passed to the terraform. Generally if your app lives at 'api.dev.nutcorp.net' the root domain is `nutcorp.net`"
                 },
                 "aws_region"   : {
                     "type": "string",
-                    "description": "AWS region"
+                    "description": "(optional) Terraform-specific AWS Region of this environment should be specified here. Normally global AWS_REGION is used."
                 },
                 "aws_profile"  : {
                     "type": "string",
-                    "description": "AWS profile"
+                    "description": "(optional) Terraform-specific AWS profile (optional) can be specified here (but normally it should be inherited from a global AWS_PROFILE)."
                 }
             },
-            "description": "terraform configuration",
+            "description": "Terraform configuration",
             "additionalProperties": false
         }
     },
@@ -373,7 +386,7 @@
         "namespace",
         "env_dir",
         "home",
-        "infra_dir",
+        "ize_dir",
         "prefer_runtime",
         "root_dir"
     ],
