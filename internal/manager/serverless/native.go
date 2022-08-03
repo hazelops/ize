@@ -3,6 +3,7 @@ package serverless
 import (
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
 )
@@ -34,8 +35,6 @@ func (sls *Manager) deployWithNative(w io.Writer) error {
 }
 
 func (sls *Manager) runNpmInstall(w io.Writer) error {
-	//npmInstallCommand := "npm install --save-dev"
-
 	cmd := exec.Command("npm", "install", "--save-dev")
 	cmd.Stdout = w
 	cmd.Stderr = w
@@ -49,7 +48,11 @@ func (sls *Manager) runNpmInstall(w io.Writer) error {
 }
 
 func (sls *Manager) runNvm(w io.Writer) error {
-	nvmCommand := fmt.Sprintf("source $HOME/.nvm/nvm.sh && nvm install %s && nvm use %s", sls.App.NodeVersion, sls.App.NodeVersion)
+	nvmDir := os.Getenv("NVM_DIR")
+	if len(nvmDir) == 0 {
+		nvmDir = "$HOME/.nvm"
+	}
+	nvmCommand := fmt.Sprintf("source %s/nvm.sh && nvm install %s && nvm use %s", nvmDir, sls.App.NodeVersion, sls.App.NodeVersion)
 
 	cmd := exec.Command("bash", "-c", nvmCommand)
 	cmd.Stdout = w
@@ -73,7 +76,7 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 		"--verbose",
 		"--region", sls.Project.AwsRegion,
 		"--profile", sls.Project.AwsProfile,
-		"--env", sls.Project.Env,
+		"--stage", sls.Project.Env,
 	)
 	cmd.Stdout = w
 	cmd.Stderr = w
@@ -96,7 +99,7 @@ func (sls *Manager) runRemove(w io.Writer) error {
 		"--verbose",
 		"--region", sls.Project.AwsRegion,
 		"--profile", sls.Project.AwsProfile,
-		"--env", sls.Project.Env,
+		"--stage", sls.Project.Env,
 	)
 	cmd.Stdout = w
 	cmd.Stderr = w
@@ -117,7 +120,7 @@ func (sls *Manager) runCreateDomain(w io.Writer) error {
 		"--verbose",
 		"--region", sls.Project.AwsRegion,
 		"--profile", sls.Project.AwsProfile,
-		"--env", sls.Project.Env,
+		"--stage", sls.Project.Env,
 	)
 	cmd.Stdout = w
 	cmd.Stderr = w
@@ -138,7 +141,7 @@ func (sls *Manager) runRemoveDomain(w io.Writer) error {
 		"--verbose",
 		"--region", sls.Project.AwsRegion,
 		"--profile", sls.Project.AwsProfile,
-		"--env", sls.Project.Env,
+		"--stage", sls.Project.Env,
 	)
 	cmd.Stdout = w
 	cmd.Stderr = w
