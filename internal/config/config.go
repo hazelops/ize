@@ -263,11 +263,11 @@ func InitConfig() {
 }
 
 func setDefaultInfraDir(cwd string) {
-	viper.SetDefault("INFRA_DIR", fmt.Sprintf("%v/.ize", cwd))
+	viper.SetDefault("IZE_DIR", fmt.Sprintf("%v/.ize", cwd))
 	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.ize/env/%v", cwd, viper.GetString("ENV")))
-	_, err := os.Stat(viper.GetString("INFRA_DIR"))
+	_, err := os.Stat(viper.GetString("IZE_DIR"))
 	if err != nil {
-		viper.SetDefault("INFRA_DIR", fmt.Sprintf("%v/.infra", cwd))
+		viper.SetDefault("IZE_DIR", fmt.Sprintf("%v/.infra", cwd))
 		viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, viper.GetString("ENV")))
 	}
 }
