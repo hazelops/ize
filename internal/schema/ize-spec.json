@@ -40,7 +40,15 @@
         },
         "plain_text": {
             "type": "boolean",
-            "description": "(optional) Plain text output can be enabled here. Default is false. Can be overridden by IZE_PLAIN_TEXT env var or --plain-text flag."
+            "description": "(optional) Plain text output can be enabled here. Default is false. Can be overridden by IZE_PLAIN_TEXT env var or --plain-text flag.",
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "boolean"
+                }
+            ]
         },
         "prefer_runtime": {
             "type": "string",

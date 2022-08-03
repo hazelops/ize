@@ -36,11 +36,12 @@ func NewCmdSecretsRemove() *cobra.Command {
 	o := NewSecretsRemoveFlags()
 
 	cmd := &cobra.Command{
-		Use:              "rm <app>",
-		Example:          secretsRemoveExample,
-		Short:            "Remove secrets from storage",
-		Long:             "This command removes secrets from storage",
-		TraverseChildren: true,
+		Use:               "rm <app>",
+		Example:           secretsRemoveExample,
+		Short:             "Remove secrets from storage",
+		Long:              "This command removes secrets from storage",
+		TraverseChildren:  true,
+		ValidArgsFunction: config.GetApps,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			err := o.Complete(cmd)

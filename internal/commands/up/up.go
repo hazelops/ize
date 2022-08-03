@@ -67,11 +67,12 @@ func NewCmdUp() *cobra.Command {
 	o := NewUpFlags()
 
 	cmd := &cobra.Command{
-		Use:     "up [flags] <app name>",
-		Example: upExample,
-		Short:   "Bring full application up from the bottom to the top.",
-		Long:    upLongDesc,
-		Args:    cobra.MaximumNArgs(1),
+		Use:               "up [flags] <app name>",
+		Example:           upExample,
+		Short:             "Bring full application up from the bottom to the top.",
+		Long:              upLongDesc,
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: config.GetApps,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			if len(args) == 0 && !o.AutoApprove {
@@ -230,21 +231,21 @@ func deployAll(ui terminal.UI, o *Options) error {
 		var manager manager.Manager
 
 		if app, ok := o.Config.Serverless[name]; ok {
-			app.Name = o.AppName
+			app.Name = name
 			manager = &serverless.Manager{
 				Project: o.Config,
 				App:     app,
 			}
 		}
 		if app, ok := o.Config.Alias[name]; ok {
-			app.Name = o.AppName
+			app.Name = name
 			manager = &alias.Manager{
 				Project: o.Config,
 				App:     app,
 			}
 		}
 		if app, ok := o.Config.Ecs[name]; ok {
-			app.Name = o.AppName
+			app.Name = name
 			manager = &ecs.Manager{
 				Project: o.Config,
 				App:     app,
@@ -271,6 +272,9 @@ func deployAll(ui terminal.UI, o *Options) error {
 
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	ui.Output("Deploy all completed!\n", terminal.WithSuccessStyle())
 

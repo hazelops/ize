@@ -183,6 +183,12 @@ func GenerateBackendTf(opts BackendOpts, path string) error {
 			hcl.TraverseRoot{Name: "var"},
 			hcl.TraverseAttr{Name: "aws_region"},
 		})
+		defaultTagsBlock := providerBlock.Body().AppendNewBlock("default_tags", nil)
+		tagsBlock := defaultTagsBlock.Body().AppendNewBlock("tags", nil)
+		tagsBlock.Body().SetAttributeValue("terraform", cty.StringVal("true"))
+		tagsBlock.Body().SetAttributeValue("env", cty.StringVal(opts.ENV))
+		tagsBlock.Body().SetAttributeValue("namespace", cty.StringVal(opts.NAMESPACE))
+
 		rootBody.AppendNewline()
 
 		// Terraform block
@@ -224,6 +230,7 @@ type VarsOpts struct {
 }
 
 type BackendOpts struct {
+	NAMESPACE                      string
 	ENV                            string
 	LOCALSTACK_ENDPOINT            string
 	TERRAFORM_STATE_BUCKET_NAME    string
