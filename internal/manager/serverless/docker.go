@@ -150,7 +150,7 @@ func (sls *Manager) removeWithDocker(s terminal.Step) error {
 		"--service", sls.App.Name,
 		"--verbose",
 		"--region", sls.Project.AwsRegion,
-		"--env", sls.Project.Env,
+		"--stage", sls.Project.Env,
 		"--profile", sls.Project.AwsProfile,
 	}, s)
 	if err != nil {
