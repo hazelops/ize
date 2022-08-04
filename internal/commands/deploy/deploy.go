@@ -100,6 +100,12 @@ func (o *Options) Complete(cmd *cobra.Command) error {
 		return fmt.Errorf("can't deploy your stack: %w", err)
 	}
 
+	if o.Config.Serverless != nil {
+		if err = config.CheckRequirements(config.WithNVM()); err != nil {
+			return err
+		}
+	}
+
 	viper.BindPFlags(cmd.Flags())
 	o.AppName = cmd.Flags().Args()[0]
 	viper.UnmarshalKey(fmt.Sprintf("app.%s", o.AppName), &o.App)
@@ -132,6 +138,15 @@ func (o *Options) Run() error {
 
 	var manager manager.Manager
 
+	manager = &ecs.Manager{
+		Project: o.Config,
+		App: &config.Ecs{
+			Name:                   o.AppName,
+			TaskDefinitionRevision: o.TaskDefinitionRevision,
+			Unsafe:                 o.Unsafe,
+		},
+	}
+
 	if app, ok := o.Config.Serverless[o.AppName]; ok {
 		app.Name = o.AppName
 		manager = &serverless.Manager{
@@ -153,15 +168,6 @@ func (o *Options) Run() error {
 		manager = &ecs.Manager{
 			Project: o.Config,
 			App:     app,
-		}
-	} else {
-		manager = &ecs.Manager{
-			Project: o.Config,
-			App: &config.Ecs{
-				Name:                   o.AppName,
-				TaskDefinitionRevision: o.TaskDefinitionRevision,
-				Unsafe:                 o.Unsafe,
-			},
 		}
 	}
 

@@ -9,3 +9,8 @@ path = "./apps/squibby"
 [app.goblin]
 type = "ecs"
 path = "./apps/goblin"
+
+[serverless.pecan]
+path = "./apps/pecan"
+node_version = "16"
+

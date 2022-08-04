@@ -39,6 +39,7 @@ type requiments struct {
 	configFile bool
 	smplugin   bool
 	structure  bool
+	nvm        bool
 }
 
 type Option func(*requiments)
@@ -61,10 +62,23 @@ func WithSSMPlugin() Option {
 	}
 }
 
+func WithNVM() Option {
+	return func(r *requiments) {
+		r.nvm = true
+	}
+}
+
 func CheckRequirements(options ...Option) error {
 	r := requiments{}
 	for _, opt := range options {
 		opt(&r)
+	}
+
+	if r.nvm {
+		err := checkNVM()
+		if err != nil {
+			return err
+		}
 	}
 
 	if r.structure {
@@ -93,6 +107,14 @@ func CheckRequirements(options ...Option) error {
 
 	if len(viper.ConfigFileUsed()) == 0 && r.configFile {
 		return fmt.Errorf("this command required config file")
+	}
+
+	return nil
+}
+
+func checkNVM() error {
+	if len(os.Getenv("NVM_DIR")) == 0 {
+		return errors.New("nvm is not installed (visit https://github.com/nvm-sh/nvm)")
 	}
 
 	return nil
