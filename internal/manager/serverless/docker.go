@@ -90,7 +90,7 @@ func (sls *Manager) deployWithDocker(s terminal.Step) error {
 		"--verbose",
 		"--region", sls.Project.AwsRegion,
 		"--profile", sls.Project.AwsProfile,
-		"--env", sls.Project.Env,
+		"--stage", sls.Project.Env,
 	}, s)
 	if err != nil {
 		s.Abort()
