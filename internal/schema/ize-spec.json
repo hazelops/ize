@@ -137,6 +137,9 @@
                         "version": {
                             "type": "string"
                         },
+                        "terraform_version": {
+                            "type": "string"
+                        },
                         "state_bucket_region": {
                             "type": "string"
                         },

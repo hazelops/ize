@@ -510,6 +510,12 @@ func ConvertApps() error {
 func ConvertInfra() error {
 	tf := viper.GetStringMap("infra.terraform")
 
+	version, ok := tf["terraform_version"]
+	if ok {
+		delete(tf, "terraform_version")
+		tf["version"] = version
+	}
+
 	err := viper.MergeConfigMap(map[string]interface{}{
 		"terraform.infra": tf,
 	})
