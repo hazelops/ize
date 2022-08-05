@@ -9,6 +9,7 @@ type Ecs struct {
 	DockerRegistry         string   `mapstructure:"docker_registry,omitempty"`
 	Timeout                int      `mapstructure:",omitempty"`
 	Unsafe                 bool     `mapstructure:",omitempty"`
+	SkipDeploy             bool     `mapstructure:"skip_deploy,omitempty"`
 	DependsOn              []string `mapstructure:"depends_on,omitempty"`
 }
 
