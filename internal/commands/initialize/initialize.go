@@ -297,12 +297,12 @@ func getProperties(settings interface{}, existsValues map[string]string) string 
 					case "string":
 						v, ok := existsValues[pn]
 						if ok && pn != "env" {
-							strRoot += fmt.Sprintf("%-36s\t#%s\n", fmt.Sprintf("%s = \"%s\"", pn, v), pd)
+							strRoot += fmt.Sprintf("%-36s\t# %s\n", fmt.Sprintf("%s = \"%s\"", pn, v), pd)
 						} else {
-							strRoot += fmt.Sprintf("#%-36s\t#%s\n", fmt.Sprintf("%s = \"%s\"", pn, v), pd)
+							strRoot += fmt.Sprintf("# %-36s\t# %s\n", fmt.Sprintf("%s = \"%s\"", pn, v), pd)
 						}
 					case "boolean":
-						strRoot += fmt.Sprintf("#%-36s\t#%s\n", fmt.Sprintf("%s = false", pn), pd)
+						strRoot += fmt.Sprintf("# %-36s\t# %s\n", fmt.Sprintf("%s = false", pn), pd)
 					}
 				}
 			}
