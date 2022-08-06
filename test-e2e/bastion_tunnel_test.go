@@ -71,6 +71,8 @@ func TestIzeUpAll_bastion_tunnel(t *testing.T) {
 	if !strings.Contains(stdout, "Deploy all completed!") {
 		t.Errorf("No success message detected after all up:\n%s", stdout)
 	}
+
+	t.Log(stdout)
 }
 
 func TestIzeTunnelUp(t *testing.T) {
