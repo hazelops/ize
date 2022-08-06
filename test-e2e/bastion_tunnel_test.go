@@ -1,4 +1,5 @@
 //go:build e2e && bastion_tunnel
+// +build e2e,bastion_tunnel
 
 package test
 
@@ -82,7 +83,7 @@ func TestIzeTunnelUp(t *testing.T) {
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
-	stdout, stderr, err := ize.RunRaw("tunnel")
+	stdout, stderr, err := ize.RunRaw("tunnel", "up")
 
 	if err != nil {
 		t.Errorf("error: %s", err)
