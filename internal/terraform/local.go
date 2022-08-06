@@ -50,7 +50,10 @@ func (l *local) Run() error {
 		l.dir = "."
 	}
 
-	err := term.New(term.WithDir(l.dir)).InteractiveRun(l.tfpath, l.command)
+	cmd := exec.Command(l.tfpath, l.command...)
+	cmd.Dir = l.dir
+
+	_, _, _, err := term.New(term.WithDir(l.dir)).InteractiveRun(cmd)
 	if err != nil {
 		return err
 	}
