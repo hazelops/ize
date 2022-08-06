@@ -4,9 +4,7 @@
 package term
 
 import (
-	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"os/exec"
 	"syscall"
@@ -47,15 +45,4 @@ func (r Runner) InteractiveRun(cmd *exec.Cmd) (stdout, stderr string, exitCode i
 		}
 	}
 	return
-}
-
-func (r Runner) printOutputWithHeader(header string, reader io.Reader) {
-	scanner := bufio.NewScanner(reader)
-	for scanner.Scan() {
-		if r.stdout != nil {
-			fmt.Fprintf(r.stdout, "%s%s\n", header, scanner.Text())
-		} else {
-			fmt.Printf("%s%s\n", header, scanner.Text())
-		}
-	}
 }

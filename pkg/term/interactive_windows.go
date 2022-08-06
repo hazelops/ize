@@ -4,9 +4,12 @@
 package term
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"os/exec"
 	"os/signal"
+	"syscall"
 )
 
 // InteractiveRun runs the input command that starts a child process.
