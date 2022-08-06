@@ -3,9 +3,10 @@ package ssmsession
 import (
 	"encoding/json"
 	"fmt"
+	"os/exec"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/pkg/term"
 )
 
@@ -14,13 +15,12 @@ const (
 	startSessionAction  = "StartSession"
 )
 
-type SSMPlugingRunner interface {
-	InteractiveRun(name string, args []string) error
-	BackgroundRun(name string, args []string) error
+type SSMPluginRunner interface {
+	InteractiveRun(cmd *exec.Cmd) (stdout string, stderr string, exitCode int, err error)
 }
 
 type SSMPluginCommand struct {
-	runner SSMPlugingRunner
+	runner SSMPluginRunner
 	region string
 }
 
@@ -36,27 +36,13 @@ func (s SSMPluginCommand) Start(ssmSession *ecs.Session) error {
 	if err != nil {
 		return fmt.Errorf("marshal session response: %w", err)
 	}
-	if err := s.runner.InteractiveRun(ssmPluginBinaryName,
-		[]string{string(response), s.region, startSessionAction}); err != nil {
+	cmd := exec.Command(ssmPluginBinaryName, []string{string(response), s.region, startSessionAction}...)
+	out, _, _, err := s.runner.InteractiveRun(cmd)
+	if err != nil {
 		return fmt.Errorf("start session: %w", err)
 	}
-	return nil
-}
-
-func (s SSMPluginCommand) Forward(ssmSession *ssm.StartSessionOutput, sessionInput *ssm.StartSessionInput) error {
-	response, err := json.Marshal(ssmSession)
-	if err != nil {
-		return fmt.Errorf("marshal session response: %w", err)
-	}
-
-	params, err := json.Marshal(sessionInput)
-	if err != nil {
-		return fmt.Errorf("marshal session response: %w", err)
-	}
-
-	err = s.runner.BackgroundRun(ssmPluginBinaryName, []string{string(response), s.region, startSessionAction, "", string(params), *ssmSession.StreamUrl})
-	if err != nil {
-		return err
+	if strings.Contains(out, "ERROR") {
+		return fmt.Errorf("exit status: 1")
 	}
 
 	return nil
