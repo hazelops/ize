@@ -19,7 +19,7 @@ type Project struct {
 
 	Home      string `mapstructure:",omitempty"`
 	RootDir   string `mapstructure:"root_dir,omitempty"`
-	InfraDir  string `mapstructure:"infra_dir,omitempty"`
+	InfraDir  string `mapstructure:"ize_dir,omitempty"`
 	EnvDir    string `mapstructure:"env_dir,omitempty"`
 	AppsPath  string `mapstructure:"apps_path,omitempty"`
 	TFLog     string `mapstructure:"tf_log,omitempty"`

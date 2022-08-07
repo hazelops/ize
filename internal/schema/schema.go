@@ -35,6 +35,17 @@ func Validate(config map[string]interface{}) error {
 	return nil
 }
 
+func GetJsonSchema() interface{} {
+	schemaLoader := gojsonschema.NewStringLoader(Schema)
+
+	json, err := schemaLoader.LoadJSON()
+	if err != nil {
+		return err
+	}
+
+	return json
+}
+
 func toError(result *gojsonschema.Result) error {
 	err := getMostSpecificError(result.Errors())
 	return err
