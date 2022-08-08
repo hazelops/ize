@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/pkg/term"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -22,7 +23,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
 	"text/template"
 )
 
@@ -195,7 +195,7 @@ func (o *UpOptions) upTunnel() (string, error) {
 		hostChecking = []string{"-o", "StrictHostKeyChecking=no"}
 	}
 
-	args := []string{"ssh", "-M", "-t", "-S", "bastion.sock", "-fN"}
+	args := []string{"-M", "-t", "-S", "bastion.sock", "-fN"}
 	args = append(args, hostChecking...)
 	args = append(args, fmt.Sprintf("ubuntu@%s", o.BastionHostID))
 	args = append(args, "-F", sshConfigPath)
@@ -208,7 +208,8 @@ func (o *UpOptions) upTunnel() (string, error) {
 
 	c.Dir = o.Config.EnvDir
 
-	_, _, code, err := runCommand(c)
+	runner := term.Runner{}
+	_, _, code, err := runner.InteractiveRun(c)
 	if err != nil {
 		return "", err
 	}
@@ -506,48 +507,4 @@ func setAWSCredentials(sess *session.Session) error {
 	os.Setenv("AWS_SESSION_TOKEN", v.SessionToken)
 
 	return nil
-}
-
-func printOutputWithHeader(header string, r io.Reader) {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		fmt.Printf("%s%s\n", header, scanner.Text())
-	}
-}
-
-func runCommand(cmd *exec.Cmd) (stdout, stderr string, exitCode int, err error) {
-	outReader, err := cmd.StdoutPipe()
-	if err != nil {
-		return
-	}
-	errReader, err := cmd.StderrPipe()
-	if err != nil {
-		return
-	}
-
-	var bufOut, bufErr bytes.Buffer
-	outReader2 := io.TeeReader(outReader, &bufOut)
-	errReader2 := io.TeeReader(errReader, &bufErr)
-
-	if err = cmd.Start(); err != nil {
-		return
-	}
-
-	go printOutputWithHeader("", outReader2)
-	go printOutputWithHeader("", errReader2)
-
-	err = cmd.Wait()
-
-	stdout = bufOut.String()
-	stderr = bufErr.String()
-
-	if err != nil {
-		if err2, ok := err.(*exec.ExitError); ok {
-			if s, ok := err2.Sys().(syscall.WaitStatus); ok {
-				err = nil
-				exitCode = s.ExitStatus()
-			}
-		}
-	}
-	return
 }
