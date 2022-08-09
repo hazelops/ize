@@ -339,11 +339,8 @@ func checkFileExists(path string) bool {
 }
 
 func destroyApp(ui terminal.UI, o *DownOptions) error {
-	ui.Output("Destroying %s app...\n", o.AppName, terminal.WithHeaderStyle())
-	sg := ui.StepGroup()
-	defer sg.Wait()
-
 	var manager manager.Manager
+	var icon string
 
 	manager = &ecs.Manager{
 		Project: o.Config,
@@ -356,6 +353,7 @@ func destroyApp(ui terminal.UI, o *DownOptions) error {
 			Project: o.Config,
 			App:     app,
 		}
+		icon = app.Icon
 	}
 	if app, ok := o.Config.Alias[o.AppName]; ok {
 		app.Name = o.AppName
@@ -363,6 +361,7 @@ func destroyApp(ui terminal.UI, o *DownOptions) error {
 			Project: o.Config,
 			App:     app,
 		}
+		icon = app.Icon
 	}
 	if app, ok := o.Config.Ecs[o.AppName]; ok {
 		app.Name = o.AppName
@@ -370,14 +369,23 @@ func destroyApp(ui terminal.UI, o *DownOptions) error {
 			Project: o.Config,
 			App:     app,
 		}
+		icon = app.Icon
 	}
+
+	if len(icon) != 0 {
+		icon += " "
+	}
+
+	ui.Output("Destroying %s%s app...\n", icon, o.AppName, terminal.WithHeaderStyle())
+	sg := ui.StepGroup()
+	defer sg.Wait()
 
 	err := manager.Destroy(ui)
 	if err != nil {
 		return fmt.Errorf("can't down: %w", err)
 	}
 
-	ui.Output("Destroy app %s completed\n", o.AppName, terminal.WithSuccessStyle())
+	ui.Output("Destroy app %s%s completed\n", icon, o.AppName, terminal.WithSuccessStyle())
 
 	return nil
 }

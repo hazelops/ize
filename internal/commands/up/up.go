@@ -294,11 +294,8 @@ func deployAll(ui terminal.UI, o *Options) error {
 }
 
 func deployApp(ui terminal.UI, o *Options) error {
-	ui.Output("Deploying %s app...\n", o.AppName, terminal.WithHeaderStyle())
-	sg := ui.StepGroup()
-	defer sg.Wait()
-
 	var manager manager.Manager
+	var icon string
 
 	manager = &ecs.Manager{
 		Project: o.Config,
@@ -327,6 +324,13 @@ func deployApp(ui terminal.UI, o *Options) error {
 		}
 	}
 
+	if len(icon) != 0 {
+	}
+
+	ui.Output("Deploying %s%s app...", icon, o.AppName, terminal.WithHeaderStyle())
+	sg := ui.StepGroup()
+	defer sg.Wait()
+
 	// build app container
 	err := manager.Build(ui)
 	if err != nil {
@@ -345,7 +349,7 @@ func deployApp(ui terminal.UI, o *Options) error {
 		return fmt.Errorf("can't deploy app: %w", err)
 	}
 
-	ui.Output("Deploy app %s completed\n", o.AppName, terminal.WithSuccessStyle())
+	ui.Output("Deploy app %s%s completed\n", icon, o.AppName, terminal.WithSuccessStyle())
 
 	return nil
 }
