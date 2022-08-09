@@ -8,7 +8,7 @@
         },
         "aws_region": {
             "type": "string",
-            "description": "(required) AWS Region of this environment should be specified here. Can be overriden by AWS_PROFILE env var or --aws-region flag."
+            "description": "(required) AWS Region of this environment should be specified here. Can be overridden by AWS_PROFILE env var or --aws-region flag."
         },
         "config_file": {
             "type": "string",
@@ -145,6 +145,17 @@
             "description": "Serverless apps configuration.",
             "additionalProperties": false
         },
+        "alias": {
+            "id": "#/properties/alias",
+            "type": "object",
+            "patternProperties": {
+                "^[a-zA-Z0-9._-]+$": {
+                    "$ref": "#/definitions/alias"
+                }
+            },
+            "description": "Alias configuration.",
+            "additionalProperties": false
+        },
         "terraform": {
             "id": "#/properties/terraform",
             "type": "object",
@@ -172,7 +183,7 @@
                         },
                         "state_bucket_region": {
                             "type": "string",
-                            "description": "(optional) Terraform state bucket region can be specified here. Normally AWS_REGION is used here. Can be overriden via env vars or flags."
+                            "description": "(optional) Terraform state bucket region can be specified here. Normally AWS_REGION is used here. Can be overridden via env vars or flags."
                         },
                         "state_bucket_name" : {
                             "type": "string",
@@ -259,7 +270,7 @@
                 },
                 "unsafe": {
                     "type": "boolean",
-                    "description": "(optional) Enables unsafe mode that increases deploy time on a cost of shorter healtchecks."
+                    "description": "(optional) Enables unsafe mode that increases deploy time on a cost of shorter healthcheck."
                 },
                 "image" : {
                     "type": "string",
@@ -283,7 +294,11 @@
                 },
                 "skip_deploy": {
                     "type": "boolean",
-                    "description": "skip deploy app"
+                    "description": "(optional) skip deploy app."
+                },
+                "depends_on": {
+                    "type": "array",
+                    "description": "(optional) expresses startup and shutdown dependencies between apps"
                 }
             },
             "description": "App configuration.",
@@ -299,7 +314,7 @@
                 },
                 "unsafe": {
                     "type": "boolean",
-                    "description": "(optional) Enables unsafe mode that increases deploy time on a cost of shorter healtchecks."
+                    "description": "(optional) Enables unsafe mode that increases deploy time on a cost of shorter healthcheck."
                 },
                 "image" : {
                     "type": "string",
@@ -323,7 +338,15 @@
                 },
                 "skip_deploy": {
                     "type": "boolean",
-                    "description": "skip deploy app"
+                    "description": "(optional) skip deploy app."
+                },
+                "icon": {
+                    "type": "string",
+                    "description": "(optional) set icon"
+                },
+                "depends_on": {
+                    "type": "array",
+                    "description": "(optional) expresses startup and shutdown dependencies between apps"
                 }
             },
             "description": "Ecs app configuration.",
@@ -360,9 +383,33 @@
                         "description": "environment"
                     },
                     "description": "environments"
+                },
+                "icon": {
+                    "type": "string",
+                    "description": "(optional) set icon"
+                },
+                "depends_on": {
+                    "type": "array",
+                    "description": "(optional) expresses startup and shutdown dependencies between apps"
                 }
             },
             "description": "Serverless app configuration.",
+            "additionalProperties": false
+        },
+        "alias": {
+            "id": "#/definitions/alias",
+            "type": "object",
+            "properties": {
+                "icon": {
+                    "type": "string",
+                    "description": "(optional) set icon"
+                },
+                "depends_on": {
+                    "type": "array",
+                    "description": "(optional) expresses startup and shutdown dependencies between apps"
+                }
+            },
+            "description": "Alias configuration.",
             "additionalProperties": false
         },
         "terraform": {
@@ -375,7 +422,7 @@
                 },
                 "state_bucket_region": {
                     "type": "string",
-                    "description": "(optional) Terraform state bucket region can be specified here. Normally AWS_REGION is used here. Can be overriden via env vars or flags."
+                    "description": "(optional) Terraform state bucket region can be specified here. Normally AWS_REGION is used here. Can be overridden via env vars or flags."
                 },
                 "state_bucket_name" : {
                     "type": "string",
