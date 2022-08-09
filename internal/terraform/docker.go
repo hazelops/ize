@@ -3,6 +3,7 @@ package terraform
 import (
 	"context"
 	"fmt"
+	"github.com/hazelops/ize/internal/config"
 	"io"
 	"os"
 	"strings"
@@ -46,24 +47,20 @@ func cleanupOldContainers(cli *client.Client) error {
 }
 
 type docker struct {
-	version  string
-	command  []string
-	env      []string
-	output   io.Writer
-	home     string
-	infraDir string
-	envDir   string
+	version string
+	command []string
+	env     []string
+	output  io.Writer
+	project *config.Project
 }
 
-func NewDockerTerraform(version string, command []string, env []string, out io.Writer, home, infraDir, envDir string) *docker {
+func NewDockerTerraform(version string, command []string, env []string, out io.Writer, project *config.Project) *docker {
 	return &docker{
-		version:  version,
-		command:  command,
-		env:      env,
-		output:   out,
-		home:     home,
-		infraDir: infraDir,
-		envDir:   envDir,
+		version: version,
+		command: command,
+		env:     env,
+		output:  out,
+		project: project,
 	}
 }
 
@@ -159,7 +156,7 @@ func (d *docker) RunUI(ui terminal.UI) error {
 		AttachStdout: true,
 		AttachStderr: true,
 		OpenStdin:    true,
-		WorkingDir:   fmt.Sprintf("%v", d.envDir),
+		WorkingDir:   fmt.Sprintf("%v", d.project.EnvDir),
 		Env:          d.env,
 	}
 
@@ -168,23 +165,23 @@ func (d *docker) RunUI(ui terminal.UI) error {
 		Mounts: []mount.Mount{
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%v", d.envDir),
-				Target: fmt.Sprintf("%v", d.envDir),
+				Source: fmt.Sprintf("%v", d.project.EnvDir),
+				Target: fmt.Sprintf("%v", d.project.EnvDir),
 			},
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%v", d.infraDir),
-				Target: fmt.Sprintf("%v", d.infraDir),
+				Source: fmt.Sprintf("%v", d.project.InfraDir),
+				Target: fmt.Sprintf("%v", d.project.InfraDir),
 			},
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%v/.aws", d.home),
+				Source: fmt.Sprintf("%v/.aws", d.project.Home),
 				Target: "/.aws",
 			},
 		},
 	}
 
-	s.Update("running terraform image %v:%v...", imageName, imageTag)
+	s.Update("[%s] running terraform image %v:%v...", d.project.Env, imageName, imageTag)
 
 	cont, err := cli.ContainerCreate(
 		context.Background(),
@@ -295,7 +292,7 @@ func (d *docker) Run() error {
 		AttachStdout: true,
 		AttachStderr: true,
 		OpenStdin:    true,
-		WorkingDir:   fmt.Sprintf("%v", d.envDir),
+		WorkingDir:   fmt.Sprintf("%v", d.project.EnvDir),
 		Env:          d.env,
 	}
 
@@ -304,17 +301,17 @@ func (d *docker) Run() error {
 		Mounts: []mount.Mount{
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%v", d.envDir),
-				Target: fmt.Sprintf("%v", d.envDir),
+				Source: fmt.Sprintf("%v", d.project.EnvDir),
+				Target: fmt.Sprintf("%v", d.project.EnvDir),
 			},
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%v", d.infraDir),
-				Target: fmt.Sprintf("%v", d.infraDir),
+				Source: fmt.Sprintf("%v", d.project.InfraDir),
+				Target: fmt.Sprintf("%v", d.project.InfraDir),
 			},
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%v/.aws", d.home),
+				Source: fmt.Sprintf("%v/.aws", d.project.Home),
 				Target: "/.aws",
 			},
 		},

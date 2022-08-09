@@ -388,9 +388,9 @@ func deployInfra(ui terminal.UI, config *config.Project, skipGen bool) error {
 
 	switch config.PreferRuntime {
 	case "docker":
-		tf = terraform.NewDockerTerraform(config.Terraform["infra"].Version, []string{"init", "-input=true"}, env, nil, config.Home, config.InfraDir, config.EnvDir)
+		tf = terraform.NewDockerTerraform(config.Terraform["infra"].Version, []string{"init", "-input=true"}, env, nil, config)
 	case "native":
-		tf = terraform.NewLocalTerraform(config.Terraform["infra"].Version, []string{"init", "-input=true"}, env, nil, config.EnvDir)
+		tf = terraform.NewLocalTerraform(config.Terraform["infra"].Version, []string{"init", "-input=true"}, env, nil, config)
 		err = tf.Prepare()
 		if err != nil {
 			return fmt.Errorf("can't deploy all: %w", err)

@@ -310,9 +310,9 @@ func destroyInfra(ui terminal.UI, config *config.Project, skipGen bool) error {
 
 	switch config.PreferRuntime {
 	case "docker":
-		tf = terraform.NewDockerTerraform(config.Terraform["infra"].Version, []string{"destroy", "-auto-approve"}, env, nil, config.Home, config.InfraDir, config.EnvDir)
+		tf = terraform.NewDockerTerraform(config.Terraform["infra"].Version, []string{"destroy", "-auto-approve"}, env, nil, config)
 	case "native":
-		tf = terraform.NewLocalTerraform(config.Terraform["infra"].Version, []string{"destroy", "-auto-approve"}, env, nil, config.EnvDir)
+		tf = terraform.NewLocalTerraform(config.Terraform["infra"].Version, []string{"destroy", "-auto-approve"}, env, nil, config)
 		err = tf.Prepare()
 		if err != nil {
 			return fmt.Errorf("can't destroy infra: %w", err)

@@ -3,6 +3,7 @@ package terraform
 import (
 	"bufio"
 	"fmt"
+	"github.com/hazelops/ize/internal/config"
 	"io"
 	"log"
 	"os"
@@ -32,25 +33,25 @@ type local struct {
 	env     []string
 	output  io.Writer
 	tfpath  string
-	dir     string
+	project *config.Project
 }
 
-func NewLocalTerraform(version string, command []string, env []string, out io.Writer, dir string) *local {
+func NewLocalTerraform(version string, command []string, env []string, out io.Writer, project *config.Project) *local {
 	return &local{
 		version: version,
 		command: command,
 		env:     env,
 		output:  out,
-		dir:     dir,
+		project: project,
 	}
 }
 
 func (l *local) Run() error {
-	if len(l.dir) == 0 {
-		l.dir = "."
+	if len(l.project.EnvDir) == 0 {
+		l.project.EnvDir = "."
 	}
 
-	err := term.New(term.WithDir(l.dir)).InteractiveRun(l.tfpath, l.command)
+	err := term.New(term.WithDir(l.project.EnvDir)).InteractiveRun(l.tfpath, l.command)
 	if err != nil {
 		return err
 	}
@@ -125,7 +126,7 @@ func (l *local) RunUI(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("Running terraform v%s...", l.version)
+	s := sg.Add("[%s] Running terraform v%s...", l.project.Env, l.version)
 	defer func() { s.Abort(); time.Sleep(time.Millisecond * 100) }()
 
 	stdout := s.TermOutput()
@@ -133,12 +134,12 @@ func (l *local) RunUI(ui terminal.UI) error {
 		stdout = l.output
 	}
 
-	if len(l.dir) == 0 {
-		l.dir = "."
+	if len(l.project.EnvDir) == 0 {
+		l.project.EnvDir = "."
 	}
 
 	cmd := exec.Command(l.tfpath, l.command...)
-	cmd.Dir = l.dir
+	cmd.Dir = l.project.EnvDir
 	_, _, err := runCommand(cmd, stdout)
 
 	if err != nil {
