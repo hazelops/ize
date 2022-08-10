@@ -52,9 +52,9 @@ func (l *local) Run() error {
 	}
 
 	cmd := exec.Command(l.tfpath, l.command...)
-	cmd.Dir = l.dir
+	cmd.Dir = l.project.EnvDir
 
-	_, _, _, err := term.New(term.WithDir(l.dir)).InteractiveRun(cmd)
+	_, _, _, err := term.New(term.WithDir(l.project.EnvDir)).InteractiveRun(cmd)
 	if err != nil {
 		return err
 	}
