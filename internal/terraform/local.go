@@ -51,7 +51,10 @@ func (l *local) Run() error {
 		l.project.EnvDir = "."
 	}
 
-	err := term.New(term.WithDir(l.project.EnvDir)).InteractiveRun(l.tfpath, l.command)
+	cmd := exec.Command(l.tfpath, l.command...)
+	cmd.Dir = l.dir
+
+	_, _, _, err := term.New(term.WithDir(l.dir)).InteractiveRun(cmd)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,6 @@
   "license": "MIT",
   "devDependencies": {
     "serverless-attach-managed-policy": "0.0.7",
-    "serverless": "1.83.0"
+    "serverless": "2.72.3"
   }
 }

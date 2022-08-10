@@ -1,4 +1,5 @@
 //go:build e2e && bastion_tunnel
+// +build e2e,bastion_tunnel
 
 package test
 
@@ -7,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestIzeGenEnv_bastion_tunnel(t *testing.T) {
@@ -71,6 +73,10 @@ func TestIzeUpAll_bastion_tunnel(t *testing.T) {
 	if !strings.Contains(stdout, "Deploy all completed!") {
 		t.Errorf("No success message detected after all up:\n%s", stdout)
 	}
+
+	time.Sleep(time.Minute)
+
+	t.Log(stdout)
 }
 
 func TestIzeTunnelUp(t *testing.T) {
@@ -80,7 +86,7 @@ func TestIzeTunnelUp(t *testing.T) {
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
-	stdout, stderr, err := ize.RunRaw("tunnel")
+	stdout, stderr, err := ize.RunRaw("tunnel", "up")
 
 	if err != nil {
 		t.Errorf("error: %s", err)

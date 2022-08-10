@@ -184,10 +184,11 @@ func GenerateBackendTf(opts BackendOpts, path string) error {
 			hcl.TraverseAttr{Name: "aws_region"},
 		})
 		defaultTagsBlock := providerBlock.Body().AppendNewBlock("default_tags", nil)
-		tagsBlock := defaultTagsBlock.Body().AppendNewBlock("tags", nil)
-		tagsBlock.Body().SetAttributeValue("terraform", cty.StringVal("true"))
-		tagsBlock.Body().SetAttributeValue("env", cty.StringVal(opts.ENV))
-		tagsBlock.Body().SetAttributeValue("namespace", cty.StringVal(opts.NAMESPACE))
+		defaultTagsBlock.Body().SetAttributeValue("tags", cty.ObjectVal(map[string]cty.Value{
+			"terraform": cty.StringVal("true"),
+			"env":       cty.StringVal(opts.ENV),
+			"namespace": cty.StringVal(opts.NAMESPACE),
+		}))
 
 		rootBody.AppendNewline()
 

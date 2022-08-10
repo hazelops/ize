@@ -173,7 +173,7 @@ func (o *ExecOptions) Run() error {
 	s.Success()
 
 	ssmCmd := ssmsession.NewSSMPluginCommand(o.Config.AwsRegion)
-	ssmCmd.Start((out.Session))
+	err = ssmCmd.Start(out.Session)
 	if err != nil {
 		return err
 	}

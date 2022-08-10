@@ -1,6 +1,8 @@
 package term
 
 import (
+	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -60,4 +62,15 @@ func (r Runner) Run(name string, args []string, options ...Option) error {
 		opt(cmd)
 	}
 	return cmd.Run()
+}
+
+func (r Runner) printOutputWithHeader(header string, reader io.Reader) {
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		if r.stdout != nil {
+			fmt.Fprintf(r.stdout, "%s%s\n", header, scanner.Text())
+		} else {
+			fmt.Printf("%s%s\n", header, scanner.Text())
+		}
+	}
 }
