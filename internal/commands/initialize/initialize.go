@@ -284,7 +284,11 @@ func getProperties(settings interface{}, existsValues map[string]string) string 
 						pd, ok := settings.(map[string]interface{})["definitions"].(map[string]interface{})[pn]
 						desc := ""
 						if ok {
-							strBlocks += fmt.Sprintf("\n# [%s.<name>]%s\n", pn, desc)
+							if pn == "terraform" {
+								strBlocks += fmt.Sprintf("\n# [%s.infra]%s\n", pn, desc)
+							} else {
+								strBlocks += fmt.Sprintf("\n# [%s.<name>]%s\n", pn, desc)
+							}
 							strBlocks += getProperties(pd, map[string]string{})
 						}
 					}
