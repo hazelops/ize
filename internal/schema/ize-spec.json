@@ -153,7 +153,7 @@
                     "$ref": "#/definitions/alias"
                 }
             },
-            "description": "Alias configuration.",
+            "description": "(optional) Alias mode can be enabled here. This can be used to combine various apps via depends_on parameter.",
             "additionalProperties": false
         },
         "terraform": {
