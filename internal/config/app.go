@@ -10,6 +10,7 @@ type Ecs struct {
 	Timeout                int      `mapstructure:",omitempty"`
 	Unsafe                 bool     `mapstructure:",omitempty"`
 	SkipDeploy             bool     `mapstructure:"skip_deploy,omitempty"`
+	Icon                   string   `mapstructure:"icon,omitempty"`
 	DependsOn              []string `mapstructure:"depends_on,omitempty"`
 }
 
@@ -21,10 +22,12 @@ type Serverless struct {
 	SLSNodeModuleCacheMount string   `mapstructure:",omitempty"`
 	CreateDomain            bool     `mapstructure:"create_domain"`
 	Env                     []string `mapstructure:",omitempty"`
+	Icon                    string   `mapstructure:"icon,omitempty"`
 	DependsOn               []string `mapstructure:"depends_on,omitempty"`
 }
 
 type Alias struct {
 	Name      string
+	Icon      string `mapstructure:"icon,omitempty"`
 	DependsOn string `mapstructure:"depends_on"`
 }

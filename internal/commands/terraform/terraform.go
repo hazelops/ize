@@ -135,9 +135,9 @@ func (o *Options) Run(args []string) error {
 
 	switch o.Config.PreferRuntime {
 	case "docker":
-		tf = terraform.NewDockerTerraform(o.Version, args, env, nil, o.Config.Home, o.Config.InfraDir, o.Config.EnvDir)
+		tf = terraform.NewDockerTerraform(o.Version, args, env, nil, o.Config)
 	case "native":
-		tf = terraform.NewLocalTerraform(o.Version, args, env, nil, o.Config.EnvDir)
+		tf = terraform.NewLocalTerraform(o.Version, args, env, nil, o.Config)
 		err = tf.Prepare()
 		if err != nil {
 			return err
