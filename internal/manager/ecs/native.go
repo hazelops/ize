@@ -15,6 +15,8 @@ import (
 	"github.com/pterm/pterm"
 )
 
+var stoppedReason string
+
 func (e *Manager) deployLocal(w io.Writer) error {
 	pterm.SetDefaultOutput(w)
 
@@ -89,6 +91,13 @@ func (e *Manager) deployLocal(w io.Writer) error {
 		if err != nil {
 			pterm.Println("Failed to get logs:", err)
 		}
+
+		sr, err := getStoppedReason(e.App.Cluster, name, svc)
+		if err != nil {
+			return err
+		}
+
+		pterm.Printfln("Stopped reason: %s", sr)
 
 		pterm.Printfln("Rolling back to old task definition: %s:%d", *oldTaskDef.Family, *oldTaskDef.Revision)
 		e.App.Timeout = 600
@@ -327,10 +336,34 @@ func getRunningTaskCount(cluster string, tasks []*string, serviceArn string, svc
 	for _, t := range dto.Tasks {
 		if *t.TaskDefinitionArn == serviceArn && *t.LastStatus == "RUNNING" {
 			count++
+			stoppedReason = *t.StoppedReason
 		}
 	}
 
 	return int64(count), nil
+}
+
+func getStoppedReason(cluster string, name string, svc *ecssvc.ECS) (string, error) {
+	stopped := ecssvc.DesiredStatusStopped
+
+	runningTasks, err := svc.ListTasks(&ecssvc.ListTasksInput{
+		Cluster:       &cluster,
+		ServiceName:   &name,
+		DesiredStatus: &stopped,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	dto, err := svc.DescribeTasks(&ecssvc.DescribeTasksInput{
+		Cluster: &cluster,
+		Tasks:   runningTasks.TaskArns,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return *dto.Tasks[0].StoppedReason, nil
 }
 
 func deregisterTaskDefinition(svc *ecssvc.ECS, td *ecssvc.TaskDefinition) error {
