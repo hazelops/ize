@@ -1,0 +1,75 @@
+name: "Terraform version install"
+defaults:
+  run:
+    shell: bash
+
+env:
+  AWS_REGION: us-east-1
+  ENV: testnut
+  NAMESPACE: nutcorp
+  AWS_PROFILE: default
+  SSH_PUBLIC_KEY: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDZqPTy/u82UzDtTY8GUdtGBrQQ1HoyMxZcv/Sc2FeSJTrcLh3i/Mo8pf/MrTO3G7LxJ8syDrptRFIVUheVY7a38UQvay94rJdYtSy6Z/0wLQbnDhJdhzzaPwXrUpBkZO7pcx2HNaC68D/40gTLEHVygJ09VEx8WS7d5QdS8YI6SnXF8ocLF6Nv1WV73aE8Cvz4aUgJJos7pvyX+/WoGzEwpj1aKVPOswRixf18Eg0G6H6WWDfK6zgqEUxsiiP7TB+yXp6VtbDRoS881PK7Cj3+X+lxMBAAuG/PslM6B6koiulCNWyauBZAuay3WR74dYWblYOpD54x1fzrELe2Q4v/1zTi669VqpVfPlH1cnpYiOXaP1aijCA9GFO/dWjxyAAkw2BVeEcbcDaIWhCToMYTHeq2f8Zzi9pxhZyJVO9qg4bXN3EeDGYrbFiWLdWxF9ITKmoSUYG5v8XhXzVTbAyBzDosDiBaa1pMsqFydgc4uZkKAF9govNw1KhRitovz9s= testnut"
+
+on: [workflow_dispatch, pull_request]
+
+jobs:
+  build:
+    name: Build & Test
+    strategy:
+      matrix:
+        terraform_version:
+          - 1.0.10
+          - 1.1.3
+          - 1.1.7
+          - 1.2.7
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.x
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Build
+        run: |
+          go mod download
+          make bin
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ize-${{ matrix.os }}
+          path: ${{ github.workspace }}/ize
+
+      - name: Configure PATH
+        run: |
+          echo "${{ github.workspace }}/bin/" >> $GITHUB_PATH
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ize-${{ matrix.os }}
+          path: bin
+
+      - name: Make Executable
+        run: |
+          chmod +rx "${{ github.workspace }}/bin/ize"
+          ize --version
+
+      - name: Check Terraform Version
+        run: |
+          cd ${{ github.workspace }}/examples/bastion-tunnel-monorepo
+          ize gen aws-profile
+          ize --terraform-version=${{ matrix.terraform_version }} terraform -version
