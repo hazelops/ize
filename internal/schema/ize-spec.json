@@ -39,7 +39,6 @@
             "description": "(required) Namespace of the project can be specified here. It is used as a base for all naming. It can be overridden by NAMESPACE env var or --namespace flag."
         },
         "plain_text": {
-            "type": "boolean",
             "description": "(optional) Plain text output can be enabled here. Default is false. Can be overridden by IZE_PLAIN_TEXT env var or --plain-text flag.",
             "anyOf": [
                 {
