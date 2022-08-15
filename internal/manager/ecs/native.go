@@ -97,7 +97,7 @@ func (e *Manager) deployLocal(w io.Writer) error {
 			return err
 		}
 
-		pterm.Printfln("Stopped reason: %s", sr)
+		pterm.Printfln("Container %s couldn't start: %s", name, sr)
 
 		pterm.Printfln("Rolling back to old task definition: %s:%d", *oldTaskDef.Family, *oldTaskDef.Revision)
 		e.App.Timeout = 600
