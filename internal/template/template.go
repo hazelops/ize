@@ -1,9 +1,12 @@
 package template
 
 import (
+	"crypto/md5"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -203,16 +206,47 @@ func GenerateBackendTf(opts BackendOpts, path string) error {
 		backendBlock.Body().SetAttributeValue("dynamodb_table", cty.StringVal(opts.TERRAFORM_STATE_DYNAMODB_TABLE))
 	}
 
-	file, err := os.Create(fmt.Sprintf("%s/%s", path, backend))
+	backendPath := filepath.Join(path, backend)
+
+	fmt.Println(path)
+
+	_, err := os.Stat(backendPath)
+	if !errors.Is(err, os.ErrNotExist) {
+		file, err := os.Create(backendPath)
+		if err != nil {
+			return err
+		}
+
+		defer file.Close()
+
+		_, err = f.WriteTo(file)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	newHash := md5.Sum(f.Bytes())
+	oldFile, err := os.ReadFile(backendPath)
 	if err != nil {
 		return err
 	}
 
-	defer file.Close()
+	oldHash := md5.Sum(oldFile)
 
-	_, err = f.WriteTo(file)
-	if err != nil {
-		return err
+	if !reflect.DeepEqual(newHash, oldHash) {
+		file, err := os.Create(backendPath)
+		if err != nil {
+			return err
+		}
+
+		defer file.Close()
+
+		_, err = f.WriteTo(file)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
