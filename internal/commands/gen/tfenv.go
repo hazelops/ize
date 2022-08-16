@@ -75,10 +75,6 @@ func (o *TfenvOptions) Complete() error {
 
 	o.Config = cfg
 
-	if len(o.TerraformStateBucketName) == 0 {
-		o.TerraformStateBucketName = fmt.Sprintf("%s-tf-state", o.Config.Namespace)
-	}
-
 	return nil
 }
 
@@ -102,9 +98,12 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 		tf.StateBucketName = terraformStateBucketName
 	}
 
+	if len(tf.StateBucketName) == 0 {
+		tf.StateBucketName = fmt.Sprintf("%s-tf-state", project.Namespace)
+	}
+
 	if len(tf.StateBucketRegion) == 0 {
 		tf.StateBucketRegion = project.AwsRegion
-
 	}
 
 	backendOpts := template.BackendOpts{

@@ -354,7 +354,7 @@ func deployInfra(ui terminal.UI, config *config.Project, skipGen bool) error {
 	if !skipGen {
 		err := gen.GenerateTerraformFiles(
 			config,
-			fmt.Sprintf("%s-tf-state", config.Namespace),
+			"",
 		)
 		if err != nil {
 			return err

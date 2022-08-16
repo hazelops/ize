@@ -4,22 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hazelops/ize/internal/commands/gen"
+	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager"
 	"github.com/hazelops/ize/internal/manager/alias"
-	"github.com/hazelops/ize/internal/manager/serverless"
-	"os"
-	"path/filepath"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager/ecs"
+	"github.com/hazelops/ize/internal/manager/serverless"
 	"github.com/hazelops/ize/internal/terraform"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 type DownOptions struct {
@@ -278,14 +276,12 @@ func destroyAll(ui terminal.UI, o *DownOptions) error {
 
 func destroyInfra(ui terminal.UI, config *config.Project, skipGen bool) error {
 	if !skipGen {
-		if !checkFileExists(filepath.Join(config.EnvDir, "backend.tf")) || !checkFileExists(filepath.Join(config.EnvDir, "terraform.tfvars")) {
-			err := gen.GenerateTerraformFiles(
-				config,
-				"",
-			)
-			if err != nil {
-				return err
-			}
+		err := gen.GenerateTerraformFiles(
+			config,
+			"",
+		)
+		if err != nil {
+			return err
 		}
 	}
 

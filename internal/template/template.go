@@ -208,8 +208,6 @@ func GenerateBackendTf(opts BackendOpts, path string) error {
 
 	backendPath := filepath.Join(path, backend)
 
-	fmt.Println(path)
-
 	_, err := os.Stat(backendPath)
 	if !errors.Is(err, os.ErrNotExist) {
 		file, err := os.Create(backendPath)
