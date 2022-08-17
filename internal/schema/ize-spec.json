@@ -344,6 +344,14 @@
                     "type": "string",
                     "description": "(optional) set icon"
                 },
+                "aws_region"   : {
+                    "type": "string",
+                    "description": "(optional) ECS-specific AWS Region of this environment should be specified here. Normally global AWS_REGION is used."
+                },
+                "aws_profile"  : {
+                    "type": "string",
+                    "description": "(optional) ECS-specific AWS profile (optional) can be specified here (but normally it should be inherited from a global AWS_PROFILE)."
+                },
                 "depends_on": {
                     "type": "array",
                     "description": "(optional) expresses startup and shutdown dependencies between apps"
@@ -387,6 +395,14 @@
                 "icon": {
                     "type": "string",
                     "description": "(optional) set icon"
+                },
+                "aws_region"   : {
+                    "type": "string",
+                    "description": "(optional) Serverless-specific AWS Region of this environment should be specified here. Normally global AWS_REGION is used."
+                },
+                "aws_profile"  : {
+                    "type": "string",
+                    "description": "(optional) Serverless-specific AWS profile (optional) can be specified here (but normally it should be inherited from a global AWS_PROFILE)."
                 },
                 "depends_on": {
                     "type": "array",

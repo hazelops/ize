@@ -74,8 +74,8 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 		"--config", sls.App.File,
 		"--service", sls.App.Name,
 		"--verbose",
-		"--region", sls.Project.AwsRegion,
-		"--profile", sls.Project.AwsProfile,
+		"--region", sls.App.AwsRegion,
+		"--profile", sls.App.AwsProfile,
 		"--stage", sls.Project.Env,
 	)
 	cmd.Stdout = w
@@ -97,8 +97,8 @@ func (sls *Manager) runRemove(w io.Writer) error {
 		"--config", sls.App.File,
 		"--service", sls.App.Name,
 		"--verbose",
-		"--region", sls.Project.AwsRegion,
-		"--profile", sls.Project.AwsProfile,
+		"--region", sls.App.AwsRegion,
+		"--profile", sls.App.AwsProfile,
 		"--stage", sls.Project.Env,
 	)
 	cmd.Stdout = w
@@ -118,8 +118,8 @@ func (sls *Manager) runCreateDomain(w io.Writer) error {
 		"serverless",
 		"create_domain",
 		"--verbose",
-		"--region", sls.Project.AwsRegion,
-		"--profile", sls.Project.AwsProfile,
+		"--region", sls.App.AwsRegion,
+		"--profile", sls.App.AwsProfile,
 		"--stage", sls.Project.Env,
 	)
 	cmd.Stdout = w
@@ -139,8 +139,8 @@ func (sls *Manager) runRemoveDomain(w io.Writer) error {
 		"serverless",
 		"remove_domain",
 		"--verbose",
-		"--region", sls.Project.AwsRegion,
-		"--profile", sls.Project.AwsProfile,
+		"--region", sls.App.AwsRegion,
+		"--profile", sls.App.AwsProfile,
 		"--stage", sls.Project.Env,
 	)
 	cmd.Stdout = w

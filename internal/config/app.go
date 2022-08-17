@@ -11,6 +11,8 @@ type Ecs struct {
 	Unsafe                 bool     `mapstructure:",omitempty"`
 	SkipDeploy             bool     `mapstructure:"skip_deploy,omitempty"`
 	Icon                   string   `mapstructure:"icon,omitempty"`
+	AwsProfile             string   `mapstructure:"aws_profile,omitempty"`
+	AwsRegion              string   `mapstructure:"aws_region,omitempty"`
 	DependsOn              []string `mapstructure:"depends_on,omitempty"`
 }
 
@@ -23,6 +25,8 @@ type Serverless struct {
 	CreateDomain            bool     `mapstructure:"create_domain"`
 	Env                     []string `mapstructure:",omitempty"`
 	Icon                    string   `mapstructure:"icon,omitempty"`
+	AwsProfile              string   `mapstructure:"aws_profile,omitempty"`
+	AwsRegion               string   `mapstructure:"aws_region,omitempty"`
 	DependsOn               []string `mapstructure:"depends_on,omitempty"`
 }
 
