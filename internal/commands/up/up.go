@@ -4,26 +4,22 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
-	"github.com/hazelops/ize/internal/manager"
-	"github.com/hazelops/ize/internal/manager/alias"
-	"github.com/hazelops/ize/internal/manager/serverless"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/commands/gen"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/manager"
+	"github.com/hazelops/ize/internal/manager/alias"
 	"github.com/hazelops/ize/internal/manager/ecs"
+	"github.com/hazelops/ize/internal/manager/serverless"
 	"github.com/hazelops/ize/internal/terraform"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"io/ioutil"
 )
 
 type Options struct {
@@ -356,14 +352,12 @@ func deployApp(ui terminal.UI, o *Options) error {
 
 func deployInfra(ui terminal.UI, config *config.Project, skipGen bool) error {
 	if !skipGen {
-		if !checkFileExists(filepath.Join(config.EnvDir, "backend.tf")) || !checkFileExists(filepath.Join(config.EnvDir, "terraform.tfvars")) {
-			err := gen.GenerateTerraformFiles(
-				config,
-				fmt.Sprintf("%s-tf-state", config.Namespace),
-			)
-			if err != nil {
-				return err
-			}
+		err := gen.GenerateTerraformFiles(
+			config,
+			"",
+		)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -464,9 +458,4 @@ func deployInfra(ui terminal.UI, config *config.Project, skipGen bool) error {
 	ui.Output("Deploy infra completed!\n", terminal.WithSuccessStyle())
 
 	return nil
-}
-
-func checkFileExists(path string) bool {
-	_, err := os.Stat(path)
-	return !errors.Is(err, os.ErrNotExist)
 }
