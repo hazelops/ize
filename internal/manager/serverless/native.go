@@ -49,6 +49,7 @@ func (sls *Manager) runNvm(w io.Writer) error {
 }
 
 func (sls *Manager) runDeploy(w io.Writer) error {
+
 	nvmDir := os.Getenv("NVM_DIR")
 	if len(nvmDir) == 0 {
 		nvmDir = "$HOME/.nvm"
@@ -65,8 +66,8 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 				--profile %s \
 				--stage %s`,
 		nvmDir, sls.App.NodeVersion, sls.App.File,
-		sls.App.Name, sls.Project.AwsRegion,
-		sls.Project.AwsProfile, sls.Project.Env)
+		sls.App.Name, sls.App.AwsRegion,
+		sls.App.AwsProfile, sls.Project.Env)
 
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Stdout = w
@@ -81,6 +82,7 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 }
 
 func (sls *Manager) runRemove(w io.Writer) error {
+
 	nvmDir := os.Getenv("NVM_DIR")
 	if len(nvmDir) == 0 {
 		nvmDir = "$HOME/.nvm"
@@ -97,8 +99,8 @@ func (sls *Manager) runRemove(w io.Writer) error {
 				--profile %s \
 				--stage %s`,
 		nvmDir, sls.App.NodeVersion, sls.App.File,
-		sls.App.Name, sls.Project.AwsRegion,
-		sls.Project.AwsProfile, sls.Project.Env)
+		sls.App.Name, sls.App.AwsRegion,
+		sls.App.AwsProfile, sls.Project.Env)
 
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Stdout = w
@@ -126,8 +128,8 @@ func (sls *Manager) runCreateDomain(w io.Writer) error {
 				--region %s \
 				--profile %s \
 				--stage %s`,
-		nvmDir, sls.App.Name, sls.Project.AwsRegion,
-		sls.Project.AwsProfile, sls.Project.Env)
+		nvmDir, sls.App.Name, sls.App.AwsRegion,
+		sls.App.AwsProfile, sls.Project.Env)
 
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Stdout = w
@@ -155,8 +157,8 @@ func (sls *Manager) runRemoveDomain(w io.Writer) error {
 				--region %s \
 				--profile %s \
 				--stage %s`,
-		nvmDir, sls.App.Name, sls.Project.AwsRegion,
-		sls.Project.AwsProfile, sls.Project.Env)
+		nvmDir, sls.App.Name, sls.App.AwsRegion,
+		sls.App.AwsProfile, sls.Project.Env)
 
 	cmd := exec.Command("bash", "-c", command)
 

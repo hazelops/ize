@@ -38,6 +38,14 @@ func (sls *Manager) prepare() {
 		sls.App.SLSNodeModuleCacheMount = fmt.Sprintf("%s-node-modules", sls.App.Name)
 	}
 
+	if len(sls.App.AwsProfile) == 0 {
+		sls.App.AwsProfile = sls.Project.AwsProfile
+	}
+
+	if len(sls.App.AwsRegion) == 0 {
+		sls.App.AwsRegion = sls.Project.AwsRegion
+	}
+
 	sls.App.Env = append(sls.App.Env, "SLS_DEBUG=*")
 }
 

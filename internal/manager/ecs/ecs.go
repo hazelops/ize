@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"os"
 	"path"
@@ -55,12 +56,32 @@ func (e *Manager) prepare() {
 	if e.App.Timeout == 0 {
 		e.App.Timeout = 300
 	}
+
+	if len(e.App.AwsProfile) == 0 {
+		e.App.AwsProfile = e.Project.AwsProfile
+	}
+
+	if len(e.App.AwsRegion) == 0 {
+		e.App.AwsRegion = e.Project.AwsRegion
+	}
 }
 
 // Deploy deploys app container to ECS via ECS deploy
 func (e *Manager) Deploy(ui terminal.UI) error {
+	e.prepare()
+
 	sg := ui.StepGroup()
 	defer sg.Wait()
+
+	sess, err := utils.GetSession(&utils.SessionConfig{
+		Region:  e.App.AwsRegion,
+		Profile: e.App.AwsProfile,
+	})
+	if err != nil {
+		return fmt.Errorf("can't get session: %w", err)
+	}
+
+	e.Project.Session = sess
 
 	if e.App.SkipDeploy {
 		s := sg.Add("%s: deploy will be skipped", e.App.Name)
@@ -68,8 +89,6 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 		s.Done()
 		return nil
 	}
-
-	e.prepare()
 
 	if e.App.Unsafe && e.Project.PreferRuntime == "native" {
 		pterm.Warning.Println(templates.Dedent(`

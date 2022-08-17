@@ -58,8 +58,8 @@ func (e *Manager) deployWithDocker(w io.Writer) error {
 	}
 
 	cmd := []string{"ecs", "deploy",
-		"--profile", e.Project.AwsProfile,
-		"--region", e.Project.AwsRegion,
+		"--profile", e.App.AwsProfile,
+		"--region", e.App.AwsRegion,
 		e.App.Cluster,
 		fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name),
 		"--image", e.App.Name,
@@ -196,8 +196,8 @@ func (e *Manager) redeployWithDocker(w io.Writer) error {
 	}
 
 	cmd := []string{"ecs", "deploy",
-		"--profile", e.Project.AwsProfile,
-		"--region", e.Project.AwsRegion,
+		"--profile", e.App.AwsProfile,
+		"--region", e.App.AwsRegion,
 		e.App.Cluster,
 		name,
 		"--task", td,

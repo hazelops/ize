@@ -70,8 +70,8 @@ func (sls *Manager) deployWithDocker(s terminal.Step) error {
 		err = sls.serverless(cli, []string{
 			"create_domain",
 			"--verbose",
-			"--region", sls.Project.AwsRegion,
-			"--profile", sls.Project.AwsProfile,
+			"--region", sls.App.AwsRegion,
+			"--profile", sls.App.AwsProfile,
 			"--stage", sls.Project.Env,
 		}, s)
 		if err != nil {
@@ -88,8 +88,8 @@ func (sls *Manager) deployWithDocker(s terminal.Step) error {
 		"--config", sls.App.File,
 		"--service", sls.App.Name,
 		"--verbose",
-		"--region", sls.Project.AwsRegion,
-		"--profile", sls.Project.AwsProfile,
+		"--region", sls.App.AwsRegion,
+		"--profile", sls.App.AwsProfile,
 		"--stage", sls.Project.Env,
 	}, s)
 	if err != nil {
@@ -149,9 +149,9 @@ func (sls *Manager) removeWithDocker(s terminal.Step) error {
 		"--config", sls.App.File,
 		"--service", sls.App.Name,
 		"--verbose",
-		"--region", sls.Project.AwsRegion,
+		"--region", sls.App.AwsRegion,
 		"--stage", sls.Project.Env,
-		"--profile", sls.Project.AwsProfile,
+		"--profile", sls.App.AwsProfile,
 	}, s)
 	if err != nil {
 		s.Abort()
