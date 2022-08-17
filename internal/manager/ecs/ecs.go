@@ -135,6 +135,16 @@ func (e *Manager) Redeploy(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
+	sess, err := utils.GetSession(&utils.SessionConfig{
+		Region:  e.App.AwsRegion,
+		Profile: e.App.AwsProfile,
+	})
+	if err != nil {
+		return fmt.Errorf("can't get session: %w", err)
+	}
+
+	e.Project.Session = sess
+
 	s := sg.Add("%s: redeploying app container...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
