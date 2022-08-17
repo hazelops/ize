@@ -128,7 +128,7 @@ func (sls *Manager) runCreateDomain(w io.Writer) error {
 				--region %s \
 				--profile %s \
 				--stage %s`,
-		nvmDir, sls.App.Name, sls.App.AwsRegion,
+		nvmDir, sls.App.NodeVersion, sls.App.AwsRegion,
 		sls.App.AwsProfile, sls.Project.Env)
 
 	cmd := exec.Command("bash", "-c", command)
