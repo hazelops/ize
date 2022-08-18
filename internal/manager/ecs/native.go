@@ -15,8 +15,6 @@ import (
 	"github.com/pterm/pterm"
 )
 
-var stoppedReason string
-
 func (e *Manager) deployLocal(w io.Writer) error {
 	pterm.SetDefaultOutput(w)
 
@@ -336,7 +334,6 @@ func getRunningTaskCount(cluster string, tasks []*string, serviceArn string, svc
 	for _, t := range dto.Tasks {
 		if *t.TaskDefinitionArn == serviceArn && *t.LastStatus == "RUNNING" {
 			count++
-			stoppedReason = *t.StoppedReason
 		}
 	}
 
@@ -361,6 +358,10 @@ func getStoppedReason(cluster string, name string, svc *ecssvc.ECS) (string, err
 	})
 	if err != nil {
 		return "", err
+	}
+
+	if dto.Tasks[0].StoppedReason == nil {
+		return "", nil
 	}
 
 	return *dto.Tasks[0].StoppedReason, nil
