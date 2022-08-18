@@ -95,13 +95,21 @@ func init() {
 	rootCmd.PersistentFlags().String("terraform-version", "", "set terraform-version")
 	rootCmd.PersistentFlags().String("prefer-runtime", "native", "set prefer runtime (native or docker)")
 	rootCmd.Flags().StringP("tag", "t", "", "set tag")
-	rootCmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
-		viper.BindPFlag(strings.ReplaceAll(f.Name, "-", "_"), rootCmd.PersistentFlags().Lookup(f.Name))
-	})
 
 	addCommands()
 
-	cobra.OnInitialize(cfg.InitConfig)
+	cobra.OnInitialize(func() {
+		bindPersistentFlags()
+		cfg.InitConfig()
+	})
+}
+
+func bindPersistentFlags() {
+	rootCmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
+		if len(f.Value.String()) != 0 {
+			viper.BindPFlag(strings.ReplaceAll(f.Name, "-", "_"), rootCmd.PersistentFlags().Lookup(f.Name))
+		}
+	})
 }
 
 func addCommands() {
