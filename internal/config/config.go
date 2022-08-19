@@ -196,6 +196,10 @@ func GetConfig() (*Project, error) {
 		cfg.TFLogPath = fmt.Sprintf("%v/tflog.txt", cfg.EnvDir)
 	}
 
+	if viper.GetString("PREFER_RUNTIME") == "docker" {
+		pterm.Warning.Println("Docker runtime is being deprecated. Please switch to native.")
+	}
+
 	if cfg.PlainText {
 		pterm.DisableStyling()
 	}
