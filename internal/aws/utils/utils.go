@@ -2,6 +2,9 @@ package utils
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/sirupsen/logrus"
 	"os"
 	"time"
 
@@ -25,19 +28,23 @@ type SessionConfig struct {
 func GetSession(c *SessionConfig) (*session.Session, error) {
 	upd := false
 
-	config := aws.NewConfig().WithRegion(c.Region)
-
+	config := aws.NewConfig().WithRegion(c.Region).WithCredentials(credentials.NewSharedCredentials("", c.Profile))
 	sess, err := session.NewSessionWithOptions(session.Options{
-		Config:  *config,
-		Profile: c.Profile,
+		Config: *config,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	devices, err := iam.New(sess).ListMFADevices(&iam.ListMFADevicesInput{})
-	if err != nil {
-		return nil, err
+	if aerr, ok := err.(awserr.Error); ok {
+		switch aerr.Code() {
+		case "SharedCredsLoad":
+			logrus.Error(err)
+			return nil, fmt.Errorf("AWS_PROFILE is not set. Please set it via AWS_PROFILE env var,--aws-profile flag or aws_profile config entry in ize.toml")
+		default:
+			return nil, err
+		}
 	}
 
 	if len(devices.MFADevices) == 0 {
