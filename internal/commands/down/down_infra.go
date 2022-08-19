@@ -64,6 +64,10 @@ func (o *DownInfraOptions) Complete() error {
 		return fmt.Errorf("can't load options for a command: %w", err)
 	}
 
+	if err := config.CheckRequirements(config.WithIzeStructure(), config.WithConfigFile()); err != nil {
+		return err
+	}
+
 	if o.Config.Terraform == nil {
 		o.Config.Terraform = map[string]*config.Terraform{}
 		o.Config.Terraform["infra"] = &config.Terraform{}
