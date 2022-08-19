@@ -197,7 +197,7 @@ func GetConfig() (*Project, error) {
 	}
 
 	if viper.GetString("PREFER_RUNTIME") == "docker" {
-		pterm.Warning.Println("Docker runtime is being deprecated. Please switch to native")
+		pterm.Warning.Println("Docker runtime is being deprecated. Please switch to native.")
 	}
 
 	if cfg.PlainText {
