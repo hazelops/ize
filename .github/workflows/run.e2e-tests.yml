@@ -29,7 +29,7 @@ jobs:
         with:
           go-version: 1.17.x
 
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v2
 
       - name: Build
@@ -51,8 +51,8 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - windows-latest
-          # - macos-latest
+#          - windows-latest
+#          - macos-latest
     runs-on: ${{ matrix.os }}
     env:
       ENV: test-ecs-apps
@@ -73,7 +73,7 @@ jobs:
         with:
           go-version: 1.17.x
 
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v2
 
       - name: Prepare Test Environment
@@ -102,7 +102,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          go test -v --timeout 0 --tags="e2e ecs_apps" ./test-e2e
+          go test -v --timeout 0 --tags="e2e ecs_apps" ./test-e2e | tee ecs-monorepo-results.json
         env:
           IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/${{ github.job }}
 
@@ -112,7 +112,10 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        os: [ ubuntu-latest, windows-latest, macos-latest  ]
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
     runs-on: ${{ matrix.os }}
     env:
       ENV: bastion-tunnel
@@ -133,7 +136,7 @@ jobs:
         with:
           go-version: 1.17.x
 
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v2
 
       - name: Prepare Test Environment
@@ -152,7 +155,7 @@ jobs:
       - name: Create AWS Profile
         run: ize gen aws-profile
 
-      - name: Install SSH key
+      - name: Install SSH Key
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ env.SSH_PUBLIC_KEY }}
@@ -166,13 +169,17 @@ jobs:
         env:
           IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/${{ github.job }}
 
-  test-terraform:
-    name: Terraform
+  terraform-commands:
+    name: Terraform Commands
     needs: build
     strategy:
       max-parallel: 1
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+
     runs-on: ${{ matrix.os }}
     env:
       ENV: test-terraform
@@ -193,7 +200,7 @@ jobs:
         with:
           go-version: 1.17.x
 
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v2
 
       - name: Prepare Test Environment
@@ -248,7 +255,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v2
 
       - name: Configure PATH

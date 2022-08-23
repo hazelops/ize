@@ -8,7 +8,8 @@ on:
     branches:
       - main
 jobs:
-  create_on_push:
+  update_github_dev_release:
+    name: Update Github dev Release
     runs-on: ubuntu-latest
     steps:
       - name: Check Out Repo
@@ -23,7 +24,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: install gemfury
+      - name: Install gemfury
         run: |
           sudo apt-get -y install ruby
           sudo gem install gemfury

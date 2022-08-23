@@ -1,4 +1,5 @@
 //go:build e2e && terraform
+// +build e2e,terraform
 
 package test
 
@@ -9,7 +10,7 @@ import (
 
 func TestIzeTerraformVersion(t *testing.T) {
 	if examplesRootDir == "" {
-		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
+		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
@@ -31,7 +32,7 @@ func TestIzeTerraformVersion(t *testing.T) {
 
 func TestIzeTerraformInit(t *testing.T) {
 	if examplesRootDir == "" {
-		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
+		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
