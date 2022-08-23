@@ -1,4 +1,4 @@
-name: "Run Tests"
+name: "Tests: E2E"
 defaults:
   run:
     shell: bash
@@ -20,8 +20,9 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - macos-latest
-          - windows-latest
+# TODO: re-enable other platforms after Ubuntu is working fine
+#          - macos-latest
+#          - windows-latest
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install Go
@@ -29,7 +30,7 @@ jobs:
         with:
           go-version: 1.17.x
 
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v2
 
       - name: Build
@@ -40,7 +41,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ize-${{ matrix.os }}
+          name: ize-${{ matrix.os }}-${{ github.sha }}
           path: ${{ github.workspace }}/ize
 
   ecs-apps-monorepo:
@@ -51,8 +52,8 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - windows-latest
-          # - macos-latest
+#          - windows-latest
+#          - macos-latest
     runs-on: ${{ matrix.os }}
     env:
       ENV: test-ecs-apps
@@ -73,7 +74,7 @@ jobs:
         with:
           go-version: 1.17.x
 
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v2
 
       - name: Prepare Test Environment
@@ -81,7 +82,7 @@ jobs:
 
       - uses: actions/download-artifact@v3
         with:
-          name: ize-${{ matrix.os }}
+          name: ize-${{ matrix.os }}-${{ github.sha }}
           path: bin
 
       - name: Make Executable
@@ -102,10 +103,9 @@ jobs:
 
       - name: Run Tests
         run: |
-          go test -v --timeout 0 --tags="e2e ecs_apps" ./test-e2e
+          go test -v --timeout 0 --tags="e2e ecs_apps" ./test-e2e | tee ecs-monorepo-results.json
         env:
           IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/${{ github.job }}
-        continue-on-error: true
 
   bastion-tunnel-monorepo:
     name: Bastion tunnel monorepo
@@ -113,7 +113,11 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        os: [ ubuntu-latest, windows-latest, macos-latest  ]
+        os:
+          - ubuntu-latest
+# TODO: re-enable other platforms after Ubuntu is working fine
+#          - windows-latest
+#          - macos-latest
     runs-on: ${{ matrix.os }}
     env:
       ENV: bastion-tunnel
@@ -134,7 +138,7 @@ jobs:
         with:
           go-version: 1.17.x
 
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v2
 
       - name: Prepare Test Environment
@@ -142,7 +146,7 @@ jobs:
 
       - uses: actions/download-artifact@v3
         with:
-          name: ize-${{ matrix.os }}
+          name: ize-${{ matrix.os }}-${{ github.sha }}
           path: bin
 
       - name: Make Executable
@@ -153,7 +157,7 @@ jobs:
       - name: Create AWS Profile
         run: ize gen aws-profile
 
-      - name: Install SSH key
+      - name: Install SSH Key
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ env.SSH_PUBLIC_KEY }}
@@ -166,15 +170,19 @@ jobs:
           go test -v --timeout 0 --tags="e2e bastion_tunnel" ./test-e2e
         env:
           IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/${{ github.job }}
-        continue-on-error: true
 
-  test-terraform:
-    name: Terraform
+  terraform-commands:
+    name: Terraform Commands
     needs: build
     strategy:
       max-parallel: 1
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        os:
+          - ubuntu-latest
+# TODO: re-enable other platforms after Ubuntu is working fine
+#          - macos-latest
+#          - windows-latest
+
     runs-on: ${{ matrix.os }}
     env:
       ENV: test-terraform
@@ -195,7 +203,7 @@ jobs:
         with:
           go-version: 1.17.x
 
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v2
 
       - name: Prepare Test Environment
@@ -203,7 +211,7 @@ jobs:
 
       - uses: actions/download-artifact@v3
         with:
-          name: ize-${{ matrix.os }}
+          name: ize-${{ matrix.os }}-${{ github.sha }}
           path: bin
 
       - name: Make Executable
@@ -227,4 +235,49 @@ jobs:
           go test -v --timeout 0 --tags="e2e terraform" ./test-e2e
         env:
           IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/ecs-apps-monorepo
-        continue-on-error: true
+
+  install-terraform-version:
+    name: Install Terraform Version
+    needs: build
+    strategy:
+      matrix:
+        terraform_version:
+          - 1.0.10
+          - 1.1.3
+          - 1.1.7
+          - 1.2.7
+        os:
+          - ubuntu-latest
+# TODO: re-enable other platforms after Ubuntu is working fine
+#          - macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Configure PATH
+        run: |
+          echo "${{ github.workspace }}/bin/" >> $GITHUB_PATH
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ize-${{ matrix.os }}-${{ github.sha }}
+          path: bin
+
+      - name: Make Executable
+        run: |
+          chmod +rx "${{ github.workspace }}/bin/ize"
+          ize --version
+
+      - name: "Check if Terraform Version is installable ${{ matrix.terraform_version }}"
+        run: |
+          cd ${{ github.workspace }}/examples/bastion-tunnel-monorepo
+          ize gen aws-profile
+          ize --terraform-version=${{ matrix.terraform_version }} terraform -version

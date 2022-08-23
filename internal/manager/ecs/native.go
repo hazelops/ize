@@ -15,8 +15,6 @@ import (
 	"github.com/pterm/pterm"
 )
 
-var stoppedReason string
-
 func (e *Manager) deployLocal(w io.Writer) error {
 	pterm.SetDefaultOutput(w)
 
@@ -43,50 +41,74 @@ func (e *Manager) deployLocal(w io.Writer) error {
 		return err
 	}
 
-	pterm.Printfln("Deploying based on task definition: %s:%d", *dtdo.TaskDefinition.Family, *dtdo.TaskDefinition.Revision)
-
-	oldTaskDef := *dtdo.TaskDefinition
-
-	var image string
-
-	for i := 0; i < len(dtdo.TaskDefinition.ContainerDefinitions); i++ {
-		container := dtdo.TaskDefinition.ContainerDefinitions[i]
-
-		// We are changing the image/tag only for the app-specific container (not sidecars)
-		if *container.Name == e.App.Name {
-			if len(e.Project.Tag) != 0 {
-				name := strings.Split(*container.Image, ":")[0]
-				image = fmt.Sprintf("%s:%s", name, e.Project.Tag)
-			} else {
-				image = e.App.Image
-			}
-
-			pterm.Printfln(`Changed image of container "%s" to : "%s" (was: "%s")`, *container.Name, image, *container.Image)
-			container.Image = &image
-		}
-	}
-
-	pterm.Println("Creating new task definition revision")
-
-	rtdo, err := svc.RegisterTaskDefinition(&ecssvc.RegisterTaskDefinitionInput{
-		ContainerDefinitions:    dtdo.TaskDefinition.ContainerDefinitions,
-		Family:                  dtdo.TaskDefinition.Family,
-		Volumes:                 dtdo.TaskDefinition.Volumes,
-		TaskRoleArn:             dtdo.TaskDefinition.TaskRoleArn,
-		ExecutionRoleArn:        dtdo.TaskDefinition.ExecutionRoleArn,
-		RuntimePlatform:         dtdo.TaskDefinition.RuntimePlatform,
-		RequiresCompatibilities: dtdo.TaskDefinition.RequiresCompatibilities,
-		NetworkMode:             dtdo.TaskDefinition.NetworkMode,
-		Cpu:                     dtdo.TaskDefinition.Cpu,
-		Memory:                  dtdo.TaskDefinition.Memory,
+	definitions, err := svc.ListTaskDefinitions(&ecssvc.ListTaskDefinitionsInput{
+		FamilyPrefix: &name,
+		Sort:         aws.String(ecssvc.SortOrderDesc),
 	})
 	if err != nil {
 		return err
 	}
 
-	pterm.Printfln("Successfully created revision: %s:%d", *rtdo.TaskDefinition.Family, *rtdo.TaskDefinition.Revision)
+	var oldTaskDef ecssvc.TaskDefinition
+	var newTaskDef ecssvc.TaskDefinition
 
-	if err = e.updateTaskDefinition(e.Project.Session, rtdo.TaskDefinition, name, "Deploying new task definition"); err != nil {
+	oldTaskDef = *dtdo.TaskDefinition
+
+	if *dtdo.TaskDefinition.TaskDefinitionArn == *definitions.TaskDefinitionArns[0] {
+		pterm.Printfln("Deploying based on task definition: %s:%d", *dtdo.TaskDefinition.Family, *dtdo.TaskDefinition.Revision)
+
+		var image string
+
+		for i := 0; i < len(dtdo.TaskDefinition.ContainerDefinitions); i++ {
+			container := dtdo.TaskDefinition.ContainerDefinitions[i]
+
+			// We are changing the image/tag only for the app-specific container (not sidecars)
+			if *container.Name == e.App.Name {
+				if len(e.Project.Tag) != 0 {
+					name := strings.Split(*container.Image, ":")[0]
+					image = fmt.Sprintf("%s:%s", name, e.Project.Tag)
+				} else {
+					image = e.App.Image
+				}
+
+				pterm.Printfln(`Changed image of container "%s" to : "%s" (was: "%s")`, *container.Name, image, *container.Image)
+				container.Image = &image
+			}
+		}
+
+		pterm.Println("Creating new task definition revision")
+
+		rtdo, err := svc.RegisterTaskDefinition(&ecssvc.RegisterTaskDefinitionInput{
+			ContainerDefinitions:    dtdo.TaskDefinition.ContainerDefinitions,
+			Family:                  dtdo.TaskDefinition.Family,
+			Volumes:                 dtdo.TaskDefinition.Volumes,
+			TaskRoleArn:             dtdo.TaskDefinition.TaskRoleArn,
+			ExecutionRoleArn:        dtdo.TaskDefinition.ExecutionRoleArn,
+			RuntimePlatform:         dtdo.TaskDefinition.RuntimePlatform,
+			RequiresCompatibilities: dtdo.TaskDefinition.RequiresCompatibilities,
+			NetworkMode:             dtdo.TaskDefinition.NetworkMode,
+			Cpu:                     dtdo.TaskDefinition.Cpu,
+			Memory:                  dtdo.TaskDefinition.Memory,
+		})
+		if err != nil {
+			return err
+		}
+
+		newTaskDef = *rtdo.TaskDefinition
+
+		pterm.Printfln("Successfully created revision: %s:%d", *rtdo.TaskDefinition.Family, *rtdo.TaskDefinition.Revision)
+	} else {
+		definition, err := svc.DescribeTaskDefinition(&ecssvc.DescribeTaskDefinitionInput{
+			TaskDefinition: definitions.TaskDefinitionArns[0],
+		})
+		if err != nil {
+			return err
+		}
+
+		newTaskDef = *definition.TaskDefinition
+	}
+
+	if err = e.updateTaskDefinition(e.Project.Session, &newTaskDef, name, "Deploying new task definition"); err != nil {
 		err := getLastContainerLogs(fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name), e.Project.Session)
 		if err != nil {
 			pterm.Println("Failed to get logs:", err)
@@ -336,7 +358,6 @@ func getRunningTaskCount(cluster string, tasks []*string, serviceArn string, svc
 	for _, t := range dto.Tasks {
 		if *t.TaskDefinitionArn == serviceArn && *t.LastStatus == "RUNNING" {
 			count++
-			stoppedReason = *t.StoppedReason
 		}
 	}
 
@@ -361,6 +382,10 @@ func getStoppedReason(cluster string, name string, svc *ecssvc.ECS) (string, err
 	})
 	if err != nil {
 		return "", err
+	}
+
+	if dto.Tasks[0].StoppedReason == nil {
+		return "", nil
 	}
 
 	return *dto.Tasks[0].StoppedReason, nil

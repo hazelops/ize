@@ -105,12 +105,13 @@ func (o *DownOptions) Complete(cmd *cobra.Command, args []string) error {
 	var err error
 
 	if len(args) == 0 {
-		if err := config.CheckRequirements(config.WithIzeStructure(), config.WithConfigFile()); err != nil {
-			return err
-		}
 		o.Config, err = config.GetConfig()
 		if err != nil {
 			return fmt.Errorf("can't load options for a command: %w", err)
+		}
+
+		if err := config.CheckRequirements(config.WithIzeStructure(), config.WithConfigFile()); err != nil {
+			return err
 		}
 
 		if o.Config.Serverless != nil {
@@ -136,12 +137,13 @@ func (o *DownOptions) Complete(cmd *cobra.Command, args []string) error {
 			o.Config.Terraform["infra"].Version = o.Config.TerraformVersion
 		}
 	} else {
-		if err := config.CheckRequirements(config.WithIzeStructure(), config.WithConfigFile()); err != nil {
-			return err
-		}
 		o.Config, err = config.GetConfig()
 		if err != nil {
 			return fmt.Errorf("can't load options for a command: %w", err)
+		}
+
+		if err := config.CheckRequirements(config.WithIzeStructure(), config.WithConfigFile()); err != nil {
+			return err
 		}
 
 		if o.Config.Serverless != nil {

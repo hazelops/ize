@@ -91,13 +91,13 @@ func NewCmdDeploy() *cobra.Command {
 func (o *Options) Complete(cmd *cobra.Command) error {
 	var err error
 
-	if err = config.CheckRequirements(config.WithIzeStructure(), config.WithConfigFile()); err != nil {
-		return err
-	}
-
 	o.Config, err = config.GetConfig()
 	if err != nil {
 		return fmt.Errorf("can't deploy your stack: %w", err)
+	}
+
+	if err = config.CheckRequirements(config.WithIzeStructure(), config.WithConfigFile()); err != nil {
+		return err
 	}
 
 	if o.Config.Serverless != nil {

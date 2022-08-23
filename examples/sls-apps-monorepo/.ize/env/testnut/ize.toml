@@ -18,15 +18,15 @@ terraform_version = "1.2.6"             # (optional) Terraform version can be se
 # config_file = ""                    	# (optional) Path to ize.toml config file can be specified, but normally it's read from the environment's directory automatically.
 # home = ""                           	# (optional) User home directory can be specified here. Normally $HOME is used.
 
-[terraform.infra]
+# [terraform.infra]
 # aws_region = ""                     	# (optional) Terraform-specific AWS Region of this environment should be specified here. Normally global AWS_REGION is used.
 # aws_profile = ""                    	# (optional) Terraform-specific AWS profile (optional) can be specified here (but normally it should be inherited from a global AWS_PROFILE).
 # version = ""                        	# (optional) Terraform version can be set here. 1.1.3 by default.
 # state_bucket_region = ""            	# (optional) Terraform state bucket region can be specified here. Normally AWS_REGION is used here. Can be overriden via env vars or flags.
 # state_bucket_name = ""              	# (optional) Terraform state bucket name can be specified here. Normally it's generated and defaults to <NAMESPACE>-tf-state
-root_domain_name = "examples.ize.sh"   	# (optional) Root domain name can be set here. This is the main domain that will be passed to the terraform. Generally if your app lives at 'api.dev.nutcorp.net' the root domain is `nutcorp.net`
+# root_domain_name = ""               	# (optional) Root domain name can be set here. This is the main domain that will be passed to the terraform. Generally if your app lives at 'api.dev.nutcorp.net' the root domain is `nutcorp.net`
 
-[ecs.squibby]
+# [ecs.<app>]
 # timeout = ""                        	# (optional) ECS deployment timeout can be specified here.
 # docker_registry = ""                	# (optional) Docker registry can be set here. By default it uses ECR repo with the name of the service.
 # skip_deploy = false                 	# skip deploy app
@@ -36,20 +36,8 @@ root_domain_name = "examples.ize.sh"   	# (optional) Root domain name can be set
 # cluster = ""                        	# (optional) ECS cluster can be specified here. By default it's derived from env & namespace
 # task_definition_revision = ""       	# (optional) Task definition revision can be specified here. By default latest revision is used to perform a deployment. Normally this parameter can be used via cli during specific deployment needs.
 
-
-[ecs.goblin]
-# timeout = ""                        	# (optional) ECS deployment timeout can be specified here.
-# docker_registry = ""                	# (optional) Docker registry can be set here. By default it uses ECR repo with the name of the service.
-# skip_deploy = false                 	# skip deploy app
-# path = ""                           	# (optional) Path to ecs app folder can be specified here. By default it's derived from apps path and app name.
-# unsafe = false                      	# (optional) Enables unsafe mode that increases deploy time on a cost of shorter healtchecks.
-# image = ""                          	# (optional) Docker image can be specified here. By default it's derived from the app name.
-# cluster = ""                        	# (optional) ECS cluster can be specified here. By default it's derived from env & namespace
-# task_definition_revision = ""       	# (optional) Task definition revision can be specified here. By default latest revision is used to perform a deployment. Normally this parameter can be used via cli during specific deployment needs.
-
-
-# [serverless.<name>]
-# node_version = "16"                   # (optional) Node version that will be used by nvm can be specified here that. Default is v14.
+[serverless.pecan]
+node_version = "16"                     # (optional) Node version that will be used by nvm can be specified here that. Default is v14.
 # path = ""                           	# (optional) Path to the serverless app directory can be specified here. Normally it's derived from app directory and app name.
 # sls_node_modules_cache_mount = ""   	# (optional) SLS node_modules cache mount path can be specified here. It's used to store cache during CI/CD process.
 # file = ""                           	# (optional) Path to serverless file can be specified here. Normally it's serverless.yml in the app directory.
