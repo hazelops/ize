@@ -13,7 +13,7 @@ import (
 
 func TestIzeGenEnv_bastion_tunnel(t *testing.T) {
 	if examplesRootDir == "" {
-		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
+		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
@@ -35,7 +35,7 @@ func TestIzeGenEnv_bastion_tunnel(t *testing.T) {
 
 func TestIzeUpAll_bastion_tunnel(t *testing.T) {
 	if examplesRootDir == "" {
-		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
+		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
 	foundIZEConfig := false
@@ -81,7 +81,7 @@ func TestIzeUpAll_bastion_tunnel(t *testing.T) {
 
 func TestIzeTunnelUp(t *testing.T) {
 	if examplesRootDir == "" {
-		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
+		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
@@ -103,7 +103,7 @@ func TestIzeTunnelUp(t *testing.T) {
 
 func TestIzeTunnelStatus(t *testing.T) {
 	if examplesRootDir == "" {
-		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
+		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
@@ -125,7 +125,7 @@ func TestIzeTunnelStatus(t *testing.T) {
 
 func TestIzeTunnelDown(t *testing.T) {
 	if examplesRootDir == "" {
-		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
+		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
@@ -147,7 +147,7 @@ func TestIzeTunnelDown(t *testing.T) {
 
 func TestIzeDownAll_bastion_tunnel(t *testing.T) {
 	if examplesRootDir == "" {
-		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
+		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)

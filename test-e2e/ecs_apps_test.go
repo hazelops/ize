@@ -1,4 +1,5 @@
 //go:build e2e && ecs_apps
+// +build e2e,ecs_apps
 
 package test
 
@@ -26,7 +27,7 @@ var (
 
 func TestIzeGenEnv_ecs_apps(t *testing.T) {
 	if examplesRootDir == "" {
-		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
+		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
@@ -48,7 +49,7 @@ func TestIzeGenEnv_ecs_apps(t *testing.T) {
 
 func TestIzeSecretsPushGoblin(t *testing.T) {
 	if examplesRootDir == "" {
-		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
+		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -98,7 +99,7 @@ func TestIzeSecretsPushGoblin(t *testing.T) {
 
 func TestIzeSecretsPushSquibby(t *testing.T) {
 	if examplesRootDir == "" {
-		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
+		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -147,7 +148,7 @@ func TestIzeSecretsPushSquibby(t *testing.T) {
 
 func TestIzeUpAll_ecs_apps(t *testing.T) {
 	if examplesRootDir == "" {
-		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
+		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
 	foundIZEConfig := false
@@ -189,7 +190,7 @@ func TestIzeUpAll_ecs_apps(t *testing.T) {
 
 func TestIzeExecGoblin(t *testing.T) {
 	if examplesRootDir == "" {
-		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
+		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
@@ -263,7 +264,7 @@ func randInt(min int, max int) int {
 
 func TestIzeDownAll_ecs_apps(t *testing.T) {
 	if examplesRootDir == "" {
-		t.Fatalf("Missing required environment variable IZE_PROJECT_TEMPLATE_PATH")
+		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
