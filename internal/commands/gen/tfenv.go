@@ -2,6 +2,11 @@ package gen
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"io/ioutil"
 	"os"
 
@@ -89,6 +94,8 @@ func (o *TfenvOptions) Run() error {
 func GenerateTerraformFiles(project *config.Project, terraformStateBucketName string) error {
 	pterm.DefaultSection.Printfln("Starting generate terraform files")
 
+	stateKey := fmt.Sprintf("%v/terraform.tfstate", project.Env)
+
 	var tf config.Terraform
 	if project.Terraform != nil {
 		tf = *project.Terraform["infra"]
@@ -99,7 +106,19 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 	}
 
 	if len(tf.StateBucketName) == 0 {
-		tf.StateBucketName = fmt.Sprintf("%s-tf-state", project.Namespace)
+		exist := checkTFState(project.Session, fmt.Sprintf("%s-tf-state", project.Namespace))
+		if exist {
+			tf.StateBucketName = fmt.Sprintf("%s-tf-state", project.Namespace)
+		} else {
+			resp, err := sts.New(project.Session).GetCallerIdentity(
+				&sts.GetCallerIdentityInput{},
+			)
+			if err != nil {
+				return err
+			}
+
+			tf.StateBucketName = fmt.Sprintf("%s-%s-tf-state", project.Namespace, *resp.Account)
+		}
 	}
 
 	if len(tf.StateBucketRegion) == 0 {
@@ -110,7 +129,7 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 		ENV:                            project.Env,
 		LOCALSTACK_ENDPOINT:            "",
 		TERRAFORM_STATE_BUCKET_NAME:    tf.StateBucketName,
-		TERRAFORM_STATE_KEY:            fmt.Sprintf("%v/terraform.tfstate", project.Env),
+		TERRAFORM_STATE_KEY:            stateKey,
 		TERRAFORM_STATE_REGION:         tf.StateBucketRegion,
 		TERRAFORM_STATE_PROFILE:        project.AwsProfile,
 		TERRAFORM_STATE_DYNAMODB_TABLE: "tf-state-lock",
@@ -183,4 +202,23 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 	pterm.DefaultSection.Printfln("Generate terraform files completed")
 
 	return nil
+}
+
+func checkTFState(sess *session.Session, name string) bool {
+	expr, _ := expression.NewBuilder().WithFilter(expression.Name("LockID").BeginsWith(name)).Build()
+	query, err := dynamodb.New(sess).Scan(&dynamodb.ScanInput{
+		FilterExpression:          expr.Filter(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		TableName:                 aws.String("tf-state-lock"),
+	})
+	if err != nil {
+		return false
+	}
+
+	if len(query.Items) == 0 {
+		return false
+	}
+
+	return true
 }
