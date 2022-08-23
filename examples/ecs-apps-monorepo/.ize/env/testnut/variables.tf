@@ -1,39 +1,13 @@
 variable "env" {}
-
-variable "namespace" {
-  default = "nutcorp"
-}
-
+variable "namespace" {}
 variable "aws_profile" {}
-
-variable "aws_region" {
-  default = "us-east-1"
-}
-
+variable "aws_region" {}
 variable "ssh_public_key" {}
-
-variable "root_domain_name" {
-  default = "examples.ize.sh"
-}
-
-variable "ec2_key_pair_name" {
-  default = "dev-nutcorp"
-}
-
+variable "root_domain_name" {}
+variable "ec2_key_pair_name" {}
 variable "docker_registry" {}
-
 variable "docker_image_tag" {}
 
-variable "nat_gateway_enabled" {
-  default = false
-  description = "Set it to true to enable NAT Gateway, otherwise nat-instance module will be used"
-}
-
-variable "monitor_enabled" {
-  default = true
-}
-
-# These are generic defaults. Feel free to reuse.
 locals {
   env                  = var.env
   namespace            = var.namespace
