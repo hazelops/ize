@@ -36,7 +36,7 @@ func TestIzeTerraformVersion(t *testing.T) {
 			t.Errorf("unexpected stderr output ize terraform version: %s", err)
 		}
 
-		if !strings.Contains(stdout, fmt.Sprintf("Terraform v%s"), terraformVersion) {
+		if !strings.Contains(stdout, fmt.Sprintf("Terraform v%s", terraformVersion)) {
 			t.Errorf("No success message detected after terraform version:\n%s", stdout)
 		}
 	}
