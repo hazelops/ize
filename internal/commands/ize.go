@@ -68,7 +68,7 @@ func Execute() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		version.CheckLatestRealese()
+		version.CheckLatestRelease()
 	}()
 
 	if err := rootCmd.Execute(); err != nil {
