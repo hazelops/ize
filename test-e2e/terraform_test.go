@@ -38,6 +38,8 @@ func TestIzeTerraformVersion(t *testing.T) {
 
 		if !strings.Contains(stdout, fmt.Sprintf("Terraform v%s", terraformVersion)) {
 			t.Errorf("No success message detected after terraform version:\n%s", stdout)
+		} else {
+			t.Log(fmt.Sprintf("PASS: v%s: terraform version"))
 		}
 	}
 }
