@@ -94,7 +94,7 @@ jobs:
         run: ize gen aws-profile
 
       - name: Generate SSH Key
-        run: ssh-keygen -q
+        run: ssh-keygen -q -f ~/.ssh/id_rsa
 
 #      - name: Install SSH key
 #        uses: shimataro/ssh-key-action@v2
