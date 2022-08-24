@@ -30,7 +30,7 @@ const (
 func ShowUpgradeCommand() error {
 	switch goos := runtime.GOOS; goos {
 	case "darwin":
-		pterm.Warning.Println("Use the command to update\n:\tbrew upgrade ize")
+		pterm.Warning.Println("Use the command to update:\n❯ brew upgrade ize")
 	case "linux":
 		distroName, err := ReadOSRelease("/etc/os-release")
 		if err != nil {
@@ -38,7 +38,7 @@ func ShowUpgradeCommand() error {
 		}
 		switch distroName["ID"] {
 		case "ubuntu":
-			pterm.Warning.Println("Use the command to update:\n\tapt update && apt install ize")
+			pterm.Warning.Println("Use the command to update:\n❯ apt update && apt install ize")
 		default:
 			pterm.Warning.Println("See https://github.com/hazelops/ize/blob/main/DOCS.md#installation")
 		}
