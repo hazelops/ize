@@ -4,29 +4,43 @@
 package test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
 
 func TestIzeTerraformVersion(t *testing.T) {
+
+	terraformVersionList := []string{
+		"1.0.10",
+		"1.1.3",
+		"1.1.7",
+		"1.2.6",
+		"1.2.7",
+	}
+
 	if examplesRootDir == "" {
 		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
-	stdout, stderr, err := ize.RunRaw("terraform", "version")
+	for _, terraformVersion := range terraformVersionList {
+		stdout, stderr, err := ize.RunRaw(fmt.Sprintf("--terraform-version=%s", terraformVersion), "terraform", "version")
 
-	if err != nil {
-		t.Errorf("error: %s", err)
-	}
+		if err != nil {
+			t.Errorf("error: %s", err)
+		}
 
-	if stderr != "" {
-		t.Errorf("unexpected stderr output ize terraform version: %s", err)
-	}
+		if stderr != "" {
+			t.Errorf("unexpected stderr output ize terraform version: %s", err)
+		}
 
-	if !strings.Contains(stdout, "Terraform v1.1.7") {
-		t.Errorf("No success message detected after terraform version:\n%s", stdout)
+		if !strings.Contains(stdout, fmt.Sprintf("Terraform v%s", terraformVersion)) {
+			t.Errorf("No success message detected after terraform version:\n%s", stdout)
+		} else {
+			t.Log(fmt.Sprintf("PASS: v%s: terraform version", terraformVersion))
+		}
 	}
 }
 
