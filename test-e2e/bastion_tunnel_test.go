@@ -48,7 +48,7 @@ func TestIzeUpInfra(t *testing.T) {
 		t.Errorf("unexpected stderr output ize up all: %s", err)
 	}
 
-	if !strings.Contains(stdout, "Deploy all completed!") {
+	if !strings.Contains(stdout, "Deploy infra completed!") {
 		t.Errorf("No success message detected after all up:\n%s", stdout)
 	}
 
