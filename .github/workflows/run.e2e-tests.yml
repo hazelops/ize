@@ -160,13 +160,16 @@ jobs:
       - name: Create AWS Profile
         run: ize gen aws-profile
 
-      - name: Install SSH Key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ env.SSH_PUBLIC_KEY }}
-          name: id_rsa.pub
-          known_hosts: unnecessary
-          if_key_exists: replace
+      - name: Generate SSH Key
+        run: ssh-keygen -q -f ~/.ssh/id_rsa
+
+#      - name: Install SSH Key
+#        uses: shimataro/ssh-key-action@v2
+#        with:
+#          key: ${{ env.SSH_PUBLIC_KEY }}
+#          name: id_rsa.pub
+#          known_hosts: unnecessary
+#          if_key_exists: replace
 
       - name: Run Tests
         run: |
