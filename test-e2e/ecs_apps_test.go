@@ -224,6 +224,10 @@ func TestCheckSecretsSquibby(t *testing.T) {
 			t.Error(err)
 		}
 
+		t.Log("----")
+		t.Log(string(body))
+		t.Log("----")
+
 		if strings.Contains(string(body), exampleSquibbySecret) {
 			return
 		}
