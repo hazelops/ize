@@ -221,7 +221,7 @@ func (o *UpOptions) runSSH(args []string) error {
 	c.Dir = o.Config.EnvDir
 
 	runner := term.Runner{}
-	_, _, code, err := runner.InteractiveRun(c)
+	_, _, code, err := runner.Run(c)
 	if err != nil {
 		return err
 	}
