@@ -1,10 +1,10 @@
-package config
+package requirements
 
 import (
 	"fmt"
 	"github.com/go-ini/ini"
+	"github.com/hazelops/ize/pkg/term"
 	"github.com/pterm/pterm"
-	"github.com/spf13/cobra"
 	"io"
 	"log"
 	"net/http"
@@ -13,41 +13,21 @@ import (
 	"runtime"
 )
 
-func CheckCommand(command string, subcommand []string) (string, error) {
-	out, err := exec.Command(command, subcommand...).Output()
+func CheckCommand(command string, subcommand []string) (bool, string) {
+	cmd := exec.Command(command, subcommand...)
+
+	out, _, _, err := term.New().InteractiveRun(cmd)
 	if err != nil {
-		return "", err
+		return false, out
 	}
 
-	return string(out), nil
+	return true, out
 }
 
 const (
 	ssmLinuxUrl = "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/%s_%s/session-manager-plugin%s"
 	ssmMacOsUrl = "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/sessionmanager-bundle.zip"
 )
-
-func ShowUpgradeCommand() error {
-	switch goos := runtime.GOOS; goos {
-	case "darwin":
-		pterm.Warning.Println("Use the command to update\n:\tbrew upgrade ize")
-	case "linux":
-		distroName, err := ReadOSRelease("/etc/os-release")
-		if err != nil {
-			return err
-		}
-		switch distroName["ID"] {
-		case "ubuntu":
-			pterm.Warning.Println("Use the command to update:\n\tapt update && apt install ize")
-		default:
-			pterm.Warning.Println("See https://github.com/hazelops/ize/blob/main/DOCS.md#installation")
-		}
-	default:
-		pterm.Warning.Println("See https://github.com/hazelops/ize/blob/main/DOCS.md#installation")
-	}
-
-	return nil
-}
 
 func downloadSSMAgentPlugin() error {
 	switch goos := runtime.GOOS; goos {
@@ -224,26 +204,4 @@ func ReadOSRelease(configfile string) (map[string]string, error) {
 	ConfigParams["ID"] = cfg.Section("").Key("ID").String()
 
 	return ConfigParams, nil
-}
-
-func GetApps(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	var apps []string
-
-	dir, _ := os.ReadDir("./apps")
-
-	if dir != nil {
-		for _, entry := range dir {
-			apps = append(apps, entry.Name())
-		}
-	}
-
-	dir, _ = os.ReadDir("./projects")
-
-	if dir != nil {
-		for _, entry := range dir {
-			apps = append(apps, entry.Name())
-		}
-	}
-
-	return apps, cobra.ShellCompDirectiveNoFileComp
 }

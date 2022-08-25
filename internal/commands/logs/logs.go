@@ -2,6 +2,7 @@ package logs
 
 import (
 	"fmt"
+	"github.com/hazelops/ize/internal/requirements"
 	"os"
 	"strings"
 	"time"
@@ -59,7 +60,7 @@ func NewCmdLogs() *cobra.Command {
 }
 
 func (o *LogsOptions) Complete(cmd *cobra.Command) error {
-	if err := config.CheckRequirements(config.WithSSMPlugin()); err != nil {
+	if err := requirements.CheckRequirements(requirements.WithSSMPlugin()); err != nil {
 		return err
 	}
 	cfg, err := config.GetConfig()

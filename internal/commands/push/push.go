@@ -3,12 +3,11 @@ package push
 import (
 	"context"
 	"fmt"
+	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager"
 	"github.com/hazelops/ize/internal/manager/alias"
-	"github.com/hazelops/ize/internal/manager/serverless"
-
-	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager/ecs"
+	"github.com/hazelops/ize/internal/manager/serverless"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"

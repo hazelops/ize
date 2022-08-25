@@ -2,6 +2,7 @@ package terraform
 
 import (
 	"fmt"
+	"github.com/hazelops/ize/internal/requirements"
 	"os"
 
 	"github.com/hazelops/ize/internal/config"
@@ -85,7 +86,7 @@ func (o *Options) Complete() error {
 		err error
 	)
 
-	if err = config.CheckRequirements(config.WithIzeStructure(), config.WithConfigFile()); err != nil {
+	if err = requirements.CheckRequirements(requirements.WithIzeStructure(), requirements.WithConfigFile()); err != nil {
 		return err
 	}
 
