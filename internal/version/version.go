@@ -33,7 +33,7 @@ func FullVersionNumber() string {
 	return versionString.String()
 }
 
-func CheckLatestRealese() {
+func CheckLatestRelease() {
 	_, err := semver.NewVersion(Version)
 	if err != nil {
 		return
@@ -50,8 +50,12 @@ func CheckLatestRealese() {
 		log.Fatal(err)
 	}
 
+	var versionChangeAction = "upgrading"
+	if Version > gr.Version {
+		versionChangeAction = "downgrading"
+	}
 	if Version != gr.Version {
-		pterm.Warning.Printfln("Newest version is %s current version is %s. Consider upgrading.", gr.Version, Version)
+		pterm.Warning.Printfln("The newest stable version is %s, but your version is %s. Consider %s.", gr.Version, Version, versionChangeAction)
 		ShowUpgradeCommand()
 	}
 }

@@ -1,7 +1,6 @@
 package tunnel
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
@@ -9,13 +8,16 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/requirements"
 	"github.com/hazelops/ize/pkg/term"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"golang.org/x/crypto/ssh"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -131,7 +133,9 @@ func (o *UpOptions) Complete() error {
 	}
 
 	if len(o.BastionHostID) == 0 && len(o.ForwardHost) == 0 {
-		bastionHostID, forwardHost, err := writeSSHConfigFromSSM(o.Config.Session, o.Config.Env, o.Config.EnvDir)
+		wr := new(SSMWrapper)
+		wr.Api = ssm.New(o.Config.Session)
+		bastionHostID, forwardHost, err := writeSSHConfigFromSSM(wr, o.Config.Env, o.Config.EnvDir)
 		if err != nil {
 			return err
 		}
@@ -168,7 +172,12 @@ func (o *UpOptions) Validate() error {
 func (o *UpOptions) Run() error {
 	logrus.Debugf("public key path: %s", o.PublicKeyFile)
 
-	err := sendSSHPublicKey(o.BastionHostID, getPublicKey(o.PublicKeyFile), o.Config.Session)
+	pk, err := getPublicKey(o.PublicKeyFile)
+	if err != nil {
+		return fmt.Errorf("can't get public key: %s", err)
+	}
+
+	err = sendSSHPublicKey(o.BastionHostID, pk, o.Config.Session)
 	if err != nil {
 		return fmt.Errorf("can't run tunnel: %s", err)
 	}
@@ -191,32 +200,11 @@ func (o *UpOptions) upTunnel() (string, error) {
 		return "", fmt.Errorf("can't run tunnel: %w", err)
 	}
 
-	var hostChecking []string
-	if o.StrictHostKeyChecking {
-		hostChecking = []string{"-o", "StrictHostKeyChecking=no"}
-	}
+	args := o.getSSHCommandArgs(sshConfigPath)
 
-	args := []string{"-M", "-t", "-S", "bastion.sock", "-fN"}
-	args = append(args, hostChecking...)
-	args = append(args, fmt.Sprintf("ubuntu@%s", o.BastionHostID))
-	args = append(args, "-F", sshConfigPath)
-
-	if _, err := os.Stat(o.PrivateKeyFile); !os.IsNotExist(err) {
-		args = append(args, "-i", o.PrivateKeyFile)
-	}
-
-	c := exec.Command("ssh", args...)
-
-	c.Dir = o.Config.EnvDir
-
-	runner := term.Runner{}
-	_, _, code, err := runner.InteractiveRun(c)
+	err := o.runSSH(args)
 	if err != nil {
 		return "", err
-	}
-
-	if code != 0 {
-		return "", fmt.Errorf("exit status: %d", code)
 	}
 
 	var forwardConfig string
@@ -227,8 +215,43 @@ func (o *UpOptions) upTunnel() (string, error) {
 	return forwardConfig, nil
 }
 
-func getTerraformOutput(sess *session.Session, env string) (terraformOutput, error) {
-	resp, err := ssm.New(sess).GetParameter(&ssm.GetParameterInput{
+func (o *UpOptions) runSSH(args []string) error {
+	c := exec.Command("ssh", args...)
+
+	c.Dir = o.Config.EnvDir
+
+	runner := term.Runner{}
+	_, _, code, err := runner.InteractiveRun(c)
+	if err != nil {
+		return err
+	}
+
+	if code != 0 {
+		return fmt.Errorf("exit status: %d", code)
+	}
+	return nil
+}
+
+func (o *UpOptions) getSSHCommandArgs(sshConfigPath string) []string {
+	args := []string{"-M", "-t", "-S", "bastion.sock", "-fN"}
+	if o.StrictHostKeyChecking {
+		args = append(args, "-o", "StrictHostKeyChecking=no")
+	}
+	args = append(args, fmt.Sprintf("ubuntu@%s", o.BastionHostID))
+	args = append(args, "-F", sshConfigPath)
+
+	if _, err := os.Stat(o.PrivateKeyFile); !os.IsNotExist(err) {
+		args = append(args, "-i", o.PrivateKeyFile)
+	}
+	return args
+}
+
+type SSMWrapper struct {
+	Api ssmiface.SSMAPI
+}
+
+func getTerraformOutput(wr *SSMWrapper, env string) (terraformOutput, error) {
+	resp, err := wr.Api.GetParameter(&ssm.GetParameterInput{
 		Name:           aws.String(fmt.Sprintf("/%s/terraform-output", env)),
 		WithDecryption: aws.Bool(true),
 	})
@@ -286,36 +309,30 @@ func sendSSHPublicKey(bastionID string, key string, sess *session.Session) error
 	return nil
 }
 
-func getPublicKey(path string) string {
+func getPublicKey(path string) (string, error) {
 	if !filepath.IsAbs(path) {
 		var err error
 		path, err = filepath.Abs(path)
 		if err != nil {
-			logrus.Fatal(err)
+			return "", err
 		}
 	}
 
 	if _, err := os.Stat(path); err != nil {
-		logrus.Fatalf("%s does not exist", path)
+		return "", fmt.Errorf("%s does not exist", path)
 	}
 
-	var key string
-	file, err := os.Open(path)
+	f, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		key = scanner.Text()
+		return "", err
 	}
 
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
+	_, _, _, _, err = ssh.ParseAuthorizedKey(f)
+	if err != nil {
+		return "", err
 	}
 
-	return key
+	return string(f), nil
 }
 
 func getHosts(config string) [][]string {
@@ -386,11 +403,11 @@ func checkPort(port int) error {
 	return nil
 }
 
-func writeSSHConfigFromSSM(sess *session.Session, env string, dir string) (string, []string, error) {
+func writeSSHConfigFromSSM(wr *SSMWrapper, env string, dir string) (string, []string, error) {
 	var bastionHostID string
 	var forwardHost []string
 
-	to, err := getTerraformOutput(sess, env)
+	to, err := getTerraformOutput(wr, env)
 	if err != nil {
 		return "", []string{}, fmt.Errorf("can't write SSH config: %w", err)
 	}
