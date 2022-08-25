@@ -74,6 +74,8 @@ func TestIzeTunnelUp(t *testing.T) {
 		t.Errorf("unexpected stderr output ize tunnel: %s", err)
 	}
 
+	t.Log(stdout)
+
 	if !strings.Contains(stdout, "Tunnel is up! Forwarded ports:") {
 		t.Errorf("No success message detected after tunnel:\n%s", stdout)
 	}

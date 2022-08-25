@@ -53,7 +53,6 @@ func New(opts ...RunnerOption) *Runner {
 type Option func(cmd *exec.Cmd)
 
 func (r Runner) Run(cmd *exec.Cmd) (stdout, stderr string, exitCode int, err error) {
-	cmd.Stdin = os.Stdin
 	outReader, err := cmd.StdoutPipe()
 	if err != nil {
 		return
