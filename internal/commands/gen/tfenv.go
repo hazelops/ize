@@ -3,9 +3,9 @@ package gen
 import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"io/ioutil"
 	"os"
@@ -205,19 +205,18 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 }
 
 func checkTFState(sess *session.Session, name string) bool {
-	expr, _ := expression.NewBuilder().WithFilter(expression.Name("LockID").BeginsWith(name)).Build()
-	query, err := dynamodb.New(sess).Scan(&dynamodb.ScanInput{
-		FilterExpression:          expr.Filter(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		TableName:                 aws.String("tf-state-lock"),
+	_, err := s3.New(sess).HeadBucket(&s3.HeadBucketInput{
+		Bucket: aws.String(name),
 	})
 	if err != nil {
-		return false
-	}
-
-	if len(query.Items) == 0 {
-		return false
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case s3.ErrCodeNoSuchBucket:
+				return false
+			default:
+				return false
+			}
+		}
 	}
 
 	return true
