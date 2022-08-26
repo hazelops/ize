@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/requirements"
 	"github.com/hazelops/ize/pkg/ssmsession"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
@@ -64,7 +65,7 @@ func NewCmdConsole() *cobra.Command {
 }
 
 func (o *Options) Complete(cmd *cobra.Command) error {
-	if err := config.CheckRequirements(config.WithSSMPlugin()); err != nil {
+	if err := requirements.CheckRequirements(requirements.WithSSMPlugin()); err != nil {
 		return err
 	}
 	cfg, err := config.GetConfig()

@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/requirements"
 	"log"
 	"net/http"
+	"runtime"
 
 	"github.com/Masterminds/semver"
 	"github.com/pterm/pterm"
@@ -55,10 +56,32 @@ func CheckLatestRelease() {
 	}
 	if Version != gr.Version {
 		pterm.Warning.Printfln("The newest stable version is %s, but your version is %s. Consider %s.", gr.Version, Version, versionChangeAction)
-		config.ShowUpgradeCommand()
+		ShowUpgradeCommand()
 	}
 }
 
 type gitResponse struct {
 	Version string `json:"tag_name"`
+}
+
+func ShowUpgradeCommand() error {
+	switch goos := runtime.GOOS; goos {
+	case "darwin":
+		pterm.Warning.Println("Use the command to update\n:\tbrew upgrade ize")
+	case "linux":
+		distroName, err := requirements.ReadOSRelease("/etc/os-release")
+		if err != nil {
+			return err
+		}
+		switch distroName["ID"] {
+		case "ubuntu":
+			pterm.Warning.Println("Use the command to update:\n\tapt update && apt install ize")
+		default:
+			pterm.Warning.Println("See https://github.com/hazelops/ize/blob/main/DOCS.md#installation")
+		}
+	default:
+		pterm.Warning.Println("See https://github.com/hazelops/ize/blob/main/DOCS.md#installation")
+	}
+
+	return nil
 }

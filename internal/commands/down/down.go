@@ -11,6 +11,7 @@ import (
 	"github.com/hazelops/ize/internal/manager/alias"
 	"github.com/hazelops/ize/internal/manager/ecs"
 	"github.com/hazelops/ize/internal/manager/serverless"
+	"github.com/hazelops/ize/internal/requirements"
 	"github.com/hazelops/ize/internal/terraform"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
@@ -110,12 +111,12 @@ func (o *DownOptions) Complete(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("can't load options for a command: %w", err)
 		}
 
-		if err := config.CheckRequirements(config.WithIzeStructure(), config.WithConfigFile()); err != nil {
+		if err := requirements.CheckRequirements(requirements.WithIzeStructure(), requirements.WithConfigFile()); err != nil {
 			return err
 		}
 
-		if o.Config.Serverless != nil {
-			if err = config.CheckRequirements(config.WithNVM()); err != nil {
+		if len(o.Config.Serverless) != 0 {
+			if err = requirements.CheckRequirements(requirements.WithNVM()); err != nil {
 				return err
 			}
 		}
@@ -142,12 +143,12 @@ func (o *DownOptions) Complete(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("can't load options for a command: %w", err)
 		}
 
-		if err := config.CheckRequirements(config.WithIzeStructure(), config.WithConfigFile()); err != nil {
+		if err := requirements.CheckRequirements(requirements.WithIzeStructure(), requirements.WithConfigFile()); err != nil {
 			return err
 		}
 
-		if o.Config.Serverless != nil {
-			if err = config.CheckRequirements(config.WithNVM()); err != nil {
+		if len(o.Config.Serverless) != 0 {
+			if err = requirements.CheckRequirements(requirements.WithNVM()); err != nil {
 				return err
 			}
 		}

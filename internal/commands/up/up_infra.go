@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/requirements"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
@@ -83,7 +84,7 @@ func (o *UpInfraOptions) Complete() error {
 		return fmt.Errorf("can't deploy your stack: %w", err)
 	}
 
-	if err := config.CheckRequirements(config.WithIzeStructure(), config.WithConfigFile()); err != nil {
+	if err := requirements.CheckRequirements(requirements.WithIzeStructure(), requirements.WithConfigFile()); err != nil {
 		return err
 	}
 
