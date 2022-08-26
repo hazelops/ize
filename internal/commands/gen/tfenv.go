@@ -106,8 +106,9 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 	}
 
 	if len(tf.StateBucketName) == 0 {
-		exist := checkTFState(project.Session, fmt.Sprintf("%s-tf-state", project.Namespace))
-		if exist {
+		legacyBucketExists := checkTFStateBucket(project.Session, fmt.Sprintf("%s-tf-state", project.Namespace))
+		// If we found an existing bucket that conforms with the legacy format use it.
+		if legacyBucketExists {
 			tf.StateBucketName = fmt.Sprintf("%s-tf-state", project.Namespace)
 		} else {
 			resp, err := sts.New(project.Session).GetCallerIdentity(
@@ -117,6 +118,7 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 				return err
 			}
 
+			// If we haven't found an existing legacy format state bucket use a <NAMESPACE>-<AWS_ACCOUNT>-tf-state bucket as default (unless overriden with other parameters.
 			tf.StateBucketName = fmt.Sprintf("%s-%s-tf-state", project.Namespace, *resp.Account)
 		}
 	}
@@ -204,7 +206,7 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 	return nil
 }
 
-func checkTFState(sess *session.Session, name string) bool {
+func checkTFStateBucket(sess *session.Session, name string) bool {
 	_, err := s3.New(sess).HeadBucket(&s3.HeadBucketInput{
 		Bucket: aws.String(name),
 	})
