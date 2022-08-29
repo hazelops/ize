@@ -39,10 +39,10 @@ func TestCheckCommand(t *testing.T) {
 				subcommand: []string{"test"},
 			},
 			want:    true,
-			wantOut: "test",
+			wantOut: "test\n",
 		},
 		{name: "failed ssm plugin", args: args{command: "session-manager-plugin"}, want: false, wantOut: ""},
-		{name: "success ssm plugin", args: args{command: "session-manager-plugin"}, want: true, wantOut: "session-manager-plugin"},
+		{name: "success ssm plugin", args: args{command: "session-manager-plugin"}, want: true, wantOut: "session-manager-plugin\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
