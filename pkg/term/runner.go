@@ -76,11 +76,8 @@ func (r Runner) Run(cmd *exec.Cmd) (stdout, stderr string, exitCode int, err err
 		cmd.Stdin = r.stdin
 	}
 
-	done := make(chan struct{})
-
 	go func() {
-		defer close(done)
-		stdout, _ = c.ExpectEOF()
+		stdout, _ = c.Expect(expect.PTSClosed, expect.EOF)
 	}()
 
 	if err = cmd.Start(); err != nil {
@@ -97,9 +94,6 @@ func (r Runner) Run(cmd *exec.Cmd) (stdout, stderr string, exitCode int, err err
 			}
 		}
 	}
-
-	c.Tty().Close()
-	<-done
 
 	return
 }
