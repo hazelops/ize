@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/requirements"
 	"github.com/hazelops/ize/pkg/term"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
@@ -88,7 +89,7 @@ func NewCmdTunnelUp() *cobra.Command {
 }
 
 func (o *UpOptions) Complete() error {
-	if err := config.CheckRequirements(config.WithSSMPlugin()); err != nil {
+	if err := requirements.CheckRequirements(requirements.WithSSMPlugin()); err != nil {
 		return err
 	}
 	cfg, err := config.GetConfig()

@@ -2,6 +2,7 @@ package exec
 
 import (
 	"fmt"
+	"github.com/hazelops/ize/internal/requirements"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -73,7 +74,7 @@ func NewCmdExec() *cobra.Command {
 }
 
 func (o *ExecOptions) Complete(cmd *cobra.Command, args []string, argsLenAtDash int) error {
-	if err := config.CheckRequirements(config.WithSSMPlugin()); err != nil {
+	if err := requirements.CheckRequirements(requirements.WithSSMPlugin()); err != nil {
 		return err
 	}
 	cfg, err := config.GetConfig()
