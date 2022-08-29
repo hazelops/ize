@@ -221,8 +221,6 @@ func (o *UpOptions) runSSH(args []string) error {
 
 	c.Dir = o.Config.EnvDir
 
-	fmt.Println(args)
-
 	runner := term.Runner{}
 	_, _, code, err := runner.Run(c)
 	if err != nil {
