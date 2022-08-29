@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
+	"time"
 
 	expect "github.com/Netflix/go-expect"
 )
@@ -61,7 +62,7 @@ func New(opts ...RunnerOption) *Runner {
 type Option func(cmd *exec.Cmd)
 
 func (r Runner) Run(cmd *exec.Cmd) (stdout, stderr string, exitCode int, err error) {
-	c, err := expect.NewConsole(expect.WithStdout(os.Stdout))
+	c, err := expect.NewConsole(expect.WithStdout(os.Stdout), expect.WithStdin(os.Stdin), expect.WithDefaultTimeout(time.Minute*5))
 	if err != nil {
 		return "", "", 0, err
 	}
