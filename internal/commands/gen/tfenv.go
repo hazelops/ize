@@ -2,6 +2,11 @@ package gen
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"io/ioutil"
 	"os"
 
@@ -89,6 +94,8 @@ func (o *TfenvOptions) Run() error {
 func GenerateTerraformFiles(project *config.Project, terraformStateBucketName string) error {
 	pterm.DefaultSection.Printfln("Starting generate terraform files")
 
+	stateKey := fmt.Sprintf("%v/terraform.tfstate", project.Env)
+
 	var tf config.Terraform
 	if project.Terraform != nil {
 		tf = *project.Terraform["infra"]
@@ -99,7 +106,21 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 	}
 
 	if len(tf.StateBucketName) == 0 {
-		tf.StateBucketName = fmt.Sprintf("%s-tf-state", project.Namespace)
+		legacyBucketExists := checkTFStateBucket(project.Session, fmt.Sprintf("%s-tf-state", project.Namespace))
+		// If we found an existing bucket that conforms with the legacy format use it.
+		if legacyBucketExists {
+			tf.StateBucketName = fmt.Sprintf("%s-tf-state", project.Namespace)
+		} else {
+			resp, err := sts.New(project.Session).GetCallerIdentity(
+				&sts.GetCallerIdentityInput{},
+			)
+			if err != nil {
+				return err
+			}
+
+			// If we haven't found an existing legacy format state bucket use a <NAMESPACE>-<AWS_ACCOUNT>-tf-state bucket as default (unless overriden with other parameters.
+			tf.StateBucketName = fmt.Sprintf("%s-%s-tf-state", project.Namespace, *resp.Account)
+		}
 	}
 
 	if len(tf.StateBucketRegion) == 0 {
@@ -110,7 +131,7 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 		ENV:                            project.Env,
 		LOCALSTACK_ENDPOINT:            "",
 		TERRAFORM_STATE_BUCKET_NAME:    tf.StateBucketName,
-		TERRAFORM_STATE_KEY:            fmt.Sprintf("%v/terraform.tfstate", project.Env),
+		TERRAFORM_STATE_KEY:            stateKey,
 		TERRAFORM_STATE_REGION:         tf.StateBucketRegion,
 		TERRAFORM_STATE_PROFILE:        project.AwsProfile,
 		TERRAFORM_STATE_DYNAMODB_TABLE: "tf-state-lock",
@@ -183,4 +204,22 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 	pterm.DefaultSection.Printfln("Generate terraform files completed")
 
 	return nil
+}
+
+func checkTFStateBucket(sess *session.Session, name string) bool {
+	_, err := s3.New(sess).HeadBucket(&s3.HeadBucketInput{
+		Bucket: aws.String(name),
+	})
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case s3.ErrCodeNoSuchBucket:
+				return false
+			default:
+				return false
+			}
+		}
+	}
+
+	return true
 }
