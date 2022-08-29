@@ -40,7 +40,7 @@ func GetFromEnv(key string, defaultValue string) string {
 // Runs a command with the arguments specified
 func (b *binary) RunRaw(args ...string) (stdout, stderr string, err error) {
 	cmd := b.NewCmd(args...)
-	cmd.Stdin = nil
+	cmd.Stdin = os.Stdin
 	cmd.Stdout = &bytes.Buffer{}
 	cmd.Stderr = &bytes.Buffer{}
 	err = cmd.Run()

@@ -39,10 +39,10 @@ func TestCheckCommand(t *testing.T) {
 				subcommand: []string{"test"},
 			},
 			want:    true,
-			wantOut: "test\n",
+			wantOut: "test",
 		},
 		{name: "failed ssm plugin", args: args{command: "session-manager-plugin"}, want: false, wantOut: ""},
-		{name: "success ssm plugin", args: args{command: "session-manager-plugin"}, want: true, wantOut: "session-manager-plugin\n"},
+		{name: "success ssm plugin", args: args{command: "session-manager-plugin"}, want: true, wantOut: "session-manager-plugin"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -60,6 +60,7 @@ func TestCheckCommand(t *testing.T) {
 					t.Fail()
 				}
 			}
+			fmt.Println(tt.wantOut)
 			exist, out := CheckCommand(tt.args.command, tt.args.subcommand)
 			if exist != tt.want {
 				t.Errorf("CheckCommand() got = %v, want %v", exist, tt.want)

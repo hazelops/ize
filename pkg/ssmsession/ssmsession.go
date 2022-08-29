@@ -3,6 +3,7 @@ package ssmsession
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -27,7 +28,7 @@ type SSMPluginCommand struct {
 
 func NewSSMPluginCommand(region string) SSMPluginCommand {
 	return SSMPluginCommand{
-		runner: term.New(),
+		runner: term.New(term.WithStdin(os.Stdin)),
 		region: region,
 	}
 }

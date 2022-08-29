@@ -16,7 +16,7 @@ import (
 func CheckCommand(command string, subcommand []string) (bool, string) {
 	cmd := exec.Command(command, subcommand...)
 
-	out, _, _, err := term.New().InteractiveRun(cmd)
+	out, _, _, err := term.New().Run(cmd)
 	if err != nil {
 		return false, out
 	}

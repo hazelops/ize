@@ -2,14 +2,12 @@ package term
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"syscall"
-	"time"
-
-	expect "github.com/Netflix/go-expect"
 )
 
 type Runner struct {
@@ -62,29 +60,34 @@ func New(opts ...RunnerOption) *Runner {
 type Option func(cmd *exec.Cmd)
 
 func (r Runner) Run(cmd *exec.Cmd) (stdout, stderr string, exitCode int, err error) {
-	c, err := expect.NewConsole(expect.WithStdout(os.Stdout), expect.WithStdin(os.Stdin), expect.WithDefaultTimeout(time.Minute*5))
-	if err != nil {
-		return "", "", 0, err
-	}
-	defer c.Close()
-
-	cmd.Stdin = c.Tty()
-	cmd.Stdout = c.Tty()
-	cmd.Stderr = c.Tty()
-
 	if r.stdin != nil {
-		cmd.Stdin = r.stdin
+		cmd.Stdin = os.Stdin
 	}
 
-	go func() {
-		stdout, _ = c.Expect(expect.PTSClosed, expect.EOF)
-	}()
+	outReader, err := cmd.StdoutPipe()
+	if err != nil {
+		return
+	}
+	errReader, err := cmd.StderrPipe()
+	if err != nil {
+		return
+	}
+
+	var bufOut, bufErr bytes.Buffer
+	outReader2 := io.TeeReader(outReader, &bufOut)
+	errReader2 := io.TeeReader(errReader, &bufErr)
 
 	if err = cmd.Start(); err != nil {
 		return
 	}
 
+	go r.printOutputWithHeader("", outReader2)
+	go r.printOutputWithHeader("", errReader2)
+
 	err = cmd.Wait()
+
+	stdout = bufOut.String()
+	stderr = bufErr.String()
 
 	if err != nil {
 		if err2, ok := err.(*exec.ExitError); ok {
@@ -94,7 +97,6 @@ func (r Runner) Run(cmd *exec.Cmd) (stdout, stderr string, exitCode int, err err
 			}
 		}
 	}
-
 	return
 }
 
