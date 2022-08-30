@@ -74,11 +74,11 @@ func NewGraph(apps map[string]*interface{}, initialStatus AppStatus) *Graph {
 	for n, s := range apps {
 		a, ok := (*s).(map[string]interface{})
 		if ok {
-			d, ok := a["depends_on"].([]interface{})
+			d, ok := a["depends_on"].([]string)
 			if ok {
 				for _, d := range d {
-					if _, ok := apps[d.(string)]; ok {
-						graph.AddEdge(n, d.(string))
+					if _, ok := apps[d]; ok {
+						graph.AddEdge(n, d)
 					}
 				}
 			}

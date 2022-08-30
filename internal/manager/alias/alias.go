@@ -3,6 +3,7 @@ package alias
 import (
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/terminal"
+	"time"
 )
 
 type Manager struct {
@@ -15,7 +16,10 @@ func (a *Manager) Deploy(ui terminal.UI) error {
 	defer sg.Wait()
 
 	s := sg.Add("%s: deployment completed!", a.App.Name)
+	defer func() { s.Abort(); time.Sleep(time.Millisecond * 200) }()
 	s.Done()
+
+	time.Sleep(time.Millisecond * 200)
 
 	return nil
 }
