@@ -60,6 +60,7 @@ func TestCheckCommand(t *testing.T) {
 					t.Fail()
 				}
 			}
+			fmt.Println(tt.wantOut)
 			exist, out := CheckCommand(tt.args.command, tt.args.subcommand)
 			if exist != tt.want {
 				t.Errorf("CheckCommand() got = %v, want %v", exist, tt.want)

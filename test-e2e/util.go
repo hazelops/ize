@@ -3,6 +3,7 @@ package test
 import (
 	"bytes"
 	"fmt"
+	"github.com/Netflix/go-expect"
 	"os"
 	"os/exec"
 	"strings"
@@ -46,6 +47,28 @@ func (b *binary) RunRaw(args ...string) (stdout, stderr string, err error) {
 	err = cmd.Run()
 	stdout = cmd.Stdout.(*bytes.Buffer).String()
 	stderr = cmd.Stderr.(*bytes.Buffer).String()
+	return
+}
+
+// Runs a command with the arguments specified in pty
+func (b *binary) RunPty(args ...string) (stdout, stderr string, err error) {
+	cmd := b.NewCmd(args...)
+	out := &bytes.Buffer{}
+	console, err := expect.NewConsole(expect.WithStdin(os.Stdin), expect.WithStdout(out))
+	if err != nil {
+		return "", "", err
+	}
+
+	cmd.Stdin = console.Tty()
+	cmd.Stdout = console.Tty()
+	cmd.Stderr = console.Tty()
+
+	go func() {
+		console.ExpectEOF()
+	}()
+	err = cmd.Start()
+	err = cmd.Wait()
+	stdout = out.String()
 	return
 }
 

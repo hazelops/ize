@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2instanceconnect"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/hazelops/ize/internal/config"
@@ -220,8 +221,8 @@ func (o *UpOptions) runSSH(args []string) error {
 
 	c.Dir = o.Config.EnvDir
 
-	runner := term.Runner{}
-	_, _, code, err := runner.InteractiveRun(c)
+	runner := term.New(term.WithStdin(os.Stdin))
+	_, _, code, err := runner.Run(c)
 	if err != nil {
 		return err
 	}
@@ -288,22 +289,13 @@ type terraformOutput struct {
 }
 
 func sendSSHPublicKey(bastionID string, key string, sess *session.Session) error {
-	// This command is executed in the bastion host and it checks if our public key is present. If it's not it uploads it to _authorized_keys file.
-	command := fmt.Sprintf(
-		`grep -qR "%s" /home/ubuntu/.ssh/authorized_keys || echo "%s" >> /home/ubuntu/.ssh/authorized_keys`,
-		key, key,
-	)
-
-	_, err := ssm.New(sess).SendCommand(&ssm.SendCommandInput{
-		InstanceIds:  []*string{&bastionID},
-		DocumentName: aws.String("AWS-RunShellScript"),
-		Comment:      aws.String("Add an SSH public key to authorized_keys"),
-		Parameters: map[string][]*string{
-			"commands": {&command},
-		},
+	_, err := ec2instanceconnect.New(sess).SendSSHPublicKey(&ec2instanceconnect.SendSSHPublicKeyInput{
+		InstanceId:     aws.String(bastionID),
+		InstanceOSUser: aws.String("ubuntu"),
+		SSHPublicKey:   aws.String(key),
 	})
 	if err != nil {
-		return fmt.Errorf("can't send SSH public key: %w", err)
+		return err
 	}
 
 	return nil

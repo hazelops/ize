@@ -2,16 +2,19 @@ package term
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"syscall"
 )
 
 type Runner struct {
 	stdout io.Writer
 	stderr io.Writer
 	dir    string
+	stdin  io.Reader
 }
 
 type RunnerOption func(*Runner)
@@ -25,6 +28,12 @@ func WithStdout(stdout io.Writer) RunnerOption {
 func WithStderr(stderr io.Writer) RunnerOption {
 	return func(r *Runner) {
 		r.stderr = stderr
+	}
+}
+
+func WithStdin(stdin io.Reader) RunnerOption {
+	return func(r *Runner) {
+		r.stdin = stdin
 	}
 }
 
@@ -50,18 +59,45 @@ func New(opts ...RunnerOption) *Runner {
 
 type Option func(cmd *exec.Cmd)
 
-func (r Runner) Run(name string, args []string, options ...Option) error {
-	cmd := exec.Command(name, args...)
-
-	cmd.Wait()
-	cmd.Stdout = r.stdout
-	cmd.Stderr = r.stderr
-	cmd.Dir = r.dir
-
-	for _, opt := range options {
-		opt(cmd)
+func (r Runner) Run(cmd *exec.Cmd) (stdout, stderr string, exitCode int, err error) {
+	if r.stdin != nil {
+		cmd.Stdin = os.Stdin
 	}
-	return cmd.Run()
+
+	outReader, err := cmd.StdoutPipe()
+	if err != nil {
+		return
+	}
+	errReader, err := cmd.StderrPipe()
+	if err != nil {
+		return
+	}
+
+	var bufOut, bufErr bytes.Buffer
+	outReader2 := io.TeeReader(outReader, &bufOut)
+	errReader2 := io.TeeReader(errReader, &bufErr)
+
+	if err = cmd.Start(); err != nil {
+		return
+	}
+
+	go r.printOutputWithHeader("", outReader2)
+	go r.printOutputWithHeader("", errReader2)
+
+	err = cmd.Wait()
+
+	stdout = bufOut.String()
+	stderr = bufErr.String()
+
+	if err != nil {
+		if err2, ok := err.(*exec.ExitError); ok {
+			if s, ok := err2.Sys().(syscall.WaitStatus); ok {
+				err = nil
+				exitCode = s.ExitStatus()
+			}
+		}
+	}
+	return
 }
 
 func (r Runner) printOutputWithHeader(header string, reader io.Reader) {
