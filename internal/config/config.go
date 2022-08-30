@@ -34,7 +34,7 @@ type Config struct {
 	IsPlainText     bool
 }
 
-func GetConfig() (*Project, error) {
+func (p *Project) GetConfig() error {
 	switch viper.GetString("log-level") {
 	case "info":
 		logrus.SetLevel(logrus.InfoLevel)
@@ -56,69 +56,70 @@ func GetConfig() (*Project, error) {
 
 	err := ConvertApps()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = ConvertInfra()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = ConvertTunnel()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	SetTag()
 	if err != nil {
-		return nil, fmt.Errorf("can't set tag: %w", err)
+		return fmt.Errorf("can't set tag: %w", err)
 	}
 
 	err = schema.Validate(viper.AllSettings())
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	logrus.Debug("config file used:", viper.ConfigFileUsed())
 
-	cfg := &Project{}
-
-	viper.Unmarshal(&cfg)
-
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  cfg.AwsRegion,
-		Profile: cfg.AwsProfile,
-	})
+	err = viper.Unmarshal(p)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	cfg.Session = sess
+	sess, err := utils.GetSession(&utils.SessionConfig{
+		Region:  p.AwsRegion,
+		Profile: p.AwsProfile,
+	})
+	if err != nil {
+		return err
+	}
+
+	p.Session = sess
 
 	resp, err := sts.New(sess).GetCallerIdentity(
 		&sts.GetCallerIdentityInput{},
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if len(cfg.DockerRegistry) == 0 {
-		cfg.DockerRegistry = fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, cfg.AwsRegion)
+	if len(p.DockerRegistry) == 0 {
+		p.DockerRegistry = fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, p.AwsRegion)
 	}
 	// Reset env directory to default because env may change
-	if len(cfg.DockerRegistry) == 0 {
-		cfg.TFLogPath = fmt.Sprintf("%v/tflog.txt", cfg.EnvDir)
+	if len(p.DockerRegistry) == 0 {
+		p.TFLogPath = fmt.Sprintf("%v/tflog.txt", p.EnvDir)
 	}
 
 	if viper.GetString("PREFER_RUNTIME") == "docker" {
 		pterm.Warning.Println("Docker runtime is being deprecated. Please switch to native.")
 	}
 
-	if cfg.PlainText {
+	if p.PlainText {
 		pterm.DisableStyling()
 	}
 
-	return cfg, nil
+	return nil
 }
 
 func SetTag() {
@@ -139,11 +140,11 @@ func InitConfig() {
 	viper.SetEnvPrefix("IZE")
 	viper.AutomaticEnv()
 
-	viper.BindEnv("ENV", "ENV")
-	viper.BindEnv("TAG", "TAG")
-	viper.BindEnv("AWS_PROFILE", "AWS_PROFILE")
-	viper.BindEnv("AWS_REGION", "AWS_REGION")
-	viper.BindEnv("NAMESPACE", "NAMESPACE")
+	_ = viper.BindEnv("ENV", "ENV")
+	_ = viper.BindEnv("TAG", "TAG")
+	_ = viper.BindEnv("AWS_PROFILE", "AWS_PROFILE")
+	_ = viper.BindEnv("AWS_REGION", "AWS_REGION")
+	_ = viper.BindEnv("NAMESPACE", "NAMESPACE")
 
 	// TODO: those static defaults should probably go to a separate package and/or function. Also would include image names and such.
 	viper.SetDefault("TERRAFORM_VERSION", "1.1.3")
@@ -198,7 +199,10 @@ func InitConfig() {
 		viper.SetDefault("ENV_DIR", fmt.Sprintf("%s/.ize/%s/%s", home, cfg.Namespace, cfg.Env))
 		_, err := os.Stat(viper.GetString("ENV_DIR"))
 		if os.IsNotExist(err) {
-			os.MkdirAll(viper.GetString("ENV_DIR"), defaultPerm)
+			err := os.MkdirAll(viper.GetString("ENV_DIR"), defaultPerm)
+			if err != nil {
+				logrus.Fatalln(err)
+			}
 		}
 	}
 }
@@ -371,7 +375,7 @@ func structToMap(item interface{}) map[string]interface{} {
 }
 
 //GetApps returns a list of application names in the directory for shell completions
-func GetApps(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func GetApps(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 	var apps []string
 
 	dir, _ := os.ReadDir("./apps")

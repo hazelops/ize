@@ -17,8 +17,19 @@ package main
 
 import (
 	"github.com/hazelops/ize/internal/commands"
+	"github.com/hazelops/ize/internal/version"
+	"sync"
 )
 
 func main() {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		version.CheckLatestRelease()
+	}()
+
 	commands.Execute()
+
+	wg.Wait()
 }

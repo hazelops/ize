@@ -147,10 +147,22 @@ func writeCredsToFile(creds *sts.Credentials, f *ini.File, filepath, profile str
 		return err
 	}
 
-	sect.NewKey("aws_access_key_id", *creds.AccessKeyId)
-	sect.NewKey("aws_secret_access_key", *creds.SecretAccessKey)
-	sect.NewKey("aws_session_token", *creds.SessionToken)
-	sect.NewKey("token_expiration", creds.Expiration.Format("2006-01-02T15:04:05Z07:00"))
+	_, err = sect.NewKey("aws_access_key_id", *creds.AccessKeyId)
+	if err != nil {
+		return err
+	}
+	_, err = sect.NewKey("aws_secret_access_key", *creds.SecretAccessKey)
+	if err != nil {
+		return err
+	}
+	_, err = sect.NewKey("aws_session_token", *creds.SessionToken)
+	if err != nil {
+		return err
+	}
+	_, err = sect.NewKey("token_expiration", creds.Expiration.Format("2006-01-02T15:04:05Z07:00"))
+	if err != nil {
+		return err
+	}
 
 	err = f.SaveTo(filepath)
 	if err != nil {

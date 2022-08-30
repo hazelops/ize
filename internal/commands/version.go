@@ -13,7 +13,7 @@ func NewVersionCmd() *cobra.Command {
 		Short: "Show IZE version",
 		Run: func(cmd *cobra.Command, args []string) {
 			c := cmd.Parent()
-			tmpl(c.OutOrStdout(), c.VersionTemplate(), c)
+			_ = tmpl(c.OutOrStdout(), c.VersionTemplate(), c)
 		},
 	}
 
