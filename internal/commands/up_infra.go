@@ -35,12 +35,14 @@ var upInfraExample = templates.Examples(`
 	ize up infra
 `)
 
-func NewUpInfraFlags() *UpInfraOptions {
-	return &UpInfraOptions{}
+func NewUpInfraFlags(project *config.Project) *UpInfraOptions {
+	return &UpInfraOptions{
+		Config: project,
+	}
 }
 
-func NewCmdUpInfra() *cobra.Command {
-	o := NewUpInfraFlags()
+func NewCmdUpInfra(project *config.Project) *cobra.Command {
+	o := NewUpInfraFlags(project)
 
 	cmd := &cobra.Command{
 		Use:     "infra",

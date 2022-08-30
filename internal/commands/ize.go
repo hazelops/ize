@@ -111,7 +111,8 @@ func Execute() {
 			slices.Contains(os.Args, "version") ||
 			slices.Contains(os.Args, "init") ||
 			slices.Contains(os.Args, "validate") ||
-			slices.Contains(os.Args, "config")) {
+			slices.Contains(os.Args, "config")) ||
+			slices.Contains(os.Args, "terraform") {
 			err := cfg.GetConfig()
 			if err != nil {
 				pterm.Error.Println(err)
