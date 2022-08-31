@@ -57,6 +57,9 @@ jobs:
       - name: Build
         run: go build -v ./...
 
+      - name: Generate Test SSH Key
+        run: ssh-keygen -q -f ~/.ssh/id_rsa
+
       - name: Test
         run: go test -v ./... -race -coverprofile=coverage.out -covermode=atomic
 
