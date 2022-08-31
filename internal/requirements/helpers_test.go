@@ -60,7 +60,12 @@ func TestCheckCommand(t *testing.T) {
 					t.Fail()
 				}
 			}
-			fmt.Println(tt.wantOut)
+			if tt.name == "failed ssm plugin" {
+				err := os.Setenv("PATH", "")
+				if err != nil {
+					t.Fail()
+				}
+			}
 			exist, out := CheckCommand(tt.args.command, tt.args.subcommand)
 			if exist != tt.want {
 				t.Errorf("CheckCommand() got = %v, want %v", exist, tt.want)
