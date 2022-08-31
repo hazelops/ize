@@ -334,7 +334,7 @@ func isDeployed(svc *ecssvc.ECS, name string, cluster string) (bool, error) {
 		return false, err
 	}
 
-	if runningTasks.TaskArns == nil {
+	if len(runningTasks.TaskArns) == 0 {
 		return *dso.Services[0].DesiredCount == 0, nil
 	}
 
