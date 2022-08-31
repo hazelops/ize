@@ -358,93 +358,93 @@ aws_secret_access_key = test
 	return session.Must(session.NewSession(aws.NewConfig().WithCredentials(credentials.NewSharedCredentials(filepath.Join(tmp, "credentials"), "test"))))
 }
 
-func TestUpOptions_runSSH(t *testing.T) {
-	type fields struct {
-		Config                *config.Project
-		PrivateKeyFile        string
-		PublicKeyFile         string
-		BastionHostID         string
-		ForwardHost           []string
-		StrictHostKeyChecking bool
-	}
-	type args struct {
-		args []string
-	}
-	tests := []struct {
-		name         string
-		fields       fields
-		args         args
-		wantErr      bool
-		wantNotFound bool
-	}{
-		{
-			name: "success",
-			fields: fields{
-				Config: &config.Project{EnvDir: func() string {
-					temp, _ := os.MkdirTemp("", "test")
-					return temp
-				}()},
-			},
-			args: args{args: []string{"-M", "-t", "-S", "bastion.sock", "git@github.com", "-fN", "-o", "StrictHostKeyChecking=no"}},
-		},
-		{
-			name: "not found",
-			fields: fields{
-				Config: &config.Project{EnvDir: func() string {
-					temp, _ := os.MkdirTemp("", "test")
-					return temp
-				}()},
-			},
-			args:         args{args: []string{"-M", "-t", "-S", "bastion.sock", "git@github.com", "-fN", "-o", "StrictHostKeyChecking=no"}},
-			wantErr:      false,
-			wantNotFound: true,
-		},
-		{
-			name: "incorrect host",
-			fields: fields{
-				Config: &config.Project{EnvDir: func() string {
-					temp, _ := os.MkdirTemp("", "test")
-					return temp
-				}()},
-			},
-			args:         args{args: []string{"-M", "-t", "-S", "bastion.sock", "git@incorrecthost.com", "-fN", "-o", "StrictHostKeyChecking=no"}},
-			wantErr:      true,
-			wantNotFound: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			o := &TunnelUpOptions{
-				Config:                tt.fields.Config,
-				PrivateKeyFile:        tt.fields.PrivateKeyFile,
-				PublicKeyFile:         tt.fields.PublicKeyFile,
-				BastionHostID:         tt.fields.BastionHostID,
-				ForwardHost:           tt.fields.ForwardHost,
-				StrictHostKeyChecking: tt.fields.StrictHostKeyChecking,
-			}
-
-			if err := o.runSSH(tt.args.args); (err != nil) != tt.wantErr {
-				t.Errorf("runSSH() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if tt.wantNotFound {
-				tt.fields.Config.EnvDir = func() string {
-					temp, _ := os.MkdirTemp("", "not_found")
-					return temp
-				}()
-			}
-
-			_, err := os.Stat(filepath.Join(tt.fields.Config.EnvDir, "bastion.sock"))
-			if os.IsNotExist(err) != tt.wantNotFound {
-				t.Error("bastion.sock not found")
-				return
-			}
-
-			return
-		})
-	}
-}
+//func TestUpOptions_runSSH(t *testing.T) {
+//	type fields struct {
+//		Config                *config.Project
+//		PrivateKeyFile        string
+//		PublicKeyFile         string
+//		BastionHostID         string
+//		ForwardHost           []string
+//		StrictHostKeyChecking bool
+//	}
+//	type args struct {
+//		args []string
+//	}
+//	tests := []struct {
+//		name         string
+//		fields       fields
+//		args         args
+//		wantErr      bool
+//		wantNotFound bool
+//	}{
+//		{
+//			name: "success",
+//			fields: fields{
+//				Config: &config.Project{EnvDir: func() string {
+//					temp, _ := os.MkdirTemp("", "test")
+//					return temp
+//				}()},
+//			},
+//			args: args{args: []string{"-M", "-t", "-S", "bastion.sock", "git@github.com", "-fN", "-o", "StrictHostKeyChecking=no"}},
+//		},
+//		{
+//			name: "not found",
+//			fields: fields{
+//				Config: &config.Project{EnvDir: func() string {
+//					temp, _ := os.MkdirTemp("", "test")
+//					return temp
+//				}()},
+//			},
+//			args:         args{args: []string{"-M", "-t", "-S", "bastion.sock", "git@github.com", "-fN", "-o", "StrictHostKeyChecking=no"}},
+//			wantErr:      false,
+//			wantNotFound: true,
+//		},
+//		{
+//			name: "incorrect host",
+//			fields: fields{
+//				Config: &config.Project{EnvDir: func() string {
+//					temp, _ := os.MkdirTemp("", "test")
+//					return temp
+//				}()},
+//			},
+//			args:         args{args: []string{"-M", "-t", "-S", "bastion.sock", "git@incorrecthost.com", "-fN", "-o", "StrictHostKeyChecking=no"}},
+//			wantErr:      true,
+//			wantNotFound: true,
+//		},
+//	}
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			o := &TunnelUpOptions{
+//				Config:                tt.fields.Config,
+//				PrivateKeyFile:        tt.fields.PrivateKeyFile,
+//				PublicKeyFile:         tt.fields.PublicKeyFile,
+//				BastionHostID:         tt.fields.BastionHostID,
+//				ForwardHost:           tt.fields.ForwardHost,
+//				StrictHostKeyChecking: tt.fields.StrictHostKeyChecking,
+//			}
+//
+//			if err := o.runSSH(tt.args.args); (err != nil) != tt.wantErr {
+//				t.Errorf("runSSH() error = %v, wantErr %v", err, tt.wantErr)
+//				return
+//			}
+//
+//			if tt.wantNotFound {
+//				tt.fields.Config.EnvDir = func() string {
+//					temp, _ := os.MkdirTemp("", "not_found")
+//					return temp
+//				}()
+//			}
+//
+//			_, err := os.Stat(filepath.Join(tt.fields.Config.EnvDir, "bastion.sock"))
+//			if os.IsNotExist(err) != tt.wantNotFound {
+//				t.Error("bastion.sock not found")
+//				return
+//			}
+//
+//			return
+//		})
+//	}
+//}
 
 func Test_getPublicKey(t *testing.T) {
 	tmp, _ := os.MkdirTemp("", "test")
