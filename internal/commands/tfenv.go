@@ -113,7 +113,7 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 				return err
 			}
 
-			// If we haven't found an existing legacy format state bucket use a <NAMESPACE>-<AWS_ACCOUNT>-tf-state bucket as default (unless override with other parameters).
+			// If we haven't found an existing legacy format state bucket use a <NAMESPACE>-<AWS_ACCOUNT>-tf-state bucket as default (unless overridden with other parameters).
 			tf.StateBucketName = fmt.Sprintf("%s-%s-tf-state", project.Namespace, *resp.Account)
 		}
 	}

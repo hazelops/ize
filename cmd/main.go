@@ -22,6 +22,7 @@ import (
 )
 
 func main() {
+	// Running a version check in goroutine and waiting finished
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
