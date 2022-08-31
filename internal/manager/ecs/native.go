@@ -108,7 +108,7 @@ func (e *Manager) deployLocal(w io.Writer) error {
 		newTaskDef = *definition.TaskDefinition
 	}
 
-	if err = e.updateTaskDefinition(e.Project.Session, &newTaskDef, name, "Deploying new task definition"); err != nil {
+	if err = e.updateTaskDefinition(e.Project.Session, &newTaskDef, &oldTaskDef, name, "Deploying new task definition"); err != nil {
 		err := getLastContainerLogs(fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name), e.Project.Session)
 		if err != nil {
 			pterm.Println("Failed to get logs:", err)
@@ -123,15 +123,11 @@ func (e *Manager) deployLocal(w io.Writer) error {
 
 		pterm.Printfln("Rolling back to old task definition: %s:%d", *oldTaskDef.Family, *oldTaskDef.Revision)
 		e.App.Timeout = 600
-		if err = e.updateTaskDefinition(e.Project.Session, &oldTaskDef, name, "Deploying previous task definition"); err != nil {
+		if err = e.updateTaskDefinition(e.Project.Session, &oldTaskDef, &newTaskDef, name, "Deploying previous task definition"); err != nil {
 			return fmt.Errorf("unable to rollback to old task definition: %w", err)
 		}
 
 		pterm.Println("Rollback successful")
-
-		if err = deregisterTaskDefinition(svc, &oldTaskDef); err != nil {
-			return err
-		}
 
 		return fmt.Errorf("deployment failed, but service has been rolled back to previous task definition: %s", *oldTaskDef.Family)
 	}
@@ -202,7 +198,7 @@ func (e *Manager) redeployLocal(w io.Writer) error {
 		}
 	}
 
-	if err = e.updateTaskDefinition(e.Project.Session, td, name, "Redeploying new task definition"); err != nil {
+	if err = e.updateTaskDefinition(e.Project.Session, td, nil, name, "Redeploying new task definition"); err != nil {
 		pterm.Println(err)
 		err := getLastContainerLogs(fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name), e.Project.Session)
 		if err != nil {
@@ -230,7 +226,7 @@ func getService(name string, cluster string, svc *ecssvc.ECS) (*ecssvc.DescribeS
 	return dso, nil
 }
 
-func (e *Manager) updateTaskDefinition(sess *session.Session, td *ecssvc.TaskDefinition, serviceName string, title string) error {
+func (e *Manager) updateTaskDefinition(sess *session.Session, newTD *ecssvc.TaskDefinition, oldTD *ecssvc.TaskDefinition, serviceName string, title string) error {
 	pterm.Println("Updating service")
 
 	svc := ecssvc.New(sess)
@@ -238,7 +234,7 @@ func (e *Manager) updateTaskDefinition(sess *session.Session, td *ecssvc.TaskDef
 	uso, err := svc.UpdateService(&ecssvc.UpdateServiceInput{
 		Service:            aws.String(serviceName),
 		Cluster:            aws.String(e.App.Cluster),
-		TaskDefinition:     aws.String(*td.TaskDefinitionArn),
+		TaskDefinition:     aws.String(*newTD.TaskDefinitionArn),
 		ForceNewDeployment: aws.Bool(true),
 	})
 	if err != nil {
@@ -267,7 +263,7 @@ func (e *Manager) updateTaskDefinition(sess *session.Session, td *ecssvc.TaskDef
 		}
 	}
 
-	pterm.Printfln("Successfully changed task definition to: %s:%d", *td.Family, *td.Revision)
+	pterm.Printfln("Successfully changed task definition to: %s:%d", *newTD.Family, *newTD.Revision)
 	pterm.Println(title)
 
 	waitingTimeout := time.Now().Add(time.Duration(e.App.Timeout) * time.Second)
@@ -301,6 +297,12 @@ func (e *Manager) updateTaskDefinition(sess *session.Session, td *ecssvc.TaskDef
 		})
 		if err != nil {
 			return fmt.Errorf("unable to modify target group: %w", err)
+		}
+	}
+
+	if oldTD != nil {
+		if err = deregisterTaskDefinition(svc, oldTD); err != nil {
+			return err
 		}
 	}
 
