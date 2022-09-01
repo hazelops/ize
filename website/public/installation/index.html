@@ -1,0 +1,1085 @@
+<html><head><style>/* PDF Specific */
+
+@media print {
+  body {
+    min-width: initial;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+}
+
+/* General */
+
+.octicon {
+  display: inline-block;
+  fill: currentColor;
+  vertical-align: text-bottom;
+}
+
+.anchor {
+  float: left;
+  line-height: 1;
+  margin-left: -20px;
+  padding-right: 4px;
+}
+
+.anchor:focus {
+  outline: none;
+}
+
+h1 .octicon-link,
+h2 .octicon-link,
+h3 .octicon-link,
+h4 .octicon-link,
+h5 .octicon-link,
+h6 .octicon-link {
+  color: #1b1f23;
+  vertical-align: middle;
+  visibility: hidden;
+}
+
+h1:hover .anchor,
+h2:hover .anchor,
+h3:hover .anchor,
+h4:hover .anchor,
+h5:hover .anchor,
+h6:hover .anchor {
+  text-decoration: none;
+}
+
+h1:hover .anchor .octicon-link,
+h2:hover .anchor .octicon-link,
+h3:hover .anchor .octicon-link,
+h4:hover .anchor .octicon-link,
+h5:hover .anchor .octicon-link,
+h6:hover .anchor .octicon-link {
+  visibility: visible;
+}
+
+h1:hover .anchor .octicon-link:before,
+h2:hover .anchor .octicon-link:before,
+h3:hover .anchor .octicon-link:before,
+h4:hover .anchor .octicon-link:before,
+h5:hover .anchor .octicon-link:before,
+h6:hover .anchor .octicon-link:before {
+  width: 16px;
+  height: 16px;
+  content: ' ';
+  display: inline-block;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' version='1.1' width='16' height='16' aria-hidden='true'%3E%3Cpath fill-rule='evenodd' d='M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z'%3E%3C/path%3E%3C/svg%3E");
+}
+
+body {
+  -ms-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+  -webkit-print-color-adjust: exact;
+  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial,
+    sans-serif, Apple Color Emoji, Segoe UI Emoji;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #24292e;
+  word-wrap: break-word;
+  box-sizing: border-box;
+  min-width: 200px;
+  max-width: 980px;
+  margin: 1rem auto;
+}
+
+details {
+  display: block;
+}
+
+summary {
+  display: list-item;
+}
+
+a {
+  background-color: initial;
+}
+
+a:active,
+a:hover {
+  outline-width: 0;
+}
+
+strong {
+  font-weight: inherit;
+  font-weight: bolder;
+}
+
+h1 {
+  font-size: 2em;
+  margin: 0.67em 0;
+}
+
+img {
+  border-style: none;
+}
+
+code,
+kbd,
+pre {
+  font-family: monospace, monospace;
+  font-size: 1em;
+}
+
+hr {
+  box-sizing: initial;
+  height: 0;
+  overflow: visible;
+}
+
+input {
+  font: inherit;
+  margin: 0;
+}
+
+input {
+  overflow: visible;
+}
+
+[type='checkbox'] {
+  box-sizing: border-box;
+  padding: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+input {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+a {
+  color: #0366d6;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+strong {
+  font-weight: 600;
+}
+
+hr {
+  height: 0;
+  margin: 15px 0;
+  overflow: hidden;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #dfe2e5;
+}
+
+hr:after,
+hr:before {
+  display: table;
+  content: '';
+}
+
+hr:after {
+  clear: both;
+}
+
+table {
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+
+td,
+th {
+  padding: 0;
+}
+
+details summary {
+  cursor: pointer;
+}
+
+kbd {
+  display: inline-block;
+  padding: 3px 5px;
+  font: 11px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+  line-height: 10px;
+  color: #444d56;
+  vertical-align: middle;
+  background-color: #fafbfc;
+  border: 1px solid #d1d5da;
+  border-radius: 3px;
+  box-shadow: inset 0 -1px 0 #d1d5da;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+h1 {
+  font-size: 32px;
+}
+
+h1,
+h2 {
+  font-weight: 600;
+}
+
+h2 {
+  font-size: 24px;
+}
+
+h3 {
+  font-size: 20px;
+}
+
+h3,
+h4 {
+  font-weight: 600;
+}
+
+h4 {
+  font-size: 16px;
+}
+
+h5 {
+  font-size: 14px;
+}
+
+h5,
+h6 {
+  font-weight: 600;
+}
+
+h6 {
+  font-size: 12px;
+}
+
+p {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+blockquote {
+  margin: 0;
+}
+
+ol,
+ul {
+  padding-left: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+ol ol,
+ul ol {
+  list-style-type: lower-roman;
+}
+
+ol ol ol,
+ol ul ol,
+ul ol ol,
+ul ul ol {
+  list-style-type: lower-alpha;
+}
+
+dd {
+  margin-left: 0;
+}
+
+code,
+pre {
+  font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+  font-size: 12px;
+}
+
+pre {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+input::-webkit-inner-spin-button,
+input::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+:checked + .radio-label {
+  position: relative;
+  z-index: 1;
+  border-color: #0366d6;
+}
+
+.border {
+  border: 1px solid #e1e4e8 !important;
+}
+
+.border-0 {
+  border: 0 !important;
+}
+
+.border-bottom {
+  border-bottom: 1px solid #e1e4e8 !important;
+}
+
+.rounded-1 {
+  border-radius: 3px !important;
+}
+
+.bg-white {
+  background-color: #fff !important;
+}
+
+.bg-gray-light {
+  background-color: #fafbfc !important;
+}
+
+.text-gray-light {
+  color: #6a737d !important;
+}
+
+.mb-0 {
+  margin-bottom: 0 !important;
+}
+
+.my-2 {
+  margin-top: 8px !important;
+  margin-bottom: 8px !important;
+}
+
+.pl-0 {
+  padding-left: 0 !important;
+}
+
+.py-0 {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.pl-1 {
+  padding-left: 4px !important;
+}
+
+.pl-2 {
+  padding-left: 8px !important;
+}
+
+.py-2 {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+.pl-3,
+.px-3 {
+  padding-left: 16px !important;
+}
+
+.px-3 {
+  padding-right: 16px !important;
+}
+
+.pl-4 {
+  padding-left: 24px !important;
+}
+
+.pl-5 {
+  padding-left: 32px !important;
+}
+
+.pl-6 {
+  padding-left: 40px !important;
+}
+
+.f6 {
+  font-size: 12px !important;
+}
+
+.lh-condensed {
+  line-height: 1.25 !important;
+}
+
+.text-bold {
+  font-weight: 600 !important;
+}
+
+.pl-c {
+  color: #6a737d;
+}
+
+.pl-c1,
+.pl-s .pl-v {
+  color: #005cc5;
+}
+
+.pl-e,
+.pl-en {
+  color: #6f42c1;
+}
+
+.pl-s .pl-s1,
+.pl-smi {
+  color: #24292e;
+}
+
+.pl-ent {
+  color: #22863a;
+}
+
+.pl-k {
+  color: #d73a49;
+}
+
+.pl-pds,
+.pl-s,
+.pl-s .pl-pse .pl-s1,
+.pl-sr,
+.pl-sr .pl-cce,
+.pl-sr .pl-sra,
+.pl-sr .pl-sre {
+  color: #032f62;
+}
+
+.pl-smw,
+.pl-v {
+  color: #e36209;
+}
+
+.pl-bu {
+  color: #b31d28;
+}
+
+.pl-ii {
+  color: #fafbfc;
+  background-color: #b31d28;
+}
+
+.pl-c2 {
+  color: #fafbfc;
+  background-color: #d73a49;
+}
+
+.pl-c2:before {
+  content: '^M';
+}
+
+.pl-sr .pl-cce {
+  font-weight: 700;
+  color: #22863a;
+}
+
+.pl-ml {
+  color: #735c0f;
+}
+
+.pl-mh,
+.pl-mh .pl-en,
+.pl-ms {
+  font-weight: 700;
+  color: #005cc5;
+}
+
+.pl-mi {
+  font-style: italic;
+  color: #24292e;
+}
+
+.pl-mb {
+  font-weight: 700;
+  color: #24292e;
+}
+
+.pl-md {
+  color: #b31d28;
+  background-color: #ffeef0;
+}
+
+.pl-mi1 {
+  color: #22863a;
+  background-color: #f0fff4;
+}
+
+.pl-mc {
+  color: #e36209;
+  background-color: #ffebda;
+}
+
+.pl-mi2 {
+  color: #f6f8fa;
+  background-color: #005cc5;
+}
+
+.pl-mdr {
+  font-weight: 700;
+  color: #6f42c1;
+}
+
+.pl-ba {
+  color: #586069;
+}
+
+.pl-sg {
+  color: #959da5;
+}
+
+.pl-corl {
+  text-decoration: underline;
+  color: #032f62;
+}
+
+.mb-0 {
+  margin-bottom: 0 !important;
+}
+
+.my-2 {
+  margin-bottom: 8px !important;
+}
+
+.my-2 {
+  margin-top: 8px !important;
+}
+
+.pl-0 {
+  padding-left: 0 !important;
+}
+
+.py-0 {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.pl-1 {
+  padding-left: 4px !important;
+}
+
+.pl-2 {
+  padding-left: 8px !important;
+}
+
+.py-2 {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+.pl-3 {
+  padding-left: 16px !important;
+}
+
+.pl-4 {
+  padding-left: 24px !important;
+}
+
+.pl-5 {
+  padding-left: 32px !important;
+}
+
+.pl-6 {
+  padding-left: 40px !important;
+}
+
+.pl-7 {
+  padding-left: 48px !important;
+}
+
+.pl-8 {
+  padding-left: 64px !important;
+}
+
+.pl-9 {
+  padding-left: 80px !important;
+}
+
+.pl-10 {
+  padding-left: 96px !important;
+}
+
+.pl-11 {
+  padding-left: 112px !important;
+}
+
+.pl-12 {
+  padding-left: 128px !important;
+}
+
+hr {
+  border-bottom-color: #eee;
+}
+
+kbd {
+  display: inline-block;
+  padding: 3px 5px;
+  font: 11px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+  line-height: 10px;
+  color: #444d56;
+  vertical-align: middle;
+  background-color: #fafbfc;
+  border: 1px solid #d1d5da;
+  border-radius: 3px;
+  box-shadow: inset 0 -1px 0 #d1d5da;
+}
+
+body:after,
+body:before {
+  display: table;
+  content: '';
+}
+
+body:after {
+  clear: both;
+}
+
+body > :first-child {
+  margin-top: 0 !important;
+}
+
+body > :last-child {
+  margin-bottom: 0 !important;
+}
+
+a:not([href]) {
+  color: inherit;
+  text-decoration: none;
+}
+
+blockquote,
+details,
+dl,
+ol,
+p,
+pre,
+table,
+ul {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+hr {
+  height: 0.25em;
+  padding: 0;
+  margin: 24px 0;
+  background-color: #e1e4e8;
+  border: 0;
+}
+
+blockquote {
+  padding: 0 1em;
+  color: #6a737d;
+  border-left: 0.25em solid #dfe2e5;
+}
+
+blockquote > :first-child {
+  margin-top: 0;
+}
+
+blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+h1 {
+  font-size: 2em;
+}
+
+h1,
+h2 {
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #eaecef;
+}
+
+h2 {
+  font-size: 1.5em;
+}
+
+h3 {
+  font-size: 1.25em;
+}
+
+h4 {
+  font-size: 1em;
+}
+
+h5 {
+  font-size: 0.875em;
+}
+
+h6 {
+  font-size: 0.85em;
+  color: #6a737d;
+}
+
+ol,
+ul {
+  padding-left: 2em;
+}
+
+ol ol,
+ol ul,
+ul ol,
+ul ul {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+li {
+  word-wrap: break-all;
+}
+
+li > p {
+  margin-top: 16px;
+}
+
+li + li {
+  margin-top: 0.25em;
+}
+
+dl {
+  padding: 0;
+}
+
+dl dt {
+  padding: 0;
+  margin-top: 16px;
+  font-size: 1em;
+  font-style: italic;
+  font-weight: 600;
+}
+
+dl dd {
+  padding: 0 16px;
+  margin-bottom: 16px;
+}
+
+table {
+  display: block;
+  width: 100%;
+  overflow: auto;
+}
+
+table th {
+  font-weight: 600;
+}
+
+table td,
+table th {
+  padding: 6px 13px;
+  border: 1px solid #dfe2e5;
+}
+
+table tr {
+  background-color: #fff;
+  border-top: 1px solid #c6cbd1;
+}
+
+table tr:nth-child(2n) {
+  background-color: #f6f8fa;
+}
+
+img {
+  max-width: 80%;
+  box-sizing: initial;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  background-color: #fff;
+}
+
+code {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(27, 31, 35, 0.05);
+  border-radius: 3px;
+}
+
+pre {
+  word-wrap: normal;
+}
+
+pre > code {
+  padding: 0;
+  margin: 0;
+  font-size: 100%;
+  word-break: normal;
+  white-space: pre;
+  background: transparent;
+  border: 0;
+}
+
+.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 0.5em;
+  color: #333;
+  -webkit-print-color-adjust: exact;
+  background: #f8f8f8;
+}
+
+.hljs pre {
+  margin-bottom: 0;
+  word-break: normal;
+}
+
+.hljs pre,
+pre {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: #f6f8fa;
+  -webkit-print-color-adjust: exact;
+
+  border-radius: 3px;
+}
+
+pre code {
+  display: inline;
+  max-width: auto;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  line-height: inherit;
+  word-wrap: normal;
+  background-color: initial;
+  border: 0;
+}
+
+.commit-tease-sha {
+  display: inline-block;
+  font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+  font-size: 90%;
+  color: #444d56;
+}
+
+.full-commit .btn-outline:not(:disabled):hover {
+  color: #005cc5;
+  border-color: #005cc5;
+}
+
+.blob-wrapper {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.blob-wrapper-embedded {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.blob-num {
+  width: 1%;
+  min-width: 50px;
+  padding-right: 10px;
+  padding-left: 10px;
+  font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+  font-size: 12px;
+  line-height: 20px;
+  color: rgba(27, 31, 35, 0.3);
+  text-align: right;
+  white-space: nowrap;
+  vertical-align: top;
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.blob-num:hover {
+  color: rgba(27, 31, 35, 0.6);
+}
+
+.blob-num:before {
+  content: attr(data-line-number);
+}
+
+.blob-code {
+  position: relative;
+  padding-right: 10px;
+  padding-left: 10px;
+  line-height: 20px;
+  vertical-align: top;
+}
+
+.blob-code-inner {
+  overflow: visible;
+  font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+  font-size: 12px;
+  color: #24292e;
+  word-wrap: normal;
+  white-space: pre;
+}
+
+.pl-token.active,
+.pl-token:hover {
+  cursor: pointer;
+  background: #ffea7f;
+}
+
+.tab-size[data-tab-size='1'] {
+  -moz-tab-size: 1;
+  tab-size: 1;
+}
+
+.tab-size[data-tab-size='2'] {
+  -moz-tab-size: 2;
+  tab-size: 2;
+}
+
+.tab-size[data-tab-size='3'] {
+  -moz-tab-size: 3;
+  tab-size: 3;
+}
+
+.tab-size[data-tab-size='4'] {
+  -moz-tab-size: 4;
+  tab-size: 4;
+}
+
+.tab-size[data-tab-size='5'] {
+  -moz-tab-size: 5;
+  tab-size: 5;
+}
+
+.tab-size[data-tab-size='6'] {
+  -moz-tab-size: 6;
+  tab-size: 6;
+}
+
+.tab-size[data-tab-size='7'] {
+  -moz-tab-size: 7;
+  tab-size: 7;
+}
+
+.tab-size[data-tab-size='8'] {
+  -moz-tab-size: 8;
+  tab-size: 8;
+}
+
+.tab-size[data-tab-size='9'] {
+  -moz-tab-size: 9;
+  tab-size: 9;
+}
+
+.tab-size[data-tab-size='10'] {
+  -moz-tab-size: 10;
+  tab-size: 10;
+}
+
+.tab-size[data-tab-size='11'] {
+  -moz-tab-size: 11;
+  tab-size: 11;
+}
+
+.tab-size[data-tab-size='12'] {
+  -moz-tab-size: 12;
+  tab-size: 12;
+}
+
+.task-list-item {
+  list-style-type: none;
+}
+
+.task-list-item + .task-list-item {
+  margin-top: 3px;
+}
+
+.task-list-item input {
+  margin: 0 0.2em 0.25em -1.6em;
+  vertical-align: middle;
+}</style></head><body><h2 id="installation-">Installation:</h2>
+<h3 id="to-install-the-latest-version-via-homebrew-macos-only-">To install the latest version via homebrew on MacOS:</h3>
+<h5 id="1-install-homebrew-https-brew-sh-">1. Install <a href="https://brew.sh/">Homebrew</a></h5>
+<h5 id="2-run-the-following-commands-">2. Run the following commands:</h5>
+<pre><code class="lang-shell"><span class="hljs-keyword">brew </span>tap hazelops/ize
+</code></pre>
+<pre><code class="lang-shell"><span class="hljs-keyword">brew </span><span class="hljs-keyword">install </span>ize
+</code></pre>
+<p>Now you can run <code>ize</code> from command shell by typing <code>ize</code> in console.</p>
+<h4 id="3-update-">3. Update:</h4>
+<p>3.1 Uninstall previous version:</p>
+<pre><code class="lang-shell"><span class="hljs-keyword">brew </span>uninstall ize
+</code></pre>
+<p>3.2 Update version in brew repo: </p>
+<pre><code class="lang-shell"><span class="hljs-keyword">brew </span>tap hazelops/ize
+</code></pre>
+<p>3.3 Install:</p>
+<pre><code class="lang-shell"><span class="hljs-keyword">brew </span><span class="hljs-keyword">install </span>ize
+</code></pre>
+<h3 id="installation-via-public-apt-repository-url-ubuntu-">Installation via public apt repository URL (Ubuntu):</h3>
+<h5 id="1-to-add-public-apt-repository-run-">1. To add public apt repository run:</h5>
+<pre><code class="lang-shell"><span class="hljs-keyword">echo</span> <span class="hljs-string">"deb [trusted=yes] https://apt.fury.io/hazelops/ /"</span> | sudo tee /etc/apt/sources.<span class="hljs-keyword">list</span>.d/fury.<span class="hljs-keyword">list</span>
+</code></pre>
+<h5 id="2-after-this-you-should-update-information-run-">2. After this, you should update information. Run:</h5>
+<pre><code class="lang-shell">sudo apt-<span class="hljs-built_in">get</span> <span class="hljs-keyword">update</span>
+</code></pre>
+<h5 id="3-to-install-the-latest-version-of-ize-app-you-should-run-">3. To install the latest version of <code>ize</code> app, you should run:</h5>
+<pre><code class="lang-shell">sudo apt-<span class="hljs-keyword">get</span> install ize
+</code></pre>
+<h5 id="4-if-you-wish-to-install-certain-version-of-the-ize-you-should-add-version-like-this-">4. If you wish to install certain version of the <code>ize</code> you should add version like this:</h5>
+<pre><code class="lang-shell">sudo apt-<span class="hljs-keyword">get</span> install ize=&lt;<span class="hljs-built_in">version</span>&gt;
+</code></pre>
+<h5 id="5-to-remove-ize-app-run-this-command-">5. To remove <code>ize</code> app - run this command:</h5>
+<pre><code class="lang-shell">sudo apt-<span class="hljs-keyword">get</span> purge ize
+</code></pre>
+<h3 id="installation-from-source-">Installation from source:</h3>
+<h4 id="prerequisites-">Prerequisites:</h4>
+<ul>
+<li>GO version should be 1.16+</li>
+<li><code>GOPATH</code> environment variable is set to <code>~/go</code></li>
+</ul>
+<p>To install Ize from source download code or clone it from this repo. After this you should run:</p>
+<pre><code class="lang-shell"><span class="hljs-keyword">go</span> <span class="hljs-keyword">mod</span> download
+<span class="hljs-keyword">make</span> install
+</code></pre>
+<h2 id="autocomplete-">Autocomplete:</h2>
+<p>You could use integrated option to add autocompletion to Ize commands (bash, fish, zsh, powershell). In this manual we will describe it only for zsh and bash.</p>
+<p>To add autocompletion script, use the following manual:</p>
+<h5 id="1-zsh-">1. ZSH:</h5>
+<p>If shell completion is not already enabled in your environment you will need to enable it. You should execute the following once:</p>
+<pre><code class="lang-shell"><span class="hljs-built_in">echo</span> <span class="hljs-string">"autoload -U compinit; compinit"</span> &gt;&gt;  ~/.zshrc
+</code></pre>
+<p>To load completions for every new session, execute once:</p>
+<h6 id="1-1-macos-">1.1 macOS:</h6>
+<pre><code class="lang-shell">ize completion zsh &gt; <span class="hljs-regexp">/usr/</span>local<span class="hljs-regexp">/share/</span>zsh<span class="hljs-regexp">/site-functions/</span>_ize
+</code></pre>
+<h6 id="1-2-linux-">1.2 Linux:</h6>
+<p>You will need root privileges.</p>
+<pre><code class="lang-shell"><span class="hljs-attribute">sudo zsh</span>
+</code></pre>
+<p>Input your root password and run:</p>
+<pre><code class="lang-shell"><span class="hljs-attribute">ize</span> completion zsh &gt; <span class="hljs-string">"<span class="hljs-variable">${fpath[1]}</span>/_ize"</span>
+</code></pre>
+<p>To take effect for this setup you should run <code>source ~/.zshrc</code> or simply restart shell.</p>
+<h5 id="2-bash-">2. Bash:</h5>
+<p>Autocompletion script depends on the <code>bash-completion</code> package.</p>
+<p>If it is not installed already, you can install it via your OS package manager.</p>
+<p>To load completions for every new session, you should execute once:</p>
+<h6 id="2-1-macos-">2.1 MacOS:</h6>
+<pre><code class="lang-shell">ize completion bash &gt; <span class="hljs-regexp">/usr/</span>local<span class="hljs-regexp">/etc/</span>bash_completion.d<span class="hljs-regexp">/ize</span>
+</code></pre>
+<h6 id="2-2-linux-">2.2 Linux:</h6>
+<p>You will need root privileges.</p>
+<pre><code class="lang-shell"><span class="hljs-attribute">sudo bash</span>
+</code></pre>
+<p>Input your root password and run:</p>
+<pre><code class="lang-shell"><span class="hljs-symbol">ize</span> completion <span class="hljs-keyword">bash </span>&gt; /etc/<span class="hljs-keyword">bash_completion.d/ize</span>
+</code></pre>
+<p>To take effect for this setup you should run <code>source ~/.bashrc</code> or simply restart shell.</p>
+</body></html>
