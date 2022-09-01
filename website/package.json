@@ -1,0 +1,24 @@
+{
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@netlify/plugin-nextjs": "^3.9.2",
+    "next": "latest",
+    "react": "^17.0.2",
+    "react-helmet": "^6.1.0",
+    "typed.js": "^2.0.12",
+    "typeit-react": "^2.0.7"
+  },
+  "devDependencies": {
+    "@fortawesome/fontawesome-svg-core": "^6.1.1",
+    "@fortawesome/free-solid-svg-icons": "^6.1.1",
+    "@fortawesome/react-fontawesome": "github:fortawesome/react-fontawesome",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.3.11",
+    "tailwindcss": "^2.2.19"
+  }
+}
