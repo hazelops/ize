@@ -31,7 +31,7 @@ type Serverless struct {
 }
 
 type Alias struct {
-	Name      string
-	Icon      string `mapstructure:"icon,omitempty"`
-	DependsOn string `mapstructure:"depends_on"`
+	Name      string   `mapstructure:",omitempty"`
+	Icon      string   `mapstructure:"icon,omitempty"`
+	DependsOn []string `mapstructure:"depends_on"`
 }
