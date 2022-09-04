@@ -31,11 +31,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v2
 
-      - name: Generate
-        run: |
-          go install github.com/golang/mock/mockgen@v1.6.0
-          go generate ./...
-
       - name: Build
         run: |
           go mod download
@@ -58,6 +53,11 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: 1.18
+
+      - name: Generate
+        run: |
+          go install github.com/golang/mock/mockgen@v1.6.0
+          go generate ./...
 
       - name: Build
         run: go build -v ./...
