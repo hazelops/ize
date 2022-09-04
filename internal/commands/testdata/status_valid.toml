@@ -1,0 +1,3 @@
+aws_region = "us-east-1"
+namespace = "testnut"
+terraform_version = "1.2.6"
