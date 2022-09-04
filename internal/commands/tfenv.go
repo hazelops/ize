@@ -4,18 +4,16 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"io/ioutil"
-	"os"
-
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/template"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"io/ioutil"
+	"os"
 )
 
 type TfenvOptions struct {
@@ -55,12 +53,8 @@ func NewCmdTfenv(project *config.Project) *cobra.Command {
 		Example: tfenvExample,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
-			err := o.Complete()
-			if err != nil {
-				return err
-			}
 
-			err = o.Run()
+			err := o.Run()
 			if err != nil {
 				return err
 			}
@@ -72,10 +66,6 @@ func NewCmdTfenv(project *config.Project) *cobra.Command {
 	cmd.Flags().StringVar(&o.TerraformStateBucketName, "terraform-state-bucket-name", "", "set terraform state bucket name (default <NAMESPACE>-tf-state)")
 
 	return cmd
-}
-
-func (o *TfenvOptions) Complete() error {
-	return nil
 }
 
 func (o *TfenvOptions) Run() error {
@@ -101,12 +91,12 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 	}
 
 	if len(tf.StateBucketName) == 0 {
-		legacyBucketExists := checkTFStateBucket(project.Session, fmt.Sprintf("%s-tf-state", project.Namespace))
+		legacyBucketExists := checkTFStateBucket(project, fmt.Sprintf("%s-tf-state", project.Namespace))
 		// If we found an existing bucket that conforms with the legacy format use it.
 		if legacyBucketExists {
 			tf.StateBucketName = fmt.Sprintf("%s-tf-state", project.Namespace)
 		} else {
-			resp, err := sts.New(project.Session).GetCallerIdentity(
+			resp, err := project.AWSClient.STSClient.GetCallerIdentity(
 				&sts.GetCallerIdentityInput{},
 			)
 			if err != nil {
@@ -142,7 +132,6 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 		backendOpts,
 		envDir,
 	)
-
 	if err != nil {
 		pterm.DefaultSection.Println("Generate terraform file not completed")
 		return err
@@ -183,26 +172,19 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 		varsOpts,
 		envDir,
 	)
-
 	if err != nil {
 		pterm.DefaultSection.Println("Generate terraform file not completed")
 		return err
 	}
 
 	pterm.Success.Println("terraform.tfvars generated")
-
-	if err != nil {
-		pterm.DefaultSection.Println("Generate terraform file not completed")
-		return err
-	}
-
 	pterm.DefaultSection.Printfln("Generate terraform files completed")
 
 	return nil
 }
 
-func checkTFStateBucket(sess *session.Session, name string) bool {
-	_, err := s3.New(sess).HeadBucket(&s3.HeadBucketInput{
+func checkTFStateBucket(project *config.Project, name string) bool {
+	_, err := project.AWSClient.S3Client.HeadBucket(&s3.HeadBucketInput{
 		Bucket: aws.String(name),
 	})
 	if err != nil {

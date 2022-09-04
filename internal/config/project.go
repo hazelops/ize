@@ -2,6 +2,9 @@ package config
 
 import (
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 )
 
 type Project struct {
@@ -25,13 +28,49 @@ type Project struct {
 	TFLog     string `mapstructure:"tf_log,omitempty"`
 	TFLogPath string `mapstructure:"tf_log_path,omitempty"`
 
-	Session *session.Session
+	Session   *session.Session
+	AWSClient *awsClient
 
 	Tunnel     *Tunnel                `mapstructure:",omitempty"`
 	Terraform  map[string]*Terraform  `mapstructure:",omitempty"`
 	Ecs        map[string]*Ecs        `mapstructure:",omitempty"`
 	Serverless map[string]*Serverless `mapstructure:",omitempty"`
 	Alias      map[string]*Alias      `mapstructure:",omitempty"`
+}
+
+type awsClient struct {
+	S3Client  s3iface.S3API
+	STSClient stsiface.STSAPI
+	IAMClient iamiface.IAMAPI
+}
+
+type Option func(*awsClient)
+
+func WithS3Client(api s3iface.S3API) Option {
+	return func(r *awsClient) {
+		r.S3Client = api
+	}
+}
+
+func WithSTSClient(api stsiface.STSAPI) Option {
+	return func(r *awsClient) {
+		r.STSClient = api
+	}
+}
+
+func WithIAMClient(api iamiface.IAMAPI) Option {
+	return func(r *awsClient) {
+		r.IAMClient = api
+	}
+}
+
+func NewAWSClient(options ...Option) *awsClient {
+	r := awsClient{}
+	for _, opt := range options {
+		opt(&r)
+	}
+
+	return &r
 }
 
 func (p *Project) GetApps() map[string]*interface{} {

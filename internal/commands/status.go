@@ -58,14 +58,14 @@ func NewDebugCmd(project *config.Project) *cobra.Command {
 			pterm.DefaultSection.Println("AWS Environment Info")
 
 			if len(project.AwsProfile) > 0 {
-				resp, err := sts.New(project.Session).GetCallerIdentity(
+				resp, err := project.AWSClient.STSClient.GetCallerIdentity(
 					&sts.GetCallerIdentityInput{},
 				)
 				if err != nil {
 					return err
 				}
 
-				guo, err := iam.New(project.Session).GetUser(&iam.GetUserInput{})
+				guo, err := project.AWSClient.IAMClient.GetUser(&iam.GetUserInput{})
 				if aerr, ok := err.(awserr.Error); ok {
 					switch aerr.Code() {
 					case "NoSuchEntity":
@@ -75,7 +75,7 @@ func NewDebugCmd(project *config.Project) *cobra.Command {
 					}
 				}
 
-				tags, err := iam.New(project.Session).ListUserTags(&iam.ListUserTagsInput{
+				tags, err := project.AWSClient.IAMClient.ListUserTags(&iam.ListUserTagsInput{
 					UserName: guo.User.UserName,
 				})
 				if aerr, ok := err.(awserr.Error); ok {

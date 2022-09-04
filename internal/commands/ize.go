@@ -3,6 +3,9 @@ package commands
 import (
 	"bytes"
 	"fmt"
+	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/version"
 	"github.com/hazelops/ize/pkg/templates"
@@ -97,34 +100,43 @@ func Execute() {
 	cmd := newRootCmd(cfg)
 
 	cobra.OnInitialize(func() {
-		config.InitConfig()
-
 		cmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
 			if len(f.Value.String()) != 0 {
 				_ = viper.BindPFlag(strings.ReplaceAll(f.Name, "-", "_"), cmd.PersistentFlags().Lookup(f.Name))
 			}
 		})
 
-		if !(slices.Contains(os.Args, "aws-profile") ||
-			slices.Contains(os.Args, "doc") ||
-			slices.Contains(os.Args, "completion") ||
-			slices.Contains(os.Args, "version") ||
-			slices.Contains(os.Args, "init") ||
-			slices.Contains(os.Args, "validate") ||
-			slices.Contains(os.Args, "config")) ||
-			slices.Contains(os.Args, "terraform") {
-			err := cfg.GetConfig()
-			if err != nil {
-				pterm.Error.Println(err)
-				os.Exit(1)
-			}
-		}
+		config.InitConfig()
+
+		getConfig(cfg)
 	})
 
 	if err := cmd.Execute(); err != nil {
 		fmt.Println()
 		pterm.Error.Println(err)
 		os.Exit(1)
+	}
+}
+
+func getConfig(cfg *config.Project) {
+	if !(slices.Contains(os.Args, "aws-profile") ||
+		slices.Contains(os.Args, "doc") ||
+		slices.Contains(os.Args, "completion") ||
+		slices.Contains(os.Args, "version") ||
+		slices.Contains(os.Args, "init") ||
+		slices.Contains(os.Args, "validate") ||
+		slices.Contains(os.Args, "config")) ||
+		slices.Contains(os.Args, "terraform") {
+		err := cfg.GetConfig()
+		if err != nil {
+			pterm.Error.Println(err)
+			os.Exit(1)
+		}
+		cfg.AWSClient = config.NewAWSClient(
+			config.WithS3Client(s3.New(cfg.Session)),
+			config.WithSTSClient(sts.New(cfg.Session)),
+			config.WithIAMClient(iam.New(cfg.Session)),
+		)
 	}
 }
 
