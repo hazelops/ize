@@ -9,7 +9,7 @@ import (
 	"github.com/golang/mock/gomock"
 	_ "github.com/golang/mock/mockgen/model"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/internal/mocks"
+	mocks2 "github.com/hazelops/ize/pkg/mocks"
 	"github.com/pterm/pterm"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -19,14 +19,14 @@ import (
 	"testing"
 )
 
-//go:generate mockgen -package=mocks -destination ../mocks/mock_aim.go github.com/aws/aws-sdk-go/service/iam/iamiface IAMAPI
-//go:generate mockgen -package=mocks -destination ../mocks/mock_sts.go github.com/aws/aws-sdk-go/service/sts/stsiface STSAPI
+//go:generate mockgen -package=mocks -destination ../../pkg/mocks/mock_aim.go github.com/aws/aws-sdk-go/service/iam/iamiface IAMAPI
+//go:generate mockgen -package=mocks -destination ../../pkg/mock_sts.go github.com/aws/aws-sdk-go/service/sts/stsiface STSAPI
 
 //go:embed testdata/status_valid.toml
 var statusToml string
 
 func TestStatus(t *testing.T) {
-	mockIAMClient := func(m *mocks.MockIAMAPI) {
+	mockIAMClient := func(m *mocks2.MockIAMAPI) {
 		m.EXPECT().ListUserTags(gomock.Any()).Return(&iam.ListUserTagsOutput{
 			IsTruncated: nil,
 			Marker:      nil,
@@ -38,7 +38,7 @@ func TestStatus(t *testing.T) {
 			},
 		}, nil).Times(1)
 	}
-	mockSTSClient := func(m *mocks.MockSTSAPI) {
+	mockSTSClient := func(m *mocks2.MockSTSAPI) {
 		m.EXPECT().GetCallerIdentity(gomock.Any()).Return(&sts.GetCallerIdentityOutput{
 			Account: aws.String("0"),
 		}, nil).Times(1)
@@ -52,8 +52,8 @@ func TestStatus(t *testing.T) {
 		env            map[string]string
 		withConfigFile bool
 		contains       []string
-		mockIAMClient  func(m *mocks.MockIAMAPI)
-		mockSTSClient  func(m *mocks.MockSTSAPI)
+		mockIAMClient  func(m *mocks2.MockIAMAPI)
+		mockSTSClient  func(m *mocks2.MockSTSAPI)
 	}{
 		{
 			name:           "success (only config)",
@@ -200,10 +200,10 @@ func TestStatus(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockIAMAPI := mocks.NewMockIAMAPI(ctrl)
+			mockIAMAPI := mocks2.NewMockIAMAPI(ctrl)
 			tt.mockIAMClient(mockIAMAPI)
 
-			mockSTSAPI := mocks.NewMockSTSAPI(ctrl)
+			mockSTSAPI := mocks2.NewMockSTSAPI(ctrl)
 			tt.mockSTSClient(mockSTSAPI)
 
 			cfg := new(config.Project)

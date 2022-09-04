@@ -8,9 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/golang/mock/gomock"
-	_ "github.com/golang/mock/mockgen/model"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/internal/mocks"
+	mocks2 "github.com/hazelops/ize/pkg/mocks"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"os"
@@ -20,8 +19,8 @@ import (
 	"testing"
 )
 
-//go:generate mockgen -package=mocks -destination ../mocks/mock_s3.go github.com/aws/aws-sdk-go/service/s3/s3iface S3API
-//go:generate mockgen -package=mocks -destination ../mocks/mock_sts.go github.com/aws/aws-sdk-go/service/sts/stsiface STSAPI
+//go:generate mockgen -package=mocks -destination ../../pkgmocks/mock_s3.go github.com/aws/aws-sdk-go/service/s3/s3iface S3API
+//go:generate mockgen -package=mocks -destination ../../pkgmocks/mock_sts.go github.com/aws/aws-sdk-go/service/sts/stsiface STSAPI
 
 //go:embed testdata/tfenv_valid.toml
 var tfenvToml string
@@ -35,8 +34,8 @@ func TestTfenv(t *testing.T) {
 		wantTfvars     string
 		withConfigFile bool
 		env            map[string]string
-		mockS3Client   func(m *mocks.MockS3API)
-		mockSTSClient  func(m *mocks.MockSTSAPI)
+		mockS3Client   func(m *mocks2.MockS3API)
+		mockSTSClient  func(m *mocks2.MockSTSAPI)
 	}{
 		{
 			name:           "success (only config file)",
@@ -44,10 +43,10 @@ func TestTfenv(t *testing.T) {
 			env:            map[string]string{"ENV": "test", "AWS_PROFILE": "test"},
 			withConfigFile: true,
 			wantErr:        false,
-			mockS3Client: func(m *mocks.MockS3API) {
+			mockS3Client: func(m *mocks2.MockS3API) {
 				m.EXPECT().HeadBucket(gomock.Any()).Return(nil, nil).AnyTimes()
 			},
-			mockSTSClient: func(m *mocks.MockSTSAPI) {},
+			mockSTSClient: func(m *mocks2.MockSTSAPI) {},
 			wantBackend: `provider "aws" {
   profile = var.aws_profile
   region  = var.aws_region
@@ -87,10 +86,10 @@ root_domain_name  = "examples.ize.sh"
 			env:            map[string]string{"ENV": "test", "AWS_PROFILE": "test"},
 			withConfigFile: true,
 			wantErr:        false,
-			mockS3Client: func(m *mocks.MockS3API) {
+			mockS3Client: func(m *mocks2.MockS3API) {
 				m.EXPECT().HeadBucket(gomock.Any()).Return(nil, nil).AnyTimes()
 			},
-			mockSTSClient: func(m *mocks.MockSTSAPI) {},
+			mockSTSClient: func(m *mocks2.MockSTSAPI) {},
 			wantBackend: `provider "aws" {
   profile = var.aws_profile
   region  = var.aws_region
@@ -130,10 +129,10 @@ root_domain_name  = "examples.ize.sh"
 			env:            map[string]string{"ENV": "test", "AWS_PROFILE": "test", "IZE_TERRAFORM__INFRA__ROOT_DOMAIN_NAME": "test"},
 			withConfigFile: true,
 			wantErr:        false,
-			mockS3Client: func(m *mocks.MockS3API) {
+			mockS3Client: func(m *mocks2.MockS3API) {
 				m.EXPECT().HeadBucket(gomock.Any()).Return(nil, nil).AnyTimes()
 			},
-			mockSTSClient: func(m *mocks.MockSTSAPI) {},
+			mockSTSClient: func(m *mocks2.MockSTSAPI) {},
 			wantBackend: `provider "aws" {
   profile = var.aws_profile
   region  = var.aws_region
@@ -172,10 +171,10 @@ root_domain_name  = "test"
 			args:    []string{"--aws-region", "us-east-1", "--namespace", "testnut", "gen", "tfenv"},
 			env:     map[string]string{"ENV": "test", "AWS_PROFILE": "test", "IZE_TERRAFORM__INFRA__ROOT_DOMAIN_NAME": "test"},
 			wantErr: false,
-			mockS3Client: func(m *mocks.MockS3API) {
+			mockS3Client: func(m *mocks2.MockS3API) {
 				m.EXPECT().HeadBucket(gomock.Any()).Return(nil, awserr.New(s3.ErrCodeNoSuchKey, "message", nil)).Times(1)
 			},
-			mockSTSClient: func(m *mocks.MockSTSAPI) {
+			mockSTSClient: func(m *mocks2.MockSTSAPI) {
 				m.EXPECT().GetCallerIdentity(gomock.Any()).Return(&sts.GetCallerIdentityOutput{
 					Account: aws.String("0"),
 				}, nil).Times(1)
@@ -216,8 +215,8 @@ namespace         = "testnut"
 			name:          "success (only flags)",
 			args:          []string{"-e=test", "-r=us-east-1", "-p=test", "-n=testnut", "gen", "tfenv", "--terraform-state-bucket-name=test"},
 			wantErr:       false,
-			mockS3Client:  func(m *mocks.MockS3API) {},
-			mockSTSClient: func(m *mocks.MockSTSAPI) {},
+			mockS3Client:  func(m *mocks2.MockS3API) {},
+			mockSTSClient: func(m *mocks2.MockSTSAPI) {},
 			wantBackend: `provider "aws" {
   profile = var.aws_profile
   region  = var.aws_region
@@ -255,10 +254,10 @@ namespace         = "testnut"
 			args:    []string{"gen", "tfenv"},
 			env:     map[string]string{"ENV": "test", "AWS_PROFILE": "test", "NAMESPACE": "testnut", "AWS_REGION": "us-west-2", "IZE_TERRAFORM__INFRA__ROOT_DOMAIN_NAME": "test"},
 			wantErr: false,
-			mockS3Client: func(m *mocks.MockS3API) {
+			mockS3Client: func(m *mocks2.MockS3API) {
 				m.EXPECT().HeadBucket(gomock.Any()).Return(nil, awserr.New(s3.ErrCodeNoSuchBucket, "message", nil)).Times(1)
 			},
-			mockSTSClient: func(m *mocks.MockSTSAPI) {
+			mockSTSClient: func(m *mocks2.MockSTSAPI) {
 				m.EXPECT().GetCallerIdentity(gomock.Any()).Return(&sts.GetCallerIdentityOutput{
 					Account: aws.String("0"),
 				}, nil).Times(1)
@@ -350,10 +349,10 @@ namespace         = "testnut"
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockS3API := mocks.NewMockS3API(ctrl)
+			mockS3API := mocks2.NewMockS3API(ctrl)
 			tt.mockS3Client(mockS3API)
 
-			mockSTSAPI := mocks.NewMockSTSAPI(ctrl)
+			mockSTSAPI := mocks2.NewMockSTSAPI(ctrl)
 			tt.mockSTSClient(mockSTSAPI)
 
 			cfg := new(config.Project)
