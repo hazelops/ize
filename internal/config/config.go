@@ -122,6 +122,87 @@ func (p *Project) GetConfig() error {
 	return nil
 }
 
+func (p *Project) GetTestConfig() error {
+	switch viper.GetString("log-level") {
+	case "info":
+		logrus.SetLevel(logrus.InfoLevel)
+	case "debug":
+		logrus.SetLevel(logrus.DebugLevel)
+	case "trace":
+		logrus.SetLevel(logrus.TraceLevel)
+	case "panic":
+		logrus.SetLevel(logrus.PanicLevel)
+	case "warn":
+		logrus.SetLevel(logrus.WarnLevel)
+	case "error":
+		logrus.SetLevel(logrus.ErrorLevel)
+	case "fatal":
+		logrus.SetLevel(logrus.FatalLevel)
+	default:
+		logrus.SetLevel(logrus.FatalLevel)
+	}
+
+	err := ConvertApps()
+	if err != nil {
+		return err
+	}
+
+	err = ConvertInfra()
+	if err != nil {
+		return err
+	}
+
+	err = ConvertTunnel()
+	if err != nil {
+		return err
+	}
+
+	SetTag()
+	if err != nil {
+		return fmt.Errorf("can't set tag: %w", err)
+	}
+
+	err = schema.Validate(viper.AllSettings())
+	if err != nil {
+		return err
+	}
+
+	logrus.Debug("config file used:", viper.ConfigFileUsed())
+
+	err = viper.Unmarshal(p)
+	if err != nil {
+		return err
+	}
+
+	sess, err := utils.GetTestSession(&utils.SessionConfig{
+		Region:  p.AwsRegion,
+		Profile: p.AwsProfile,
+	})
+	if err != nil {
+		return err
+	}
+
+	p.Session = sess
+
+	if len(p.DockerRegistry) == 0 {
+		p.DockerRegistry = fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", 0, p.AwsRegion)
+	}
+	// Reset env directory to default because env may change
+	if len(p.DockerRegistry) == 0 {
+		p.TFLogPath = fmt.Sprintf("%v/tflog.txt", p.EnvDir)
+	}
+
+	if viper.GetString("PREFER_RUNTIME") == "docker" {
+		pterm.Warning.Println("Docker runtime is being deprecated. Please switch to native.")
+	}
+
+	if p.PlainText {
+		pterm.DisableStyling()
+	}
+
+	return nil
+}
+
 func SetTag() {
 	out, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output()
 	if err != nil {
@@ -138,6 +219,9 @@ func SetTag() {
 
 func InitConfig() {
 	viper.SetEnvPrefix("IZE")
+
+	replacer := strings.NewReplacer(".", "__")
+	viper.SetEnvKeyReplacer(replacer)
 	viper.AutomaticEnv()
 
 	_ = viper.BindEnv("ENV", "ENV")
