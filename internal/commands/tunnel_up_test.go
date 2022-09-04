@@ -1,10 +1,6 @@
 package commands
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -13,17 +9,20 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/hazelops/ize/internal/config"
-	"golang.org/x/crypto/ssh"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"testing"
 )
 
 func TestUpOptions_getSSHCommandArgs(t *testing.T) {
+	temp, err := os.MkdirTemp("", "test")
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	type fields struct {
 		Config                *config.Project
 		PrivateKeyFile        string
@@ -68,14 +67,14 @@ func TestUpOptions_getSSHCommandArgs(t *testing.T) {
 		{name: "success with private key file",
 			fields: fields{
 				Config:                &config.Project{},
-				PrivateKeyFile:        fmt.Sprintf("%s/.ssh/id_rsa", homeDir()),
-				PublicKeyFile:         "",
+				PrivateKeyFile:        fmt.Sprintf("%s/.ssh/id_rsa", temp),
+				PublicKeyFile:         fmt.Sprintf("%s/.ssh/id_rsa.pub", temp),
 				BastionHostID:         "i-XXXXXXXXXXXXXXXXX",
 				ForwardHost:           nil,
 				StrictHostKeyChecking: false,
 			},
 			args: args{sshConfigPath: "./test/ssh.config"},
-			want: []string{"-M", "-t", "-S", "bastion.sock", "-fN", "ubuntu@i-XXXXXXXXXXXXXXXXX", "-F", "./test/ssh.config", "-i", fmt.Sprintf("%s/.ssh/id_rsa", homeDir())},
+			want: []string{"-M", "-t", "-S", "bastion.sock", "-fN", "ubuntu@i-XXXXXXXXXXXXXXXXX", "-F", "./test/ssh.config", "-i", fmt.Sprintf("%s/.ssh/id_rsa", temp)},
 		},
 	}
 	for _, tt := range tests {
@@ -88,16 +87,19 @@ func TestUpOptions_getSSHCommandArgs(t *testing.T) {
 				ForwardHost:           tt.fields.ForwardHost,
 				StrictHostKeyChecking: tt.fields.StrictHostKeyChecking,
 			}
+			os.MkdirAll(filepath.Join(temp, ".ssh"), 0777)
+			if len(o.PrivateKeyFile) != 0 {
+				_, err := makeSSHKeyPair(o.PublicKeyFile, o.PrivateKeyFile)
+				if err != nil {
+					t.Error(err)
+					return
+				}
+			}
 			if got := o.getSSHCommandArgs(tt.args.sshConfigPath); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getSSHCommandArgs() = %v, want %v", got, tt.want)
 			}
 		})
 	}
-}
-
-func homeDir() string {
-	dir, _ := os.UserHomeDir()
-	return dir
 }
 
 type mockSSM struct {
@@ -486,36 +488,4 @@ func Test_getPublicKey(t *testing.T) {
 			}
 		})
 	}
-}
-
-func makeSSHKeyPair(pubKeyPath, privateKeyPath string) (string, error) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 1024)
-	if err != nil {
-		return "", err
-	}
-
-	privateKeyFile, err := os.Create(privateKeyPath)
-	defer func() {
-		cerr := privateKeyFile.Close()
-		if err == nil {
-			err = cerr
-		}
-	}()
-	if err != nil {
-		return "", err
-	}
-	privateKeyPEM := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
-	if err := pem.Encode(privateKeyFile, privateKeyPEM); err != nil {
-		return "", err
-	}
-
-	pub, err := ssh.NewPublicKey(&privateKey.PublicKey)
-	if err != nil {
-		return "", err
-	}
-
-	var pubKeyBuf strings.Builder
-	pubKeyBuf.Write(ssh.MarshalAuthorizedKey(pub))
-
-	return pubKeyBuf.String(), ioutil.WriteFile(pubKeyPath, ssh.MarshalAuthorizedKey(pub), 0655)
 }
