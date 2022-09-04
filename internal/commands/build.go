@@ -2,15 +2,16 @@ package commands
 
 import (
 	"context"
+	"fmt"
+	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager"
 	"github.com/hazelops/ize/internal/manager/alias"
-	"github.com/hazelops/ize/internal/manager/serverless"
-
-	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager/ecs"
+	"github.com/hazelops/ize/internal/manager/serverless"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 type BuildOptions struct {
@@ -91,6 +92,13 @@ func (o *BuildOptions) Run() error {
 
 	var m manager.Manager
 
+	m = &ecs.Manager{
+		Project: o.Config,
+		App:     &config.Ecs{Name: o.AppName},
+	}
+
+	fmt.Println(os.Getenv("IZE_CONFIG_FILE"))
+
 	if app, ok := o.Config.Serverless[o.AppName]; ok {
 		app.Name = o.AppName
 		m = &serverless.Manager{
@@ -110,11 +118,6 @@ func (o *BuildOptions) Run() error {
 		m = &ecs.Manager{
 			Project: o.Config,
 			App:     app,
-		}
-	} else {
-		m = &ecs.Manager{
-			Project: o.Config,
-			App:     &config.Ecs{Name: o.AppName},
 		}
 	}
 
