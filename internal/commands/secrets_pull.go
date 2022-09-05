@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -109,10 +110,16 @@ func (o *SecretsPullOptions) pull(s *pterm.SpinnerPrinter) error {
 	s.UpdateText(fmt.Sprintf("Pulling secrets from %s://%s...", o.Backend, o.SecretsPath))
 
 	ssmSvc := ssm.New(o.Config.Session)
-
 	params, err := ssmSvc.GetParametersByPath(&ssm.GetParametersByPathInput{
 		Path:           aws.String(o.SecretsPath),
+		Recursive:      aws.Bool(true),
 		WithDecryption: aws.Bool(true),
+		ParameterFilters: []*ssm.ParameterStringFilter{
+			{
+				Key:    aws.String("Type"),
+				Values: aws.StringSlice([]string{"SecureString"}),
+			},
+		},
 	})
 	if err != nil {
 		return err
@@ -121,7 +128,8 @@ func (o *SecretsPullOptions) pull(s *pterm.SpinnerPrinter) error {
 	values := make(map[string]interface{})
 
 	for _, param := range params.Parameters {
-		values[*param.Name] = *param.Value
+		p := strings.Split(*param.Name, "/")
+		values[p[len(p)-1]] = *param.Value
 	}
 
 	b, err := json.MarshalIndent(values, "", "")
