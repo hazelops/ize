@@ -118,7 +118,20 @@ func GetSession(c *SessionConfig) (*session.Session, error) {
 	}
 
 	return sess, nil
+}
 
+func GetTestSession(c *SessionConfig) (*session.Session, error) {
+	sess, err := session.NewSessionWithOptions(
+		session.Options{
+			Config:  *aws.NewConfig().WithRegion(c.Region),
+			Profile: c.Profile,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return sess, nil
 }
 
 func getNewToken(sess *session.Session, sn *string) (*sts.Credentials, error) {

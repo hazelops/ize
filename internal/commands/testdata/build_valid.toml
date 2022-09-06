@@ -1,0 +1,18 @@
+aws_region = "us-east-1"
+namespace = "testnut"
+terraform_version = "1.2.6"
+
+[terraform.infra]
+root_domain_name = "examples.ize.sh"
+
+[ecs.squibby]
+timeout = 300
+
+[ecs.goblin]
+timeout = 300
+
+[alias.test]
+icon = "~"
+
+[serverless.pecan]
+depends_on = ["squibby"]

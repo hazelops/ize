@@ -1,0 +1,6 @@
+aws_region = "us-east-1"
+namespace = "testnut"
+terraform_version = "1.2.6"
+
+[terraform.infra]
+root_domain_name = "examples.ize.sh"
