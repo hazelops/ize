@@ -93,7 +93,7 @@ func NewCmdDown(project *config.Project) *cobra.Command {
 	cmd.Flags().BoolVar(&o.SkipGen, "skip-gen", false, "skip generating terraform files")
 
 	cmd.AddCommand(
-		NewCmdDownInfra(),
+		NewCmdDownInfra(project),
 	)
 
 	return cmd

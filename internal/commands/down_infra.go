@@ -18,12 +18,14 @@ type DownInfraOptions struct {
 	SkipGen    bool
 }
 
-func NewDownInfraFlags() *DownInfraOptions {
-	return &DownInfraOptions{}
+func NewDownInfraFlags(project *config.Project) *DownInfraOptions {
+	return &DownInfraOptions{
+		Config: project,
+	}
 }
 
-func NewCmdDownInfra() *cobra.Command {
-	o := NewDownInfraFlags()
+func NewCmdDownInfra(project *config.Project) *cobra.Command {
+	o := NewDownInfraFlags(project)
 
 	cmd := &cobra.Command{
 		Use:   "infra",
