@@ -43,9 +43,18 @@ func NewDebugCmd(project *config.Project) *cobra.Command {
 				{"PREFER_RUNTIME", project.PreferRuntime},
 			}).WithLeftAlignment().Render()
 
+			v := project.TerraformVersion
+			if project.Terraform != nil {
+				if i, ok := project.Terraform["infra"]; ok {
+					if len(i.Version) != 0 {
+						v = i.Version
+					}
+				}
+			}
+
 			pterm.DefaultSection.Println("Terraform Info")
 			_ = dt.WithData(pterm.TableData{
-				{"TERRAFORM_VERSION", project.TerraformVersion},
+				{"TERRAFORM_VERSION", v},
 			}).WithLeftAlignment().Render()
 
 			pterm.DefaultSection.Println("System Info")
