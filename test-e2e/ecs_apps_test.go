@@ -254,50 +254,6 @@ func TestIzeUpSquibby(t *testing.T) {
 
 }
 
-func TestIzeExecGoblin(t *testing.T) {
-	if examplesRootDir == "" {
-		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
-	}
-
-	ize := NewBinary(t, izeBinary, examplesRootDir)
-
-	stdout, stderr, err := ize.RunPty("--plain-text", "exec", "goblin", "--", "sh -c \"echo $APP_NAME\"")
-
-	if err != nil {
-		t.Errorf("error: %s", err)
-	}
-
-	if stderr != "" {
-		t.Errorf("unexpected stderr output ize exec goblin: %s", err)
-	}
-
-	if !strings.Contains(stdout, "goblin") || strings.Contains(stdout, "EOF") {
-		t.Errorf("No success message detected after exec goblin:\n%s", stdout)
-	}
-}
-
-func TestIzeExecSquibby(t *testing.T) {
-	if examplesRootDir == "" {
-		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
-	}
-
-	ize := NewBinary(t, izeBinary, examplesRootDir)
-
-	stdout, stderr, err := ize.RunPty("--plain-text", "exec", "squibby", "--", "sh -c \"echo $APP_NAME\"")
-
-	if err != nil {
-		t.Errorf("error: %s", err)
-	}
-
-	if stderr != "" {
-		t.Errorf("unexpected stderr output ize exec squibby: %s", err)
-	}
-
-	if !strings.Contains(stdout, "squibby") || strings.Contains(stdout, "EOF") {
-		t.Errorf("No success message detected after exec squibby:\n%s", stdout)
-	}
-}
-
 func TestCheckSecretsSquibby(t *testing.T) {
 	url := fmt.Sprintf("http://squibby.%s.examples.ize.sh/", os.Getenv("ENV"))
 
@@ -346,6 +302,50 @@ func TestCheckSecretsGoblin(t *testing.T) {
 	}
 
 	t.Errorf("The expected string was not found in the response: %s", url)
+}
+
+func TestIzeExecGoblin(t *testing.T) {
+	if examplesRootDir == "" {
+		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
+	}
+
+	ize := NewBinary(t, izeBinary, examplesRootDir)
+
+	stdout, stderr, err := ize.RunPty("--plain-text", "exec", "goblin", "--", "sh -c \"echo $APP_NAME\"")
+
+	if err != nil {
+		t.Errorf("error: %s", err)
+	}
+
+	if stderr != "" {
+		t.Errorf("unexpected stderr output ize exec goblin: %s", err)
+	}
+
+	if !strings.Contains(stdout, "goblin") || strings.Contains(stdout, "EOF") {
+		t.Errorf("No success message detected after exec goblin:\n%s", stdout)
+	}
+}
+
+func TestIzeExecSquibby(t *testing.T) {
+	if examplesRootDir == "" {
+		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
+	}
+
+	ize := NewBinary(t, izeBinary, examplesRootDir)
+
+	stdout, stderr, err := ize.RunPty("--plain-text", "exec", "squibby", "--", "sh -c \"echo $APP_NAME\"")
+
+	if err != nil {
+		t.Errorf("error: %s", err)
+	}
+
+	if stderr != "" {
+		t.Errorf("unexpected stderr output ize exec squibby: %s", err)
+	}
+
+	if !strings.Contains(stdout, "squibby") || strings.Contains(stdout, "EOF") {
+		t.Errorf("No success message detected after exec squibby:\n%s", stdout)
+	}
 }
 
 func TestIzeSecretsRmGoblin(t *testing.T) {
