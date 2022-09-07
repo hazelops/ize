@@ -11,9 +11,10 @@ import (
 )
 
 type CIOptions struct {
-	Template string
-	Source   string
-	Config   *config.Project
+	Template      string
+	Source        string
+	Config        *config.Project
+	PublicKeyFile string
 }
 
 var ciLongDesc = templates.LongDesc(`
@@ -62,11 +63,16 @@ func NewCmdCI(project *config.Project) *cobra.Command {
 
 	cmd.Flags().StringVar(&o.Template, "template", "", "set template path")
 	cmd.Flags().StringVar(&o.Source, "source", "", "set git repository")
+	cmd.Flags().StringVar(&o.PublicKeyFile, "ssh-public-key", "", "set ssh key public path")
 
 	return cmd
 }
 
 func (o *CIOptions) Complete() error {
+	if len(o.PublicKeyFile) == 0 {
+		o.PublicKeyFile = fmt.Sprintf("%s/.ssh/id_rsa.pub", o.Config.Home)
+	}
+
 	return nil
 }
 
@@ -96,7 +102,9 @@ func (o *CIOptions) Run(cmd *cobra.Command) error {
 		return err
 	}
 
-	key, err := getPublicKey(fmt.Sprintf("%s/.ssh/id_rsa.pub", o.Config.Home))
+	fmt.Println(o.PublicKeyFile)
+
+	key, err := getPublicKey(o.PublicKeyFile)
 	if err != nil {
 		return err
 	}
