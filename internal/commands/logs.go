@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"github.com/hazelops/ize/internal/requirements"
 	"os"
 	"strings"
 	"time"
@@ -62,10 +61,6 @@ func NewCmdLogs(project *config.Project) *cobra.Command {
 }
 
 func (o *LogsOptions) Complete(cmd *cobra.Command) error {
-	if err := requirements.CheckRequirements(requirements.WithSSMPlugin()); err != nil {
-		return err
-	}
-
 	if o.EcsCluster == "" {
 		o.EcsCluster = fmt.Sprintf("%s-%s", o.Config.Env, o.Config.Namespace)
 	}
@@ -93,7 +88,7 @@ func (o *LogsOptions) Validate() error {
 func (o *LogsOptions) Run() error {
 	logGroup := fmt.Sprintf("%s-%s", o.Config.Env, o.AppName)
 
-	lto, err := ecs.New(o.Config.Session).ListTasks(&ecs.ListTasksInput{
+	lto, err := o.Config.AWSClient.ECSClient.ListTasks(&ecs.ListTasksInput{
 		Cluster:       &o.EcsCluster,
 		DesiredStatus: aws.String("RUNNING"),
 		ServiceName:   &logGroup,
@@ -101,8 +96,6 @@ func (o *LogsOptions) Run() error {
 	})
 
 	logrus.Infof("log group: %s, cluster name: %s", logGroup, o.EcsCluster)
-
-	svc := cloudwatchlogs.New(o.Config.Session)
 
 	if err != nil {
 		return fmt.Errorf("can't run logs: %w", err)
@@ -115,7 +108,7 @@ func (o *LogsOptions) Run() error {
 	logStreamName := fmt.Sprintf("main/%s/%s", o.AppName, taskID)
 
 	for {
-		logEvents, err := svc.GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
+		logEvents, err := o.Config.AWSClient.CloudWatchLogsClient.GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
 			LogGroupName:  &logGroup,
 			LogStreamName: &logStreamName,
 			NextToken:     token,
