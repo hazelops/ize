@@ -123,10 +123,8 @@ func (o *ExecOptions) Run() error {
 
 	s, _ := pterm.DefaultSpinner.WithRemoveWhenDone().Start("Getting access to container...")
 
-	ecsSvc := ecs.New(o.Config.Session)
-
 	if o.Task == "" {
-		lto, err := ecsSvc.ListTasks(&ecs.ListTasksInput{
+		lto, err := o.Config.AWSClient.ECSClient.ListTasks(&ecs.ListTasksInput{
 			Cluster:       &o.EcsCluster,
 			DesiredStatus: aws.String(ecs.DesiredStatusRunning),
 			ServiceName:   &appName,
@@ -151,7 +149,7 @@ func (o *ExecOptions) Run() error {
 
 	s.UpdateText("Executing command...")
 
-	out, err := ecsSvc.ExecuteCommand(&ecs.ExecuteCommandInput{
+	out, err := o.Config.AWSClient.ECSClient.ExecuteCommand(&ecs.ExecuteCommandInput{
 		Container:   &o.AppName,
 		Interactive: aws.Bool(true),
 		Cluster:     &o.EcsCluster,
