@@ -2,8 +2,11 @@ package config
 
 import (
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
+	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 )
 
@@ -39,9 +42,12 @@ type Project struct {
 }
 
 type awsClient struct {
-	S3Client  s3iface.S3API
-	STSClient stsiface.STSAPI
-	IAMClient iamiface.IAMAPI
+	S3Client             s3iface.S3API
+	STSClient            stsiface.STSAPI
+	IAMClient            iamiface.IAMAPI
+	ECSClient            ecsiface.ECSAPI
+	CloudWatchLogsClient cloudwatchlogsiface.CloudWatchLogsAPI
+	SSMClient            ssmiface.SSMAPI
 }
 
 type Option func(*awsClient)
@@ -55,6 +61,24 @@ func WithS3Client(api s3iface.S3API) Option {
 func WithSTSClient(api stsiface.STSAPI) Option {
 	return func(r *awsClient) {
 		r.STSClient = api
+	}
+}
+
+func WithECSClient(api ecsiface.ECSAPI) Option {
+	return func(r *awsClient) {
+		r.ECSClient = api
+	}
+}
+
+func WithSSMClient(api ssmiface.SSMAPI) Option {
+	return func(r *awsClient) {
+		r.SSMClient = api
+	}
+}
+
+func WithCloudWatchLogsClient(api cloudwatchlogsiface.CloudWatchLogsAPI) Option {
+	return func(r *awsClient) {
+		r.CloudWatchLogsClient = api
 	}
 }
 

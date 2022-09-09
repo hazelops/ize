@@ -109,8 +109,7 @@ func (o *SecretsPullOptions) Run() error {
 func (o *SecretsPullOptions) pull(s *pterm.SpinnerPrinter) error {
 	s.UpdateText(fmt.Sprintf("Pulling secrets from %s://%s...", o.Backend, o.SecretsPath))
 
-	ssmSvc := ssm.New(o.Config.Session)
-	params, err := ssmSvc.GetParametersByPath(&ssm.GetParametersByPathInput{
+	params, err := o.Config.AWSClient.SSMClient.GetParametersByPath(&ssm.GetParametersByPathInput{
 		Path:           aws.String(o.SecretsPath),
 		Recursive:      aws.Bool(true),
 		WithDecryption: aws.Bool(true),
