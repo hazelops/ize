@@ -78,13 +78,14 @@ func (o *TfenvOptions) Run() error {
 
 func GenerateTerraformFiles(project *config.Project, terraformStateBucketName string) error {
 	pterm.DefaultSection.Printfln("Starting generate terraform files")
-
-	stateKey := fmt.Sprintf("%v/terraform.tfstate", project.Env)
-
 	var tf config.Terraform
+
 	if project.Terraform != nil {
 		tf = *project.Terraform["infra"]
 	}
+
+	stateName := tf.StateName
+	stateKey := fmt.Sprintf("%v/%v.tfstate", project.Env, stateName)
 
 	if len(terraformStateBucketName) != 0 {
 		tf.StateBucketName = terraformStateBucketName
