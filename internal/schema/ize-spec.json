@@ -188,6 +188,10 @@
                             "type": "string",
                             "description": "(optional) Terraform state bucket name can be specified here. Normally it's generated and defaults to <NAMESPACE>-tf-state"
                         },
+                        "state_name": {
+                            "type": "string",
+                            "description": "(optional) Terraform state name that will be used in the .tfstate file. Normally it's 'terraform' or state name."
+                        },
                         "root_domain_name"   : {
                             "type": "string",
                             "description": "(optional) Root domain name can be set here. This is the main domain that will be passed to the terraform. Generally if your app lives at 'api.dev.nutcorp.net' the root domain is `nutcorp.net`"
@@ -442,6 +446,10 @@
                 "state_bucket_name" : {
                     "type": "string",
                     "description": "(optional) Terraform state bucket name can be specified here. Normally it's generated and defaults to <NAMESPACE>-tf-state"
+                },
+                "state_name": {
+                    "type": "string",
+                    "description": "(optional) Terraform state name that will be used in the .tfstate file. Normally it's 'terraform' or state name."
                 },
                 "root_domain_name"   : {
                     "type": "string",

@@ -235,6 +235,7 @@ func InitConfig() {
 	viper.SetDefault("PREFER_RUNTIME", "native")
 	viper.SetDefault("CUSTOM_PROMPT", false)
 	viper.SetDefault("PLAIN_TEXT", false)
+	viper.SetDefault("terraform.infra.state_name", "terraform")
 
 	home, err := os.UserHomeDir()
 	if err != nil {
