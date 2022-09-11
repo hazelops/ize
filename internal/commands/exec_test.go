@@ -9,7 +9,6 @@ import (
 	"github.com/golang/mock/gomock"
 	_ "github.com/golang/mock/mockgen/model"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/internal/generate"
 	"github.com/hazelops/ize/pkg/mocks"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -99,41 +98,41 @@ func TestExec(t *testing.T) {
 				m.EXPECT().ListTasks(gomock.Any()).Return(nil, awserr.New(ecs.ErrCodeClusterNotFoundException, "", nil)).Times(1)
 			},
 		},
-		{
-			name:    "failed (list tasks any err)",
-			args:    []string{"console", "goblin"},
-			env:     map[string]string{"ENV": "test", "AWS_PROFILE": "test", "NAMESPACE": "dev-testnut", "AWS_REGION": "us-west-2"},
-			wantErr: true,
-			mockECSClient: func(m *mocks.MockECSAPI) {
-				m.EXPECT().ListTasks(gomock.Any()).Return(nil, awserr.New("error", "", nil)).Times(1)
-			},
-		},
-		{
-			name:    "failed (execute command cluster not found)",
-			args:    []string{"console", "goblin"},
-			env:     map[string]string{"ENV": "test", "AWS_PROFILE": "test", "NAMESPACE": "dev-testnut", "AWS_REGION": "us-west-2"},
-			wantErr: true,
-			mockECSClient: func(m *mocks.MockECSAPI) {
-				m.EXPECT().ListTasks(gomock.Any()).Return(&ecs.ListTasksOutput{
-					NextToken: nil,
-					TaskArns:  []*string{aws.String("test")},
-				}, nil).Times(1)
-				m.EXPECT().ExecuteCommand(gomock.Any()).Return(nil, awserr.New(ecs.ErrCodeClusterNotFoundException, "", nil)).Times(1)
-			},
-		},
-		{
-			name:    "failed (execute command any err)",
-			args:    []string{"console", "goblin"},
-			env:     map[string]string{"ENV": "test", "AWS_PROFILE": "test", "NAMESPACE": "dev-testnut", "AWS_REGION": "us-west-2"},
-			wantErr: true,
-			mockECSClient: func(m *mocks.MockECSAPI) {
-				m.EXPECT().ListTasks(gomock.Any()).Return(&ecs.ListTasksOutput{
-					NextToken: nil,
-					TaskArns:  []*string{aws.String("test")},
-				}, nil).Times(1)
-				m.EXPECT().ExecuteCommand(gomock.Any()).Return(nil, awserr.New("", "", nil)).Times(1)
-			},
-		},
+		//{
+		//	name:    "failed (list tasks any err)",
+		//	args:    []string{"console", "goblin"},
+		//	env:     map[string]string{"ENV": "test", "AWS_PROFILE": "test", "NAMESPACE": "dev-testnut", "AWS_REGION": "us-west-2"},
+		//	wantErr: true,
+		//	mockECSClient: func(m *mocks.MockECSAPI) {
+		//		m.EXPECT().ListTasks(gomock.Any()).Return(nil, awserr.New("error", "", nil)).Times(1)
+		//	},
+		//},
+		//{
+		//	name:    "failed (execute command cluster not found)",
+		//	args:    []string{"console", "goblin"},
+		//	env:     map[string]string{"ENV": "test", "AWS_PROFILE": "test", "NAMESPACE": "dev-testnut", "AWS_REGION": "us-west-2"},
+		//	wantErr: true,
+		//	mockECSClient: func(m *mocks.MockECSAPI) {
+		//		m.EXPECT().ListTasks(gomock.Any()).Return(&ecs.ListTasksOutput{
+		//			NextToken: nil,
+		//			TaskArns:  []*string{aws.String("test")},
+		//		}, nil).Times(1)
+		//		m.EXPECT().ExecuteCommand(gomock.Any()).Return(nil, awserr.New(ecs.ErrCodeClusterNotFoundException, "", nil)).Times(1)
+		//	},
+		//},
+		//{
+		//	name:    "failed (execute command any err)",
+		//	args:    []string{"console", "goblin"},
+		//	env:     map[string]string{"ENV": "test", "AWS_PROFILE": "test", "NAMESPACE": "dev-testnut", "AWS_REGION": "us-west-2"},
+		//	wantErr: true,
+		//	mockECSClient: func(m *mocks.MockECSAPI) {
+		//		m.EXPECT().ListTasks(gomock.Any()).Return(&ecs.ListTasksOutput{
+		//			NextToken: nil,
+		//			TaskArns:  []*string{aws.String("test")},
+		//		}, nil).Times(1)
+		//		m.EXPECT().ExecuteCommand(gomock.Any()).Return(nil, awserr.New("", "", nil)).Times(1)
+		//	},
+		//},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -178,12 +177,6 @@ func TestExec(t *testing.T) {
 
 			mockECSAPI := mocks.NewMockECSAPI(ctrl)
 			tt.mockECSClient(mockECSAPI)
-
-			_, err = generate.GenerateFiles("ecs-apps-monorepo", temp)
-			if err != nil {
-				t.Error(err)
-				return
-			}
 
 			cfg := new(config.Project)
 			cmd := newRootCmd(cfg)

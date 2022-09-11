@@ -2,6 +2,7 @@ package commands
 
 import (
 	_ "embed"
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ecs"
@@ -162,6 +163,12 @@ func TestConsole(t *testing.T) {
 			if tt.withConfigFile {
 				setConfigFile(filepath.Join(temp, "ize.toml"), buildToml, t)
 			}
+
+			err = os.WriteFile(filepath.Join(temp, "session-manager-plugin"), []byte("#!/bin/bash\necho \"session-manager-plugin\""), 0777)
+			if err != nil {
+				t.Error(err)
+			}
+			t.Setenv("PATH", fmt.Sprintf("%s:$PATH", temp))
 
 			t.Setenv("HOME", temp)
 
