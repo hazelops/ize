@@ -91,7 +91,7 @@ func TestConsole(t *testing.T) {
 		},
 		{
 			name:    "failed (list tasks cluster not found)",
-			args:    []string{"console", "goblin"},
+			args:    []string{"console", "goblin", "--plain-text"},
 			env:     map[string]string{"ENV": "test", "AWS_PROFILE": "test", "NAMESPACE": "dev-testnut", "AWS_REGION": "us-west-2"},
 			wantErr: true,
 			mockECSClient: func(m *mocks.MockECSAPI) {
@@ -100,7 +100,7 @@ func TestConsole(t *testing.T) {
 		},
 		{
 			name:    "failed (list tasks any err)",
-			args:    []string{"console", "goblin"},
+			args:    []string{"console", "goblin", "--plain-text"},
 			env:     map[string]string{"ENV": "test", "AWS_PROFILE": "test", "NAMESPACE": "dev-testnut", "AWS_REGION": "us-west-2"},
 			wantErr: true,
 			mockECSClient: func(m *mocks.MockECSAPI) {
@@ -109,7 +109,7 @@ func TestConsole(t *testing.T) {
 		},
 		{
 			name:    "failed (execute command cluster not found)",
-			args:    []string{"console", "goblin"},
+			args:    []string{"console", "goblin", "--plain-text"},
 			env:     map[string]string{"ENV": "test", "AWS_PROFILE": "test", "NAMESPACE": "dev-testnut", "AWS_REGION": "us-west-2"},
 			wantErr: true,
 			mockECSClient: func(m *mocks.MockECSAPI) {
@@ -122,7 +122,7 @@ func TestConsole(t *testing.T) {
 		},
 		{
 			name:    "failed (execute command any err)",
-			args:    []string{"console", "goblin"},
+			args:    []string{"console", "goblin", "--plain-text"},
 			env:     map[string]string{"ENV": "test", "AWS_PROFILE": "test", "NAMESPACE": "dev-testnut", "AWS_REGION": "us-west-2"},
 			wantErr: true,
 			mockECSClient: func(m *mocks.MockECSAPI) {

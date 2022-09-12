@@ -192,11 +192,11 @@ func TestLogs(t *testing.T) {
 			go func() {
 				errC <- cmd.ExecuteContext(ctx)
 			}()
-			time.Sleep(time.Second)
+			time.Sleep(time.Millisecond * 50)
 			signal.NotifyContext(ctx, os.Interrupt)
 			cancel()
 
-			time.Sleep(time.Second)
+			time.Sleep(time.Millisecond * 50)
 
 			// Unset env
 			for k, _ := range tt.env {
