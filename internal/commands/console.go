@@ -89,14 +89,6 @@ func (o *ConsoleOptions) Complete(cmd *cobra.Command) error {
 }
 
 func (o *ConsoleOptions) Validate() error {
-	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("can't validate: env must be specified")
-	}
-
-	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("can't validate: namespace must be specified")
-	}
-
 	if len(o.AppName) == 0 {
 		return fmt.Errorf("can't validate: app name must be specified")
 	}
@@ -112,10 +104,8 @@ func (o *ConsoleOptions) Run() error {
 
 	s, _ := pterm.DefaultSpinner.WithRemoveWhenDone().Start("Getting access to container...")
 
-	ecsSvc := ecs.New(o.Config.Session)
-
 	if o.Task == "" {
-		lto, err := ecsSvc.ListTasks(&ecs.ListTasksInput{
+		lto, err := o.Config.AWSClient.ECSClient.ListTasks(&ecs.ListTasksInput{
 			Cluster:       &o.EcsCluster,
 			DesiredStatus: aws.String(ecs.DesiredStatusRunning),
 			ServiceName:   &appName,
@@ -148,7 +138,7 @@ func (o *ConsoleOptions) Run() error {
 		consoleCommand = fmt.Sprintf(`/bin/sh -c '$(echo "export PS1=\"%s\"" > /etc/profile.d/ize.sh) /bin/bash --rcfile /etc/profile'`, promptString)
 	}
 
-	out, err := ecsSvc.ExecuteCommand(&ecs.ExecuteCommandInput{
+	out, err := o.Config.AWSClient.ECSClient.ExecuteCommand(&ecs.ExecuteCommandInput{
 		Container:   &o.ContainerName,
 		Interactive: aws.Bool(true),
 		Cluster:     &o.EcsCluster,

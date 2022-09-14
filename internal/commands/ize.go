@@ -3,8 +3,11 @@ package commands
 import (
 	"bytes"
 	"fmt"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/version"
@@ -136,6 +139,9 @@ func getConfig(cfg *config.Project) {
 			config.WithS3Client(s3.New(cfg.Session)),
 			config.WithSTSClient(sts.New(cfg.Session)),
 			config.WithIAMClient(iam.New(cfg.Session)),
+			config.WithECSClient(ecs.New(cfg.Session)),
+			config.WithCloudWatchLogsClient(cloudwatchlogs.New(cfg.Session)),
+			config.WithSSMClient(ssm.New(cfg.Session)),
 		)
 	}
 }

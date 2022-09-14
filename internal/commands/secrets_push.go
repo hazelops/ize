@@ -128,12 +128,10 @@ func (o *SecretsPushOptions) push(s *pterm.SpinnerPrinter) error {
 
 	s.UpdateText(fmt.Sprintf("Pushing secrets to %s://%s...", o.Backend, o.SecretsPath))
 
-	ssmSvc := ssm.New(o.Config.Session)
-
 	for key, value := range values {
 		name := fmt.Sprintf("%s/%s", o.SecretsPath, key)
 
-		_, err := ssmSvc.PutParameter(&ssm.PutParameterInput{
+		_, err := o.Config.AWSClient.SSMClient.PutParameter(&ssm.PutParameterInput{
 			Name:      &name,
 			Value:     aws.String(value),
 			Type:      aws.String(ssm.ParameterTypeSecureString),
@@ -149,7 +147,7 @@ func (o *SecretsPushOptions) push(s *pterm.SpinnerPrinter) error {
 			}
 		}
 
-		_, err = ssmSvc.AddTagsToResource(&ssm.AddTagsToResourceInput{
+		_, err = o.Config.AWSClient.SSMClient.AddTagsToResource(&ssm.AddTagsToResourceInput{
 			ResourceId:   &name,
 			ResourceType: aws.String("Parameter"),
 			Tags: []*ssm.Tag{

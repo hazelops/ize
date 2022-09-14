@@ -112,9 +112,7 @@ func (o *SecretsRemoveOptions) rm(s *pterm.SpinnerPrinter) error {
 
 	s.UpdateText(fmt.Sprintf("Removing secrets from %s://%s...", o.Backend, o.SecretsPath))
 
-	ssmSvc := ssm.New(o.Config.Session)
-
-	out, err := ssmSvc.GetParametersByPath(&ssm.GetParametersByPathInput{
+	out, err := o.Config.AWSClient.SSMClient.GetParametersByPath(&ssm.GetParametersByPathInput{
 		Path: &o.SecretsPath,
 	})
 	if err != nil {
@@ -137,7 +135,7 @@ func (o *SecretsRemoveOptions) rm(s *pterm.SpinnerPrinter) error {
 		names = append(names, p.Name)
 	}
 
-	_, err = ssmSvc.DeleteParameters(&ssm.DeleteParametersInput{
+	_, err = o.Config.AWSClient.SSMClient.DeleteParameters(&ssm.DeleteParametersInput{
 		Names: names,
 	})
 	if err != nil {
