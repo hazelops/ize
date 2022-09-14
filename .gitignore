@@ -1,6 +1,8 @@
 bin/
 ize
 
+website/node_modules/
+website/.next/
 
 *.hcl
 
