@@ -178,7 +178,7 @@ func (e *Manager) Push(ui terminal.UI) error {
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	if len(e.App.Image) != 0 {
-		s.Update("%s: push app image... (skipped)", e.App.Name)
+		s.Update("%s: pushing app image... (skipped, using %s) ", e.App.Name, e.App.Image)
 		s.Done()
 
 		return nil
