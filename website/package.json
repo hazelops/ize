@@ -10,8 +10,7 @@
     "next": "latest",
     "react": "^17.0.2",
     "react-helmet": "^6.1.0",
-    "typed.js": "^2.0.12",
-    "typeit-react": "^2.0.7"
+    "typed.js": "^2.0.12"
   },
   "devDependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.1.1",
