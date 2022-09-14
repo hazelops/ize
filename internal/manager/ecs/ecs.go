@@ -261,7 +261,7 @@ func (e *Manager) Build(ui terminal.UI) error {
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	if len(e.App.Image) != 0 {
-		s.Update("%s: building app container... (skipped)", e.App.Name)
+		s.Update("%s: building app container... (skipped, using %s)", e.App.Name, e.App.Image)
 
 		s.Done()
 		return nil
