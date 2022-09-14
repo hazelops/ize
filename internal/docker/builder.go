@@ -24,14 +24,16 @@ type Builder struct {
 	Tags       []string
 	Dockerfile string
 	CacheFrom  []string
+	Platform   string
 }
 
-func NewBuilder(buildArgs map[string]*string, tags []string, dockerfile string, cacheFrom []string) Builder {
+func NewBuilder(buildArgs map[string]*string, tags []string, dockerfile string, cacheFrom []string, platform string) Builder {
 	return Builder{
 		BuildArgs:  buildArgs,
 		Tags:       tags,
 		Dockerfile: dockerfile,
 		CacheFrom:  cacheFrom,
+		Platform:   platform,
 	}
 }
 
@@ -113,6 +115,7 @@ func (b *Builder) buildWithDocker(
 		Dockerfile: relDockerfile,
 		Tags:       tags,
 		BuildArgs:  buildArgs,
+		Platform:   b.Platform,
 	}
 
 	resp, err := cli.ImageBuild(context.Background(), buildCtx, buildOpts)
