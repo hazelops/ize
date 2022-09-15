@@ -6,22 +6,22 @@ export IZE_CONFIG_FILE=<path to your infra folder>/.infra/env/dev/ize.toml
 ```
 
 ### Commands for generate terraform files
-__Note:__ Use the `--terraform-state-bucket-name` flag for overwriting default value (<NAMESPACE>-tf-state)
+
 ```shell
-ize env terraform
+ize gen tfenv
 ```
 
 ### Commands to deploy/destroy infrastructure
 
 ```shell
-ize deploy infra
-ize destroy infra
+ize up infra
+ize down infra
 ```
 
 ### Commands to deploy/destroy "goblin" project
 ```shell
-ize deploy goblin
-ize destroy goblin
+ize up goblin
+ize down goblin
 ```
 
 ### Establish SSM tunnel
@@ -31,8 +31,18 @@ ize tunnel up
 ize tunnel down
 ```
 
+### Connect to a container in the ECS
+```shell
+ize console goblin
+```
+
 ### Upload/Remove secrets
 ```shell
-ize secret set --file .infra/env/testnut/secrets/example-service.json --type ssm
-ize secret remove --type ssm --path /testnut/example-service
+ize secrets set --file .infra/env/testnut/secrets/example-service.json --type ssm
+ize secrets rm --backend ssm --path /testnut/example-service
+```
+
+### Show debug information
+```shell
+ize status
 ```
