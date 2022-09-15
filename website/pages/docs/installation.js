@@ -1,19 +1,22 @@
 import DocsPageLayout from '../../components/docsPageLayout'
-import { readFilesNames } from '../../utilities/readFilesNames'
+import { readFilesNames, fetchContent } from '../../utilities/docsGlobalProps'
 
-export async function getServerSideProps() {
+export async function getStaticProps() {
     const filesNames = await readFilesNames()
+    const mdContent = fetchContent()
     return {
         props: {
-         filesNames
+         filesNames,
+         mdContent
         }
     }
 }
 
-export default function Installation({ filesNames }) {
+export default function Installation({ filesNames, mdContent }) {
     return <DocsPageLayout 
                 title="Installation"
                 data="INSTALLATION"
                 filesNames={filesNames}
+                mdContent={mdContent}
             />
 }

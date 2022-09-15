@@ -1,19 +1,22 @@
 import DocsPageLayout from '../../components/docsPageLayout'
-import { readFilesNames } from '../../utilities/readFilesNames'
+import { readFilesNames, fetchContent } from '../../utilities/docsGlobalProps'
 
-export async function getServerSideProps() {
+export async function getStaticProps() {
     const filesNames = await readFilesNames()
+    const mdContent = fetchContent()
     return {
         props: {
-         filesNames
+         filesNames,
+         mdContent
         }
     }
 }
 
-export default function DeployingServerlessApp({ filesNames }) {
+export default function DeployingServerlessApp({ filesNames, mdContent }) {
     return <DocsPageLayout 
                 title="Deploying Serverless App"
                 data="Deploying Serverless App"
                 filesNames={filesNames}
+                mdContent={mdContent}
             />
 }

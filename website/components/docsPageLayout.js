@@ -3,7 +3,7 @@ import Head from 'next/head'
 import SideBar from './sideBar'
 import DocBody from './docBody'
 
-export default function DocsPageLayout({ title, data, filesNames }) {
+export default function DocsPageLayout({ title, data, filesNames, mdContent }) {
     return (
         <React.Fragment>
             <Head>
@@ -14,7 +14,7 @@ export default function DocsPageLayout({ title, data, filesNames }) {
             <div className="flex">
                 <SideBar filesNames={filesNames} />
                 <div>
-                    <DocBody data={data} />
+                    <DocBody data={data} mdContent={mdContent} />
                 </div>
             </div>
         </React.Fragment>
