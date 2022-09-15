@@ -38,8 +38,8 @@ ize console goblin
 
 ### Upload/Remove secrets
 ```shell
-ize secrets set --file .infra/env/testnut/secrets/example-service.json --type ssm
-ize secrets rm --backend ssm --path /testnut/example-service
+ize secrets push goblin --backend ssm --file goblin.json --force
+ize secrets rm goblin
 ```
 
 ### Show debug information
