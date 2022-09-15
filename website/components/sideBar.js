@@ -51,7 +51,7 @@ function MenuElement(props) {
 
 //------------------------------------------------------------------------------------------------------------------
 
-export default function SideBar(props) {
+export default function SideBar({ filesNames }) {
     const { mainMenu, seeAlso } = sideBarMenu
 
     const menuList = mainMenu.map(el => {
@@ -74,8 +74,9 @@ export default function SideBar(props) {
                 <nav>
                     {menuList}
                     <hr className="my-6 border-gray-200" />
-                    <TopElement
+                    <MenuElement
                         title={seeAlso.title}
+                        nestedItems={filesNames}
                     />
                 </nav>
             </div>

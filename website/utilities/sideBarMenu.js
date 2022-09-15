@@ -16,10 +16,6 @@ export const sideBarMenu = {
         }
     ],
     seeAlso: {
-        title: "see also",
-        nestedItems: [
-            "file name",
-            "file name"
-        ]
+        title: "see also"
     }
 } 
