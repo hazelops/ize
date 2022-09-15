@@ -1,15 +1,19 @@
-import Head from 'next/head'
-import DocsLayout from '../../components/docsLayout'
+import DocsPageLayout from '../../components/docsPageLayout'
+import { readFilesNames } from '../../utilities/readFilesNames'
 
-export default function Installation() {
-    return (
-        <div>
-            <Head>
-                <title>Deploying Serverless App</title>
-                <link rel="icon" href="/favicon.ico"/>
-            </Head>
+export async function getServerSideProps() {
+    const filesNames = await readFilesNames()
+    return {
+        props: {
+         filesNames
+        }
+    }
+}
 
-            <DocsLayout data="DEPLOYING SERVERLESS APP PAGE"/>
-        </div>
-    )
+export default function DeployingServerlessApp({ filesNames }) {
+    return <DocsPageLayout 
+                title="Deploying Serverless App"
+                data="Deploying Serverless App"
+                filesNames={filesNames}
+            />
 }

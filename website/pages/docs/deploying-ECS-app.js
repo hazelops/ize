@@ -1,15 +1,19 @@
-import Head from 'next/head'
-import DocsLayout from '../../components/docsLayout'
+import DocsPageLayout from '../../components/docsPageLayout'
+import { readFilesNames } from '../../utilities/readFilesNames'
 
-export default function Installation() {
-    return (
-        <div>
-            <Head>
-                <title>Deploying ECS App</title>
-                <link rel="icon" href="/favicon.ico"/>
-            </Head>
+export async function getServerSideProps() {
+    const filesNames = await readFilesNames()
+    return {
+        props: {
+         filesNames
+        }
+    }
+}
 
-            <DocsLayout data="DEPLOYING ECS APP PAGE"/>
-        </div>
-    )
+export default function DeployingECSApp({ filesNames }) {
+    return <DocsPageLayout 
+                title="Deploying ECS App"
+                data="Deploying ECS App"
+                filesNames={filesNames}
+            />
 }

@@ -1,5 +1,4 @@
-import Head from 'next/head'
-import DocsLayout from '../../components/docsLayout'
+import DocsPageLayout from '../../components/docsPageLayout'
 import { readFilesNames } from '../../utilities/readFilesNames'
 
 export async function getServerSideProps() {
@@ -12,16 +11,9 @@ export async function getServerSideProps() {
 }
 
 export default function Welcome({ filesNames }) {
-    return (
-        <div>
-            <Head>
-                <title>docs</title>
-                <link rel="icon" href="/favicon.ico"/>
-            </Head>
-            <DocsLayout 
-                data="A WELCOME PAGE"
-                filesNames={filesNames} 
+    return <DocsPageLayout 
+                title="docs"
+                data="WELCOME"
+                filesNames={filesNames}
             />
-        </div>
-    )
 }
