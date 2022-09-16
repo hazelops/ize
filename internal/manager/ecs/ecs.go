@@ -177,6 +177,13 @@ func (e *Manager) Push(ui terminal.UI) error {
 	s := sg.Add("%s: push app image...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
+	if len(e.App.Image) != 0 {
+		s.Update("%s: pushing app image... (skipped, using %s) ", e.App.Name, e.App.Image)
+		s.Done()
+
+		return nil
+	}
+
 	image := fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name)
 
 	svc := ecr.New(e.Project.Session)
@@ -252,6 +259,13 @@ func (e *Manager) Build(ui terminal.UI) error {
 
 	s := sg.Add("%s: building app container...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
+
+	if len(e.App.Image) != 0 {
+		s.Update("%s: building app container... (skipped, using %s)", e.App.Name, e.App.Image)
+
+		s.Done()
+		return nil
+	}
 
 	image := fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name)
 	imageUri := fmt.Sprintf("%s/%s", e.App.DockerRegistry, image)
