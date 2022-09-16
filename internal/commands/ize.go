@@ -70,7 +70,7 @@ func newRootCmd(project *config.Project) *cobra.Command {
 	cmd.PersistentFlags().StringP("aws-region", "r", "", "(required) set AWS region (overrides value in ize.toml and IZE_AWS_REGION / AWS_REGION if any of them are set)")
 	cmd.PersistentFlags().StringP("namespace", "n", "", "(required) set namespace (overrides value in ize.toml and IZE_NAMESPACE / NAMESPACE if any of them are set)")
 	cmd.PersistentFlags().String("terraform-version", "", "set terraform-version")
-	cmd.PersistentFlags().String("prefer-runtime", "native", "set prefer runtime (native or docker)")
+	cmd.PersistentFlags().String("prefer-runtime", "native", "set prefer runtime (native, docker or docker-arm64)")
 	cmd.Flags().StringP("tag", "t", "", "set tag")
 
 	cmd.AddCommand(

@@ -34,6 +34,9 @@ var buildExample = templates.Examples(`
 	#  Build app with explicitly specified config file passed via environment variable.
 	export IZE_CONFIG_FILE=/path/to/config
 	ize build <app name>
+
+	# Build app for arm64
+	ize build <app name> --prefer-runtime docker-arm64
 `)
 
 func NewBuildFlags(project *config.Project) *BuildOptions {
