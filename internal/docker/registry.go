@@ -14,12 +14,14 @@ import (
 type Registry struct {
 	Registry string
 	Token    string
+	Platform string
 }
 
-func NewRegistry(registry, token string) Registry {
+func NewRegistry(registry, token, platform string) Registry {
 	return Registry{
 		Registry: registry,
 		Token:    token,
+		Platform: platform,
 	}
 }
 
@@ -45,6 +47,7 @@ func (r *Registry) Push(ctx context.Context, w io.Writer, image string, tags []s
 	resp, err := cli.ImagePush(ctx, image+":"+tags[0], types.ImagePushOptions{
 		RegistryAuth: r.Token,
 		All:          true,
+		Platform:     r.Platform,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to push image: %s", err)
