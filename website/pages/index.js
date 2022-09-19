@@ -2,11 +2,13 @@
 // https://merakiui.com/
 // https://www.tailwind-kit.com/components#elements
 import Head from 'next/head'
-import IzeNavbar from '../components/izeNavbar'
-// import TypeIt from "typeit-react"
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { fas } from '@fortawesome/free-solid-svg-icons'
+
+import IzeNavbar from '../components/izeNavbar'
+import TypeItAnimation from '../components/typeItAnimation'
+import TypeIt from 'typeit-react'
 
 library.add(fas)
 
@@ -43,7 +45,7 @@ export default function Home() {
                 <div className="lg:flex">
                     <div className="flex justify-center w-full px-6 py-8 lg:h-128 lg:w-1/2">
                         <div className="max-w-xl">
-                            {/* <TypeIt
+                            <TypeIt
                                 getBeforeInit={(instance) => {
                                     instance.type("<span class='text-blue-600'>❯</span> ")
                                         .type("dockerize").type(" ").pause(750).delete(10).pause(500)
@@ -54,18 +56,16 @@ export default function Home() {
                                         .type("ize:").type(" ")
                                     return instance;
                                 }}
-                                options={
-                                    {
-
+                                options={{
                                         speed: 50,
                                         waitUntilVisible: true,
                                         cursorChar: "|"
-
-                                    }
-                                } element={"h2"}
-                                className="text-2xl font-semibold text-gray-800 dark:text-white lg:text-3xl">
-
-                            </TypeIt> */}
+                                }}
+                                element={"h2"}
+                                className="text-2xl font-semibold text-gray-800 dark:text-white lg:text-3xl"
+                                >
+                            </TypeIt>
+                           
 
 
                             <p className="mt-20 text-sm text-gray-500 dark:text-gray-400 lg:text-base">
