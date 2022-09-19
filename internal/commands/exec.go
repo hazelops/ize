@@ -2,25 +2,24 @@ package commands
 
 import (
 	"fmt"
-	"github.com/hazelops/ize/internal/requirements"
-	"strings"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/requirements"
 	"github.com/hazelops/ize/pkg/ssmsession"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"strings"
 )
 
 type ExecOptions struct {
 	Config        *config.Project
 	AppName       string
 	EcsCluster    string
-	Command       string
+	Command       []string
 	Task          string
 	ContainerName string
 }
@@ -90,7 +89,9 @@ func (o *ExecOptions) Complete(cmd *cobra.Command, args []string, argsLenAtDash 
 		o.ContainerName = o.AppName
 	}
 
-	o.Command = strings.Join(args[argsLenAtDash:], " ")
+	if argsLenAtDash > -1 {
+		o.Command = args[argsLenAtDash:]
+	}
 
 	return nil
 }
@@ -109,7 +110,7 @@ func (o *ExecOptions) Validate() error {
 	}
 
 	if len(o.Command) == 0 {
-		return fmt.Errorf("can't validate: command must be specified")
+		return fmt.Errorf("can't validate: you must specify at least one command for the container")
 	}
 
 	return nil
@@ -154,7 +155,7 @@ func (o *ExecOptions) Run() error {
 		Interactive: aws.Bool(true),
 		Cluster:     &o.EcsCluster,
 		Task:        &o.Task,
-		Command:     aws.String(o.Command),
+		Command:     aws.String(strings.Join(o.Command, " ")),
 	})
 	if aerr, ok := err.(awserr.Error); ok {
 		switch aerr.Code() {
