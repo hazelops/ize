@@ -25,6 +25,7 @@ import (
 
 const (
 	versionPrefix = "terraform_"
+	defaultMirror = "https://releases.hashicorp.com/terraform"
 )
 
 type local struct {
@@ -64,11 +65,11 @@ func (l *local) Run() error {
 
 func (l *local) Prepare() error {
 	var (
-		defaultMirror = "https://releases.hashicorp.com/terraform"
-		path          = ""
+		mirror = defaultMirror
+		path   = ""
 	)
 
-	path, err := installVersion(l.version, &defaultMirror)
+	path, err := installVersion(l.version, &mirror)
 	if err != nil {
 		return err
 	}
@@ -195,7 +196,10 @@ func installVersion(version string, mirrorURL *string) (string, error) {
 		exist := tfswitcher.VersionExist(requestedVersion, tflist) //check if version exist before downloading it
 
 		if exist {
-			Install(requestedVersion, *mirrorURL)
+			err := Install(requestedVersion, *mirrorURL)
+			if err != nil {
+				return "", err
+			}
 		} else {
 			return "", fmt.Errorf("provided terraform version does not exist")
 		}
@@ -227,7 +231,7 @@ func Install(tfversion string, mirrorURL string) error {
 
 	/* if selected version already exists */
 	if fileExist {
-		os.Exit(0)
+		return nil
 	}
 
 	// if it does not have a slash - append it
@@ -243,16 +247,14 @@ func Install(tfversion string, mirrorURL string) error {
 
 	/* If unable to download file from url, exit(1) immediately */
 	if errDownload != nil {
-		fmt.Println(errDownload)
-		os.Exit(1)
+		return errDownload
 	}
 
 	/* unzip the downloaded zipfile */
 	_, errUnzip := tfswitcher.Unzip(zipFile, installLocation)
 	if errUnzip != nil {
 		fmt.Println("[Error] : Unable to unzip downloaded zip file")
-		log.Fatal(errUnzip)
-		os.Exit(1)
+		return errUnzip
 	}
 
 	/* rename unzipped file to terraform version name - terraform_x.x.x */
