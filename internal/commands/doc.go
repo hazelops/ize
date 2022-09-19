@@ -4,6 +4,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
+	"os"
 )
 
 func NewCmdDoc() *cobra.Command {
@@ -14,8 +15,12 @@ func NewCmdDoc() *cobra.Command {
 		Long:                  "Create docs with ize commands description",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
+			err := os.MkdirAll("./website/commands", 0777)
+			if err != nil {
+				return err
+			}
 
-			err := doc.GenMarkdownTree(cmd.Root(), "./commands")
+			err = doc.GenMarkdownTree(cmd.Root(), "./website/commands")
 			if err != nil {
 				return err
 			}
