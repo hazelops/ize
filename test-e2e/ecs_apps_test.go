@@ -129,6 +129,8 @@ func TestIzeUpInfra(t *testing.T) {
 		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
+	defer recovery(t)
+
 	foundIZEConfig := false
 	err := filepath.Walk(examplesRootDir, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
@@ -174,6 +176,8 @@ func TestIzeUpGoblin(t *testing.T) {
 		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
+	defer recovery(t)
+
 	foundIZEConfig := false
 	err := filepath.Walk(examplesRootDir, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
@@ -216,6 +220,8 @@ func TestIzeUpSquibby(t *testing.T) {
 		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
+	defer recovery(t)
+
 	foundIZEConfig := false
 	err := filepath.Walk(examplesRootDir, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
@@ -255,6 +261,8 @@ func TestIzeUpSquibby(t *testing.T) {
 }
 
 func TestCheckSecretsSquibby(t *testing.T) {
+	defer recovery(t)
+
 	url := fmt.Sprintf("http://squibby.%s.examples.ize.sh/", os.Getenv("ENV"))
 
 	for i := 0; i < 10; i++ {
@@ -281,6 +289,8 @@ func TestCheckSecretsSquibby(t *testing.T) {
 }
 
 func TestCheckSecretsGoblin(t *testing.T) {
+	defer recovery(t)
+
 	url := fmt.Sprintf("http://goblin.%s.examples.ize.sh/", os.Getenv("ENV"))
 
 	for i := 0; i < 10; i++ {
@@ -309,6 +319,8 @@ func TestIzeExecGoblin(t *testing.T) {
 		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
+	defer recovery(t)
+
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
 	stdout, stderr, err := ize.RunPty("--plain-text", "exec", "goblin", "--", "sh -c \"echo $APP_NAME\"")
@@ -331,6 +343,8 @@ func TestIzeExecSquibby(t *testing.T) {
 		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
+	defer recovery(t)
+
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
 	stdout, stderr, err := ize.RunPty("--plain-text", "exec", "squibby", "--", "sh -c \"echo $APP_NAME\"")
@@ -352,6 +366,8 @@ func TestIzeSecretsRmGoblin(t *testing.T) {
 	if examplesRootDir == "" {
 		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
+
+	defer recovery(t)
 
 	rand.Seed(time.Now().UTC().UnixNano())
 
@@ -402,6 +418,8 @@ func TestIzeSecretsRmSquibby(t *testing.T) {
 	if examplesRootDir == "" {
 		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
+
+	defer recovery(t)
 
 	rand.Seed(time.Now().UTC().UnixNano())
 
@@ -455,6 +473,8 @@ func TestIzeDown(t *testing.T) {
 	if examplesRootDir == "" {
 		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
+
+	defer recovery(t)
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 

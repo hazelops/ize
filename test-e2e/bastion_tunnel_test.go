@@ -36,6 +36,8 @@ func TestIzeUpInfra(t *testing.T) {
 		t.Fatalf("No ize.toml file in project template path %s", examplesRootDir)
 	}
 
+	defer recovery(t)
+
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
 	stdout, stderr, err := ize.RunRaw("up", "infra")
@@ -62,6 +64,8 @@ func TestIzeTunnelUp(t *testing.T) {
 		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
+	defer recovery(t)
+
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
 	stdout, stderr, err := ize.RunRaw("tunnel", "up")
@@ -86,6 +90,8 @@ func TestIzeTunnelStatus(t *testing.T) {
 		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
+	defer recovery(t)
+
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
 	stdout, stderr, err := ize.RunRaw("tunnel", "status")
@@ -108,6 +114,8 @@ func TestIzeTunnelDown(t *testing.T) {
 		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
 
+	defer recovery(t)
+
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
 	stdout, stderr, err := ize.RunRaw("tunnel", "down")
@@ -129,6 +137,8 @@ func TestIzeDown(t *testing.T) {
 	if examplesRootDir == "" {
 		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
 	}
+
+	defer recovery(t)
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
