@@ -119,14 +119,14 @@ func Execute() {
 }
 
 func getConfig(cfg *config.Project) {
-	if !(slices.Contains(os.Args, "aws-profile") ||
-		slices.Contains(os.Args, "doc") ||
-		slices.Contains(os.Args, "completion") ||
-		slices.Contains(os.Args, "version") ||
-		slices.Contains(os.Args, "init") ||
-		slices.Contains(os.Args, "validate") ||
-		slices.Contains(os.Args, "config")) ||
-		slices.Contains(os.Args, "terraform") {
+	if slices.Contains(os.Args, "terraform") ||
+		!(slices.Contains(os.Args, "aws-profile") ||
+			slices.Contains(os.Args, "doc") ||
+			slices.Contains(os.Args, "completion") ||
+			slices.Contains(os.Args, "version") ||
+			slices.Contains(os.Args, "init") ||
+			slices.Contains(os.Args, "validate") ||
+			slices.Contains(os.Args, "config")) {
 		err := cfg.GetConfig()
 		if err != nil {
 			pterm.Error.Println(err)
