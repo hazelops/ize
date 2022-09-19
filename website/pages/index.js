@@ -2,13 +2,11 @@
 // https://merakiui.com/
 // https://www.tailwind-kit.com/components#elements
 import Head from 'next/head'
-import Link from 'next/link'
 import IzeNavbar from '../components/izeNavbar'
 // import TypeIt from "typeit-react"
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { fas } from '@fortawesome/free-solid-svg-icons'
-import Ize from '../components/ize'
 
 library.add(fas)
 
