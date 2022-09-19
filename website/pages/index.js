@@ -2,13 +2,12 @@
 // https://merakiui.com/
 // https://www.tailwind-kit.com/components#elements
 import Head from 'next/head'
-import Link from 'next/link'
-import IzeNavbar from '../components/izeNavbar'
-// import TypeIt from "typeit-react"
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { fas } from '@fortawesome/free-solid-svg-icons'
-import Ize from '../components/ize'
+
+import IzeNavbar from '../components/izeNavbar'
+import TypeItAnimation from '../components/typeItAnimation'
 
 library.add(fas)
 
@@ -43,32 +42,9 @@ export default function Home() {
             <IzeNavbar />
             
                 <div className="lg:flex">
-                    <div className="flex justify-center w-full px-6 py-8 lg:h-128 lg:w-1/2">
+                    <div className="flex justify-center w-full px-6 py-6 lg:h-128 lg:w-1/2">
                         <div className="max-w-xl">
-                            {/* <TypeIt
-                                getBeforeInit={(instance) => {
-                                    instance.type("<span class='text-blue-600'>❯</span> ")
-                                        .type("dockerize").type(" ").pause(750).delete(10).pause(500)
-                                        .type("terraformize").type(" ").pause(750).delete(13).pause(500)
-                                        .type("organize").type(" ").pause(750).delete(9).pause(500)
-                                        .type("standardize").type(" ").pause(750).delete(12).pause(500)
-                                        .type("optimize").type(" ").pause(750).delete(9).pause(500)
-                                        .type("ize:").type(" ")
-                                    return instance;
-                                }}
-                                options={
-                                    {
-
-                                        speed: 50,
-                                        waitUntilVisible: true,
-                                        cursorChar: "|"
-
-                                    }
-                                } element={"h2"}
-                                className="text-2xl font-semibold text-gray-800 dark:text-white lg:text-3xl">
-
-                            </TypeIt> */}
-
+                            <TypeItAnimation />
 
                             <p className="mt-20 text-sm text-gray-500 dark:text-gray-400 lg:text-base">
                                 An opinionated deployment tool for infrastructure and code. The main goal is to co-join
