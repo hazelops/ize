@@ -57,6 +57,8 @@ export default function Home() {
                                     return instance;
                                 }}
                                 options={{
+                                        loop: true,
+                                        loopDelay: 1500,
                                         speed: 50,
                                         waitUntilVisible: true,
                                         cursorChar: "|"
