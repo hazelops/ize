@@ -1,5 +1,5 @@
 import DocsPageLayout from '../../components/docsPageLayout'
-import Tab from '../../components/tab'
+import Tab from '../../components/tab/tab'
 import { readFilesNames } from '../../utilities/docsGlobalProps'
 
 export async function getStaticProps() {

@@ -1,6 +1,7 @@
 // https://tailblocks.cc/
 // https://merakiui.com/
 // https://www.tailwind-kit.com/components#elements
+
 import Head from 'next/head'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
@@ -131,7 +132,7 @@ export default function Home() {
                     <div className="flex justify-center w-full px-6 py-8 lg:h-256 lg:w-1/2">
                         <div className="w-full py-12">
                             <div className="coding inverse-toggle px-5 pt-4 shadow-lg text-gray-100 text-sm font-mono subpixel-antialiased
-                 bg-gray-800  pb-6 pt-4 rounded-lg leading-normal overflow-hidden text-left">
+                 bg-gray-800  pb-6 rounded-lg leading-normal overflow-hidden text-left">
                                 <div className="top mb-2 flex">
                                     <div className="h-3 w-3 bg-red-500 rounded-full"></div>
                                     <div className="ml-2 h-3 w-3 bg-yellow-500 rounded-full"></div>

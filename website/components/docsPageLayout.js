@@ -9,7 +9,7 @@ export default function DocsPageLayout({ children, title, filesNames }) {
 
             <div className="flex">
                 <SideBar filesNames={filesNames} />
-                <div>
+                <div className="flex w-full justify-center">
                     {children}
                 </div>
             </div>
