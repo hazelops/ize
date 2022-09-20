@@ -70,7 +70,7 @@ export default function SideBar({ filesNames }) {
     })
 
     return (
-        <div className="flex flex-col w-64 h-screen px-4 py-8 bg-white border-r">
+        <div className="flex flex-col w-1/5 h-screen px-4 py-8 bg-white border-r">
             <div>
                <Ize /> 
             </div>

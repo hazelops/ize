@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { installationMenu } from '../../utilities/installationMenu'
+import CodeTemplate from '../codeTemplate'
 
 function TabButton({ field, id, onClick, active }) {
     const border = active == id ? "border-b-2 border-blue-500" : ""
 
     return (
         <button 
-            className={`h-10 px-4 py-2 -mb-px text-sm text-center text-blue-600 bg-transparent sm:text-base whitespace-nowrap focus:outline-none hover:bg-gray-200 ${border}`}
+            className={`h-10 px-4 py-2 -mb-px text-sm text-center bg-transparent sm:text-base whitespace-nowrap focus:outline-none hover:bg-gray-200 ${border}`}
             onClick={() => onClick(id)}
         >
             {field}
@@ -41,12 +42,16 @@ export default function Tab() {
         )
     })
 
+
     return (
             <div className="flex flex-col w-2/3 items-center">
                 <div className="inline-flex w-1/2 justify-between border-b border-gray-200 h-fit">
                     {listButtons}
                 </div>
                 <TabContent></TabContent>
+                <CodeTemplate>
+                    
+                </CodeTemplate>
             </div> 
     )
 }
