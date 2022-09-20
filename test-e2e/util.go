@@ -97,3 +97,9 @@ func (b *binary) Run(args string) (stdout string) {
 func splitArgs(args string) []string {
 	return strings.Split(args, " ")
 }
+
+func recovery(t *testing.T) {
+	if panicMsg := recover(); panicMsg != nil {
+		t.Errorf("panic message: %s\n", panicMsg)
+	}
+}
