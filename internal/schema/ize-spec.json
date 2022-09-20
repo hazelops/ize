@@ -251,6 +251,10 @@
                     "type": "string",
                     "description": "(optional) Node version that will be used by nvm can be specified here that. Default is v14."
                 },
+                "serverless_version": {
+                    "type": "string",
+                    "description": "(optional) Serverless framework version which is used. Defines cli interface. Default is 2."
+                },
                 "create_domain" : {
                     "type": "boolean",
                     "description": "(optional) Create domain for the serverless domain manager during the deployment."
@@ -374,6 +378,10 @@
                 "node_version": {
                     "type": "string",
                     "description": "(optional) Node version that will be used by nvm can be specified here that. Default is v14."
+                },
+                "serverless_version": {
+                    "type": "string",
+                    "description": "(optional) Serverless framework version which is used. Defines cli interface. Default is 2."
                 },
                 "create_domain" : {
                     "type": "boolean",
