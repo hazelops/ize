@@ -20,6 +20,7 @@ type Serverless struct {
 	Name                    string   `mapstructure:",omitempty"`
 	File                    string   `mapstructure:",omitempty"`
 	NodeVersion             string   `mapstructure:"node_version"`
+	ServerlessVersion       string   `mapstructure:"serverless_version"`
 	Path                    string   `mapstructure:",omitempty"`
 	SLSNodeModuleCacheMount string   `mapstructure:",omitempty"`
 	CreateDomain            bool     `mapstructure:"create_domain"`
