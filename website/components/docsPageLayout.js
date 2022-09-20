@@ -1,20 +1,16 @@
 import React from 'react'
-import Head from 'next/head'
+import IzeHead from './izeHead'
 import SideBar from './sideBar'
-import DocBody from './docBody'
 
-export default function DocsPageLayout({ title, data, filesNames, mdContent }) {
+export default function DocsPageLayout({ children, title, filesNames }) {
     return (
         <React.Fragment>
-            <Head>
-                <title>{title}</title>
-                <link rel="icon" href="/favicon.ico"/>
-            </Head>
+            <IzeHead title={title} />
 
             <div className="flex">
                 <SideBar filesNames={filesNames} />
                 <div>
-                    <DocBody data={data} mdContent={mdContent} />
+                    {children}
                 </div>
             </div>
         </React.Fragment>
