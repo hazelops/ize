@@ -32,7 +32,7 @@ func (sls *Manager) prepare() {
 	}
 
 	if len(sls.App.File) == 0 {
-		_, err := os.Stat(filepath.Join(sls.Project.RootDir, "serverless.ts"))
+		_, err := os.Stat(filepath.Join(sls.App.Path, "serverless.ts"))
 		if os.IsNotExist(err) {
 			sls.App.File = "serverless.yml"
 		} else {
