@@ -32,8 +32,18 @@ func (sls *Manager) prepare() {
 	}
 
 	if len(sls.App.File) == 0 {
-		sls.App.File = "serverless.yml"
+		_, err := os.Stat(filepath.Join(sls.App.Path, "serverless.ts"))
+		if os.IsNotExist(err) {
+			sls.App.File = "serverless.yml"
+		} else {
+			sls.App.File = "serverless.ts"
+		}
 	}
+
+	if len(sls.App.ServerlessVersion) == 0 {
+		sls.App.ServerlessVersion = "2"
+	}
+
 	if len(sls.App.SLSNodeModuleCacheMount) == 0 {
 		sls.App.SLSNodeModuleCacheMount = fmt.Sprintf("%s-node-modules", sls.App.Name)
 	}

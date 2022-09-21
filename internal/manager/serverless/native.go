@@ -54,9 +54,26 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 	if len(nvmDir) == 0 {
 		nvmDir = "$HOME/.nvm"
 	}
+	var command string
 
-	command := fmt.Sprintf(
-		`source %s/nvm.sh && 
+	// SLS v3 has breaking changes in syntax
+	if sls.App.ServerlessVersion == "3" {
+		command = fmt.Sprintf(
+			`source %s/nvm.sh && 
+				nvm use %s &&
+				npx serverless deploy \
+				--config=%s \
+				--param="service=%s" \				
+				--region=%s \
+				--param="profile=%s" \
+				--stage=%s \
+				--verbose \`,
+			nvmDir, sls.App.NodeVersion, sls.App.File,
+			sls.App.Name, sls.App.AwsRegion,
+			sls.App.AwsProfile, sls.Project.Env)
+	} else {
+		command = fmt.Sprintf(
+			`source %s/nvm.sh && 
 				nvm use %s &&
 				npx serverless deploy \
 				--config %s \
@@ -65,9 +82,10 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 				--region %s \
 				--profile %s \
 				--stage %s`,
-		nvmDir, sls.App.NodeVersion, sls.App.File,
-		sls.App.Name, sls.App.AwsRegion,
-		sls.App.AwsProfile, sls.Project.Env)
+			nvmDir, sls.App.NodeVersion, sls.App.File,
+			sls.App.Name, sls.App.AwsRegion,
+			sls.App.AwsProfile, sls.Project.Env)
+	}
 
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Stdout = w
@@ -88,8 +106,26 @@ func (sls *Manager) runRemove(w io.Writer) error {
 		nvmDir = "$HOME/.nvm"
 	}
 
-	command := fmt.Sprintf(
-		`source %s/nvm.sh && 
+	var command string
+
+	// SLS v3 has breaking changes in syntax
+	if sls.App.ServerlessVersion == "3" {
+		command = fmt.Sprintf(
+			`source %s/nvm.sh && 
+				nvm use %s &&
+				npx serverless remove \
+				--config=%s \
+				--param="service=%s" \				
+				--region=%s \
+				--param="profile=%s" \
+				--stage=%s \
+				--verbose \`,
+			nvmDir, sls.App.NodeVersion, sls.App.File,
+			sls.App.Name, sls.App.AwsRegion,
+			sls.App.AwsProfile, sls.Project.Env)
+	} else {
+		command = fmt.Sprintf(
+			`source %s/nvm.sh && 
 				nvm use %s &&
 				npx serverless remove \
 				--config %s \
@@ -98,9 +134,10 @@ func (sls *Manager) runRemove(w io.Writer) error {
 				--region %s \
 				--profile %s \
 				--stage %s`,
-		nvmDir, sls.App.NodeVersion, sls.App.File,
-		sls.App.Name, sls.App.AwsRegion,
-		sls.App.AwsProfile, sls.Project.Env)
+			nvmDir, sls.App.NodeVersion, sls.App.File,
+			sls.App.Name, sls.App.AwsRegion,
+			sls.App.AwsProfile, sls.Project.Env)
+	}
 
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Stdout = w
