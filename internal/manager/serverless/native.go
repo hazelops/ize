@@ -63,11 +63,11 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 				nvm use %s &&
 				npx serverless deploy \
 				--config=%s \
-				--param="service=%s" \				
+				--param="service=%s" \
 				--region=%s \
 				--param="profile=%s" \
 				--stage=%s \
-				--verbose \`,
+				--verbose`,
 			nvmDir, sls.App.NodeVersion, sls.App.File,
 			sls.App.Name, sls.App.AwsRegion,
 			sls.App.AwsProfile, sls.Project.Env)
@@ -115,7 +115,7 @@ func (sls *Manager) runRemove(w io.Writer) error {
 				nvm use %s &&
 				npx serverless remove \
 				--config=%s \
-				--param="service=%s" \				
+				--param="service=%s" \			
 				--region=%s \
 				--param="profile=%s" \
 				--stage=%s \
@@ -131,7 +131,7 @@ func (sls *Manager) runRemove(w io.Writer) error {
 				--config %s \
 				--service %s \
 				--verbose \
-				--region %s \
+				dion %s \
 				--profile %s \
 				--stage %s`,
 			nvmDir, sls.App.NodeVersion, sls.App.File,
