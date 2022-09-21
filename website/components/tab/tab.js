@@ -1,6 +1,10 @@
 import { useState } from 'react'
+
 import { installationMenu } from '../../utilities/installationMenu'
-import CodeTemplate from '../codeTemplate'
+import MacOSInstallation from '../installationContent/macOSInstallation'
+import UbuntuInstallation from '../installationContent/ubuntuInstallation'
+import SourceInstallation from '../installationContent/sourceInstallation'
+import AutocompleteInstructions from '../installationContent/autocompleteInstructions'
 
 function TabButton({ field, id, onClick, active }) {
     const border = active == id ? "border-b-2 border-blue-500" : ""
@@ -15,10 +19,15 @@ function TabButton({ field, id, onClick, active }) {
     )
 }
 
-function TabContent({ children }) {
-    return (
-        <div>{children}</div>
-    )
+function TabContent({ active }) {
+    if (active == 1) {
+        return <UbuntuInstallation />
+    } else if (active == 2) {
+        return <SourceInstallation />
+    } else if (active == 3) {
+        return <AutocompleteInstructions />
+    }
+    return <MacOSInstallation />
 }
 
 //---------------------------------------------------------
@@ -42,16 +51,13 @@ export default function Tab() {
         )
     })
 
-
     return (
             <div className="flex flex-col w-2/3 items-center">
                 <div className="inline-flex w-1/2 justify-between border-b border-gray-200 h-fit">
                     {listButtons}
                 </div>
-                <TabContent></TabContent>
-                <CodeTemplate>
-                    
-                </CodeTemplate>
+                <TabContent active={active} />
             </div> 
+           
     )
 }

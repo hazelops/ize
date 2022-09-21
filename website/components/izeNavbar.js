@@ -2,9 +2,8 @@ import Ize from './ize'
 import Link from 'next/link'
 import React from 'react'
 
-export default function IzeNavbar({ children }) {
+export default function IzeNavbar() {
     return (
-        <React.Fragment>
             <nav className="bg-white shadow dark:bg-gray-800" >
                     <div className="container inline-block px-6 py-4 mx-auto lg:flex lg:justify-between lg:items-center">
                         <div className="lg:flex lg:items-center">
@@ -49,8 +48,5 @@ export default function IzeNavbar({ children }) {
                         </div>
                     </div>
             </nav>
-
-            <main>{children}</main>
-        </React.Fragment>
     )
 }
