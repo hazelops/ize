@@ -100,7 +100,9 @@ jobs:
           go test -v --timeout 0 --tags="e2e ecs_apps" ./test-e2e
 
       - name: Destroy Infra
-        run: ize down infra
+        run: |
+          cd "${{ env.IZE_EXAMPLES_PATH }}/.ize/env/${{ env.ENV }}"
+          ize down infra
 
   test-tunnel:
     name: Bastion Tunnel Monorepo
@@ -161,7 +163,9 @@ jobs:
           go test -v --timeout 0 --tags="e2e bastion_tunnel" ./test-e2e
 
       - name: Destroy Infra
-        run: ize down infra
+        run: |
+          cd "${{ env.IZE_EXAMPLES_PATH }}/.ize/env/${{ env.ENV }}"
+          ize down infra
 
   test-terraform:
     name: Terraform Commands
@@ -223,4 +227,6 @@ jobs:
           go test -v --timeout 0 --tags="e2e terraform" ./test-e2e
 
       - name: Destroy Infra
-        run: ize down infra
+        run: |
+          cd "${{ env.IZE_EXAMPLES_PATH }}/.ize/env/${{ env.ENV }}"
+          ize down infra
