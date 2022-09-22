@@ -2,11 +2,21 @@ package config
 
 import (
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
+	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go/service/ecr/ecriface"
+	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
+	"github.com/aws/aws-sdk-go/service/elbv2"
+	"github.com/aws/aws-sdk-go/service/elbv2/elbv2iface"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 )
 
@@ -48,6 +58,8 @@ type awsClient struct {
 	ECSClient            ecsiface.ECSAPI
 	CloudWatchLogsClient cloudwatchlogsiface.CloudWatchLogsAPI
 	SSMClient            ssmiface.SSMAPI
+	ELBV2Client          elbv2iface.ELBV2API
+	ECRClient            ecriface.ECRAPI
 }
 
 type Option func(*awsClient)
@@ -76,6 +88,12 @@ func WithSSMClient(api ssmiface.SSMAPI) Option {
 	}
 }
 
+func WithELBV2Client(api elbv2iface.ELBV2API) Option {
+	return func(r *awsClient) {
+		r.ELBV2Client = api
+	}
+}
+
 func WithCloudWatchLogsClient(api cloudwatchlogsiface.CloudWatchLogsAPI) Option {
 	return func(r *awsClient) {
 		r.CloudWatchLogsClient = api
@@ -88,6 +106,12 @@ func WithIAMClient(api iamiface.IAMAPI) Option {
 	}
 }
 
+func WithECRClient(api ecriface.ECRAPI) Option {
+	return func(r *awsClient) {
+		r.ECRClient = api
+	}
+}
+
 func NewAWSClient(options ...Option) *awsClient {
 	r := awsClient{}
 	for _, opt := range options {
@@ -95,6 +119,19 @@ func NewAWSClient(options ...Option) *awsClient {
 	}
 
 	return &r
+}
+
+func (p *Project) SettingAWSClient(sess *session.Session) {
+	p.AWSClient = NewAWSClient(
+		WithS3Client(s3.New(sess)),
+		WithSTSClient(sts.New(sess)),
+		WithIAMClient(iam.New(sess)),
+		WithECSClient(ecs.New(sess)),
+		WithCloudWatchLogsClient(cloudwatchlogs.New(sess)),
+		WithSSMClient(ssm.New(sess)),
+		WithELBV2Client(elbv2.New(sess)),
+		WithECRClient(ecr.New(sess)),
+	)
 }
 
 func (p *Project) GetApps() map[string]*interface{} {

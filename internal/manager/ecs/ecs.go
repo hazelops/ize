@@ -56,14 +56,6 @@ func (e *Manager) prepare() {
 	if e.App.Timeout == 0 {
 		e.App.Timeout = 300
 	}
-
-	if len(e.App.AwsProfile) == 0 {
-		e.App.AwsProfile = e.Project.AwsProfile
-	}
-
-	if len(e.App.AwsRegion) == 0 {
-		e.App.AwsRegion = e.Project.AwsRegion
-	}
 }
 
 // Deploy deploys app container to ECS via ECS deploy
@@ -73,15 +65,17 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  e.App.AwsRegion,
-		Profile: e.App.AwsProfile,
-	})
-	if err != nil {
-		return fmt.Errorf("can't get session: %w", err)
-	}
+	if len(e.App.AwsRegion) != 0 && len(e.App.AwsProfile) != 0 {
+		sess, err := utils.GetSession(&utils.SessionConfig{
+			Region:  e.App.AwsRegion,
+			Profile: e.App.AwsProfile,
+		})
+		if err != nil {
+			return fmt.Errorf("can't get session: %w", err)
+		}
 
-	e.Project.Session = sess
+		e.Project.SettingAWSClient(sess)
+	}
 
 	if e.App.SkipDeploy {
 		s := sg.Add("%s: deploy will be skipped", e.App.Name)
@@ -135,15 +129,17 @@ func (e *Manager) Redeploy(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  e.App.AwsRegion,
-		Profile: e.App.AwsProfile,
-	})
-	if err != nil {
-		return fmt.Errorf("can't get session: %w", err)
-	}
+	if len(e.App.AwsRegion) != 0 && len(e.App.AwsProfile) != 0 {
+		sess, err := utils.GetSession(&utils.SessionConfig{
+			Region:  e.App.AwsRegion,
+			Profile: e.App.AwsProfile,
+		})
+		if err != nil {
+			return fmt.Errorf("can't get session: %w", err)
+		}
 
-	e.Project.Session = sess
+		e.Project.SettingAWSClient(sess)
+	}
 
 	s := sg.Add("%s: redeploying app container...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
@@ -186,7 +182,7 @@ func (e *Manager) Push(ui terminal.UI) error {
 
 	image := fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name)
 
-	svc := ecr.New(e.Project.Session)
+	svc := e.Project.AWSClient.ECRClient
 
 	var repository *ecr.Repository
 
