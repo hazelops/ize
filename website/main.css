@@ -13,4 +13,8 @@ html, body {
     .h-fit {
         height: fit-content;
     }
+
+    .selectedElement {
+        color: #0460d8;
+    }
 }

@@ -5,30 +5,42 @@ import Link from 'next/link'
 import { sideBarMenu } from '../../utilities/sideBarMenu'
 import styles from './sideBar.module.css'
 
-function TopElement({ title, onClick }) {
+function TopElement({ title, onClick, active, id }) {
+    const color = active == id ? "selectedElement" : ""
     return (
             <div
-                className={`${styles.topElement} w-fit py-2 mt-3 cursor-pointer`}
+                className={`${styles.topElement} w-fit py-2 mt-2 cursor-pointer ${color}`}
                 onClick={onClick}
-                >
-                <span className="font-medium capitalize">{title}</span>
+            >
+                {title}
             </div>
     )
 }
 
-function NestedElements({ hidden, nestedItems }) {
+function NestedElements({ hidden, nestedItems, active, onClick }) {
     if (hidden) {
         return null
     }
 
     const nestedList = nestedItems.map(el => {
+        const ind = nestedItems.indexOf(el)
+
+        const handleClick = function() {
+            return onClick(ind)
+        }
+
         const pathName = el.slice().replaceAll(" ", "-")
         let route = pathName == "welcome"? "" : pathName
-        return <Link 
-                key={nestedItems.indexOf(el)} 
-                href={`/docs/${route}`}
-                >
-                    <a><TopElement title={el}/></a>
+
+        return <Link key={ind} href={`/docs/${route}`}>
+                    <a>
+                        <TopElement 
+                            title={el}
+                            id={ind} 
+                            onClick={handleClick}
+                            active={active}
+                        />
+                    </a>
                 </Link>
     })
 
@@ -39,17 +51,28 @@ function NestedElements({ hidden, nestedItems }) {
     )
 }
 
-function MenuElement({ title, nestedItems }) {
+function MenuElement({ title, nestedItems, id, onClickOuter, activeOuter, onClickInner, activeInner }) {
     const [isHidden, setHidden] = useState(false)
 
-    const handleClick = function() {
+    const handleClickOuter = function() {
         setHidden(!isHidden)
+        return onClickOuter(id)
     } 
 
     return (
         <React.Fragment>
-            <TopElement title={title} onClick={handleClick} />
-            <NestedElements hidden={isHidden} nestedItems={nestedItems} />
+            <TopElement 
+                title={title}
+                onClick={handleClickOuter}
+                active={activeOuter}
+                id={id}
+            />
+            <NestedElements 
+                hidden={isHidden} 
+                nestedItems={nestedItems}
+                onClick={onClickInner}
+                active={activeInner} 
+            />
         </React.Fragment>
         
     )
@@ -60,12 +83,29 @@ function MenuElement({ title, nestedItems }) {
 export default function SideBar({ filesNames }) {
     const { mainMenu, seeAlso } = sideBarMenu
 
+    const [activeOuter, setActiveOuter] = useState(0)
+    const [activeInner, setActiveInner] = useState(null)
+    // get unique ids (array?)
+
+    const handleClickOuter = function(id) {
+        setActiveOuter(id)
+    }
+
+    const handleClickInner = function(id) {
+        setActiveInner(id)
+    }
+
     const menuList = mainMenu.map(el => {
+        const ind = mainMenu.indexOf(el)
         return (
-            <MenuElement
-                key={mainMenu.indexOf(el)}
+            <MenuElement key={ind}
+                id={ind}
                 title={el.title}
                 nestedItems={el.nestedItems}
+                onClickOuter={handleClickOuter}
+                activeOuter={activeOuter}
+                onClickInner={handleClickInner}
+                activeInner={activeInner}
              />
         )
     })
@@ -82,6 +122,11 @@ export default function SideBar({ filesNames }) {
                     <MenuElement
                         title={seeAlso.title}
                         nestedItems={filesNames}
+                        id={2}
+                        onClickOuter={handleClickOuter}
+                        activeOuter={activeOuter}
+                        onClickInner={handleClickInner}
+                        activeInner={activeInner}
                     />
                 </nav>
         </div>
