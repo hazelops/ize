@@ -1,6 +1,6 @@
 import React from 'react'
 import IzeHead from './izeHead'
-import SideBar from './sideBar'
+import SideBar from './sideBar/sideBar'
 
 export default function DocsPageLayout({ children, title, filesNames }) {
     return (

@@ -1,4 +1,9 @@
+@tailwind base;
 @tailwind utilities;
+
+html, body {
+    min-height: 100vh;
+}
 
 @layer utilities {
     .w-fit {

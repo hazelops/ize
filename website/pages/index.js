@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { fas } from '@fortawesome/free-solid-svg-icons'
 
+import IzeNavbar from '../components/izeNavbar'
 import TypeItAnimation from '../components/typeItAnimation'
 
 library.add(fas)
@@ -39,7 +40,8 @@ export default function Home() {
 
            {/* REMOVE HEADER */}
             <header className="bg-white dark:bg-gray-800">
-            
+                <IzeNavbar />
+
                 <div className="lg:flex">
                     <div className="flex justify-center w-full px-6 py-6 lg:h-128 lg:w-1/2">
                         <div className="max-w-xl">

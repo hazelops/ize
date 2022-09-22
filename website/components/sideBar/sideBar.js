@@ -1,30 +1,31 @@
-import Ize from "./ize"
 import React, { useState } from 'react'
+import Ize from "../ize"
 import Link from 'next/link'
-import { sideBarMenu } from '../utilities/sideBarMenu'
 
-function TopElement(props) {
+import { sideBarMenu } from '../../utilities/sideBarMenu'
+import styles from './sideBar.module.css'
+
+function TopElement({ title, onClick }) {
     return (
-            <div 
-                id={props.title}
-                className="flex items-center px-4 py-2 mt-5 text-gray-600 rounded-md hover:bg-gray-200 transition-colors duration-300 transform cursor-pointer" 
-                onClick={props.onClick}
+            <div
+                className={`${styles.topElement} w-fit py-2 mt-3 cursor-pointer`}
+                onClick={onClick}
                 >
-                <span className="mx-4 font-medium capitalize">{props.title}</span>
+                <span className="font-medium capitalize">{title}</span>
             </div>
     )
 }
 
-function NestedElements(props) {
-    if (props.hidden) {
+function NestedElements({ hidden, nestedItems }) {
+    if (hidden) {
         return null
     }
 
-    const nestedList = props.nestedItems.map(el => {
+    const nestedList = nestedItems.map(el => {
         const pathName = el.slice().replaceAll(" ", "-")
         let route = pathName == "welcome"? "" : pathName
         return <Link 
-                key={props.nestedItems.indexOf(el)} 
+                key={nestedItems.indexOf(el)} 
                 href={`/docs/${route}`}
                 >
                     <a><TopElement title={el}/></a>
@@ -32,13 +33,13 @@ function NestedElements(props) {
     })
 
     return (
-        <div className="flex flex-col justify-between flex-1 ml-10">
+        <div className="flex flex-col justify-between flex-1 ml-7">
             {nestedList}
         </div>
     )
 }
 
-function MenuElement(props) {
+function MenuElement({ title, nestedItems }) {
     const [isHidden, setHidden] = useState(false)
 
     const handleClick = function() {
@@ -47,8 +48,8 @@ function MenuElement(props) {
 
     return (
         <React.Fragment>
-            <TopElement title={props.title} onClick={handleClick} />
-            <NestedElements hidden={isHidden} nestedItems={props.nestedItems} />
+            <TopElement title={title} onClick={handleClick} />
+            <NestedElements hidden={isHidden} nestedItems={nestedItems} />
         </React.Fragment>
         
     )
@@ -70,13 +71,12 @@ export default function SideBar({ filesNames }) {
     })
 
     return (
-        <div className="flex flex-col w-1/5 h-screen px-4 py-8 bg-white border-r">
-            <div>
-               <Ize /> 
-            </div>
-
-            <div className="flex flex-col justify-between flex-1">
-                <nav>
+        <div className={`${styles.outer} flex flex-col w-1/6 px-5 py-3`}>
+                <nav className="">
+                    <div className="flex mb-5">
+                        <Ize /> 
+                        <div className="text-2xl font-bold text-blue-600 lg:text-3xl ml-5">docs</div>
+                    </div>
                     {menuList}
                     <hr className="my-6 border-gray-200" />
                     <MenuElement
@@ -84,7 +84,6 @@ export default function SideBar({ filesNames }) {
                         nestedItems={filesNames}
                     />
                 </nav>
-            </div>
         </div>
     )
 }
