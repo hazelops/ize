@@ -102,7 +102,7 @@ jobs:
       - name: Destroy Infra
         run: |
           cd "${{ env.IZE_EXAMPLES_PATH }}"
-          ize down infra
+          ize down --auto-approve
 
   test-tunnel:
     name: Bastion Tunnel Monorepo
@@ -165,7 +165,7 @@ jobs:
       - name: Destroy Infra
         run: |
           cd "${{ env.IZE_EXAMPLES_PATH }}"
-          ize down infra
+          ize down --auto-approve
 
   test-terraform:
     name: Terraform Commands
@@ -229,4 +229,4 @@ jobs:
       - name: Destroy Infra
         run: |
           cd "${{ env.IZE_EXAMPLES_PATH }}"
-          ize down infra
+          ize down --auto-approve
