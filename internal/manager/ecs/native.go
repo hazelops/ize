@@ -2,15 +2,15 @@ package ecs
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
 	"io"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
-	ecssvc "github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/elbv2"
 	"github.com/pterm/pterm"
 )
@@ -18,11 +18,11 @@ import (
 func (e *Manager) deployLocal(w io.Writer) error {
 	pterm.SetDefaultOutput(w)
 
-	svc := ecssvc.New(e.Project.Session)
+	svc := e.Project.AWSClient.ECSClient
 
 	name := fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name)
 
-	dso, err := svc.DescribeServices(&ecssvc.DescribeServicesInput{
+	dso, err := svc.DescribeServices(&ecs.DescribeServicesInput{
 		Cluster:  &e.App.Cluster,
 		Services: []*string{&name},
 	})
@@ -34,23 +34,23 @@ func (e *Manager) deployLocal(w io.Writer) error {
 		return fmt.Errorf("app %s not found not found in %s cluster", name, e.App.Cluster)
 	}
 
-	dtdo, err := svc.DescribeTaskDefinition(&ecssvc.DescribeTaskDefinitionInput{
+	dtdo, err := svc.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
 		TaskDefinition: dso.Services[0].TaskDefinition,
 	})
 	if err != nil {
 		return err
 	}
 
-	definitions, err := svc.ListTaskDefinitions(&ecssvc.ListTaskDefinitionsInput{
+	definitions, err := svc.ListTaskDefinitions(&ecs.ListTaskDefinitionsInput{
 		FamilyPrefix: &name,
-		Sort:         aws.String(ecssvc.SortOrderDesc),
+		Sort:         aws.String(ecs.SortOrderDesc),
 	})
 	if err != nil {
 		return err
 	}
 
-	var oldTaskDef ecssvc.TaskDefinition
-	var newTaskDef ecssvc.TaskDefinition
+	var oldTaskDef ecs.TaskDefinition
+	var newTaskDef ecs.TaskDefinition
 
 	oldTaskDef = *dtdo.TaskDefinition
 
@@ -78,7 +78,7 @@ func (e *Manager) deployLocal(w io.Writer) error {
 
 		pterm.Println("Creating new task definition revision")
 
-		rtdo, err := svc.RegisterTaskDefinition(&ecssvc.RegisterTaskDefinitionInput{
+		rtdo, err := svc.RegisterTaskDefinition(&ecs.RegisterTaskDefinitionInput{
 			ContainerDefinitions:    dtdo.TaskDefinition.ContainerDefinitions,
 			Family:                  dtdo.TaskDefinition.Family,
 			Volumes:                 dtdo.TaskDefinition.Volumes,
@@ -98,7 +98,7 @@ func (e *Manager) deployLocal(w io.Writer) error {
 
 		pterm.Printfln("Successfully created revision: %s:%d", *rtdo.TaskDefinition.Family, *rtdo.TaskDefinition.Revision)
 	} else {
-		definition, err := svc.DescribeTaskDefinition(&ecssvc.DescribeTaskDefinitionInput{
+		definition, err := svc.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
 			TaskDefinition: definitions.TaskDefinitionArns[0],
 		})
 		if err != nil {
@@ -108,8 +108,8 @@ func (e *Manager) deployLocal(w io.Writer) error {
 		newTaskDef = *definition.TaskDefinition
 	}
 
-	if err = e.updateTaskDefinition(e.Project.Session, &newTaskDef, &oldTaskDef, name, "Deploying new task definition"); err != nil {
-		err := getLastContainerLogs(fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name), e.Project.Session)
+	if err = e.updateTaskDefinition(&newTaskDef, &oldTaskDef, name, "Deploying new task definition"); err != nil {
+		err := e.getLastContainerLogs(fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name))
 		if err != nil {
 			pterm.Println("Failed to get logs:", err)
 		}
@@ -123,7 +123,7 @@ func (e *Manager) deployLocal(w io.Writer) error {
 
 		pterm.Printfln("Rolling back to old task definition: %s:%d", *oldTaskDef.Family, *oldTaskDef.Revision)
 		e.App.Timeout = 600
-		if err = e.updateTaskDefinition(e.Project.Session, &oldTaskDef, &newTaskDef, name, "Deploying previous task definition"); err != nil {
+		if err = e.updateTaskDefinition(&oldTaskDef, &newTaskDef, name, "Deploying previous task definition"); err != nil {
 			return fmt.Errorf("unable to rollback to old task definition: %w", err)
 		}
 
@@ -142,7 +142,7 @@ func (e *Manager) deployLocal(w io.Writer) error {
 func (e *Manager) redeployLocal(w io.Writer) error {
 	pterm.SetDefaultOutput(w)
 
-	svc := ecssvc.New(e.Project.Session)
+	svc := e.Project.AWSClient.ECSClient
 
 	name := fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name)
 
@@ -151,11 +151,11 @@ func (e *Manager) redeployLocal(w io.Writer) error {
 		return err
 	}
 
-	var td *ecssvc.TaskDefinition
+	var td *ecs.TaskDefinition
 
 	switch e.App.TaskDefinitionRevision {
 	case "latest":
-		tds, err := svc.ListTaskDefinitions(&ecssvc.ListTaskDefinitionsInput{
+		tds, err := svc.ListTaskDefinitions(&ecs.ListTaskDefinitionsInput{
 			FamilyPrefix: aws.String(name),
 			Sort:         aws.String("DESC"),
 		})
@@ -163,7 +163,7 @@ func (e *Manager) redeployLocal(w io.Writer) error {
 			return fmt.Errorf("unable to list task definitions: %w", err)
 		}
 
-		dtdo, err := svc.DescribeTaskDefinition(&ecssvc.DescribeTaskDefinitionInput{
+		dtdo, err := svc.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
 			TaskDefinition: tds.TaskDefinitionArns[0],
 		})
 		if err != nil {
@@ -172,7 +172,7 @@ func (e *Manager) redeployLocal(w io.Writer) error {
 
 		td = dtdo.TaskDefinition
 	case "current":
-		dtdo, err := svc.DescribeTaskDefinition(&ecssvc.DescribeTaskDefinitionInput{
+		dtdo, err := svc.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
 			TaskDefinition: dso.Services[0].TaskDefinition,
 		})
 		if err != nil {
@@ -185,7 +185,7 @@ func (e *Manager) redeployLocal(w io.Writer) error {
 		if err == nil && r > 0 {
 			arn := fmt.Sprintf("%s:%s", name, e.App.TaskDefinitionRevision)
 
-			dtdo, err := svc.DescribeTaskDefinition(&ecssvc.DescribeTaskDefinitionInput{
+			dtdo, err := svc.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
 				TaskDefinition: &arn,
 			})
 			if err != nil {
@@ -198,21 +198,20 @@ func (e *Manager) redeployLocal(w io.Writer) error {
 		}
 	}
 
-	if err = e.updateTaskDefinition(e.Project.Session, td, nil, name, "Redeploying new task definition"); err != nil {
+	if err = e.updateTaskDefinition(td, nil, name, "Redeploying new task definition"); err != nil {
 		pterm.Println(err)
-		err := getLastContainerLogs(fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name), e.Project.Session)
+		err := e.getLastContainerLogs(fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name))
 		if err != nil {
 			pterm.Println("Failed to get logs:", err)
 		}
-		pterm.Println("test")
-		return nil
+		return fmt.Errorf("redeployment failed")
 	}
 
 	return nil
 }
 
-func getService(name string, cluster string, svc *ecssvc.ECS) (*ecssvc.DescribeServicesOutput, error) {
-	dso, err := svc.DescribeServices(&ecssvc.DescribeServicesInput{
+func getService(name string, cluster string, svc ecsiface.ECSAPI) (*ecs.DescribeServicesOutput, error) {
+	dso, err := svc.DescribeServices(&ecs.DescribeServicesInput{
 		Cluster:  &cluster,
 		Services: []*string{&name},
 	})
@@ -226,12 +225,12 @@ func getService(name string, cluster string, svc *ecssvc.ECS) (*ecssvc.DescribeS
 	return dso, nil
 }
 
-func (e *Manager) updateTaskDefinition(sess *session.Session, newTD *ecssvc.TaskDefinition, oldTD *ecssvc.TaskDefinition, serviceName string, title string) error {
+func (e *Manager) updateTaskDefinition(newTD *ecs.TaskDefinition, oldTD *ecs.TaskDefinition, serviceName string, title string) error {
 	pterm.Println("Updating service")
 
-	svc := ecssvc.New(sess)
+	svc := e.Project.AWSClient.ECSClient
 
-	uso, err := svc.UpdateService(&ecssvc.UpdateServiceInput{
+	uso, err := svc.UpdateService(&ecs.UpdateServiceInput{
 		Service:            aws.String(serviceName),
 		Cluster:            aws.String(e.App.Cluster),
 		TaskDefinition:     aws.String(*newTD.TaskDefinitionArn),
@@ -243,15 +242,15 @@ func (e *Manager) updateTaskDefinition(sess *session.Session, newTD *ecssvc.Task
 
 	var dtgo *elbv2.DescribeTargetGroupsOutput
 	if e.App.Unsafe {
-		elbsvc := elbv2.New(sess)
-		dtgo, err = elbsvc.DescribeTargetGroups(&elbv2.DescribeTargetGroupsInput{
+		elb := e.Project.AWSClient.ELBV2Client
+		dtgo, err = elb.DescribeTargetGroups(&elbv2.DescribeTargetGroupsInput{
 			TargetGroupArns: aws.StringSlice([]string{*uso.Service.LoadBalancers[0].TargetGroupArn}),
 		})
 		if err != nil {
 			return fmt.Errorf("can't describe target groups: %w", err)
 		}
 
-		_, err = elbv2.New(sess).ModifyTargetGroup(&elbv2.ModifyTargetGroupInput{
+		_, err = e.Project.AWSClient.ELBV2Client.ModifyTargetGroup(&elbv2.ModifyTargetGroupInput{
 			HealthyThresholdCount:      aws.Int64(2),
 			HealthCheckIntervalSeconds: aws.Int64(5),
 			HealthCheckTimeoutSeconds:  aws.Int64(2),
@@ -288,7 +287,7 @@ func (e *Manager) updateTaskDefinition(sess *session.Session, newTD *ecssvc.Task
 	}
 
 	if e.App.Unsafe {
-		_, err = elbv2.New(sess).ModifyTargetGroup(&elbv2.ModifyTargetGroupInput{
+		_, err = e.Project.AWSClient.ELBV2Client.ModifyTargetGroup(&elbv2.ModifyTargetGroupInput{
 			HealthyThresholdCount:      dtgo.TargetGroups[0].HealthyThresholdCount,
 			HealthCheckIntervalSeconds: dtgo.TargetGroups[0].HealthCheckIntervalSeconds,
 			HealthCheckTimeoutSeconds:  dtgo.TargetGroups[0].HealthCheckTimeoutSeconds,
@@ -309,8 +308,8 @@ func (e *Manager) updateTaskDefinition(sess *session.Session, newTD *ecssvc.Task
 	return nil
 }
 
-func isDeployed(svc *ecssvc.ECS, name string, cluster string) (bool, error) {
-	dso, err := svc.DescribeServices(&ecssvc.DescribeServicesInput{
+func isDeployed(svc ecsiface.ECSAPI, name string, cluster string) (bool, error) {
+	dso, err := svc.DescribeServices(&ecs.DescribeServicesInput{
 		Cluster:  &cluster,
 		Services: []*string{&name},
 	})
@@ -326,7 +325,7 @@ func isDeployed(svc *ecssvc.ECS, name string, cluster string) (bool, error) {
 		return false, nil
 	}
 
-	runningTasks, err := svc.ListTasks(&ecssvc.ListTasksInput{
+	runningTasks, err := svc.ListTasks(&ecs.ListTasksInput{
 		Cluster:     &cluster,
 		ServiceName: &name,
 	})
@@ -346,10 +345,10 @@ func isDeployed(svc *ecssvc.ECS, name string, cluster string) (bool, error) {
 	return runningCount == *dso.Services[0].DesiredCount, nil
 }
 
-func getRunningTaskCount(cluster string, tasks []*string, serviceArn string, svc *ecssvc.ECS) (int64, error) {
+func getRunningTaskCount(cluster string, tasks []*string, serviceArn string, svc ecsiface.ECSAPI) (int64, error) {
 	count := 0
 
-	dto, err := svc.DescribeTasks(&ecssvc.DescribeTasksInput{
+	dto, err := svc.DescribeTasks(&ecs.DescribeTasksInput{
 		Cluster: &cluster,
 		Tasks:   tasks,
 	})
@@ -366,10 +365,10 @@ func getRunningTaskCount(cluster string, tasks []*string, serviceArn string, svc
 	return int64(count), nil
 }
 
-func getStoppedReason(cluster string, name string, svc *ecssvc.ECS) (string, error) {
-	stopped := ecssvc.DesiredStatusStopped
+func getStoppedReason(cluster string, name string, svc ecsiface.ECSAPI) (string, error) {
+	stopped := ecs.DesiredStatusStopped
 
-	runningTasks, err := svc.ListTasks(&ecssvc.ListTasksInput{
+	runningTasks, err := svc.ListTasks(&ecs.ListTasksInput{
 		Cluster:       &cluster,
 		ServiceName:   &name,
 		DesiredStatus: &stopped,
@@ -378,7 +377,7 @@ func getStoppedReason(cluster string, name string, svc *ecssvc.ECS) (string, err
 		return "", err
 	}
 
-	dto, err := svc.DescribeTasks(&ecssvc.DescribeTasksInput{
+	dto, err := svc.DescribeTasks(&ecs.DescribeTasksInput{
 		Cluster: &cluster,
 		Tasks:   runningTasks.TaskArns,
 	})
@@ -393,10 +392,10 @@ func getStoppedReason(cluster string, name string, svc *ecssvc.ECS) (string, err
 	return *dto.Tasks[0].StoppedReason, nil
 }
 
-func deregisterTaskDefinition(svc *ecssvc.ECS, td *ecssvc.TaskDefinition) error {
+func deregisterTaskDefinition(svc ecsiface.ECSAPI, td *ecs.TaskDefinition) error {
 	pterm.Println("Deregister task definition revision")
 
-	_, err := svc.DeregisterTaskDefinition(&ecssvc.DeregisterTaskDefinitionInput{
+	_, err := svc.DeregisterTaskDefinition(&ecs.DeregisterTaskDefinitionInput{
 		TaskDefinition: td.TaskDefinitionArn,
 	})
 	if err != nil {
@@ -408,9 +407,8 @@ func deregisterTaskDefinition(svc *ecssvc.ECS, td *ecssvc.TaskDefinition) error 
 	return nil
 }
 
-func getLastContainerLogs(logGroup string, sess *session.Session) error {
-	cwl := cloudwatchlogs.New(sess)
-
+func (e *Manager) getLastContainerLogs(logGroup string) error {
+	cwl := e.Project.AWSClient.CloudWatchLogsClient
 	out, err := cwl.DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 		LogGroupName: &logGroup,
 		Limit:        aws.Int64(1),
