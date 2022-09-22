@@ -5,7 +5,11 @@ import { sideBarMenu } from '../utilities/sideBarMenu'
 
 function TopElement(props) {
     return (
-            <div id={props.title} className="flex items-center px-4 py-2 mt-5 text-gray-600 rounded-md hover:bg-gray-200 transition-colors duration-300 transform cursor-pointer" onClick={props.onClick}>
+            <div 
+                id={props.title}
+                className="flex items-center px-4 py-2 mt-5 text-gray-600 rounded-md hover:bg-gray-200 transition-colors duration-300 transform cursor-pointer" 
+                onClick={props.onClick}
+                >
                 <span className="mx-4 font-medium capitalize">{props.title}</span>
             </div>
     )
@@ -21,7 +25,8 @@ function NestedElements(props) {
         let route = pathName == "welcome"? "" : pathName
         return <Link 
                 key={props.nestedItems.indexOf(el)} 
-                href={`/docs/${route}`}>
+                href={`/docs/${route}`}
+                >
                     <a><TopElement title={el}/></a>
                 </Link>
     })
@@ -65,7 +70,7 @@ export default function SideBar({ filesNames }) {
     })
 
     return (
-        <div className="flex flex-col w-64 h-screen px-4 py-8 bg-white border-r">
+        <div className="flex flex-col w-1/5 h-screen px-4 py-8 bg-white border-r">
             <div>
                <Ize /> 
             </div>

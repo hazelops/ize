@@ -1,4 +1,5 @@
 import DocsPageLayout from '../../components/docsPageLayout'
+import DocBody from '../../components/docBody'
 import { readFilesNames, fetchContent } from '../../utilities/docsGlobalProps'
 
 export async function getStaticProps() {
@@ -15,8 +16,8 @@ export async function getStaticProps() {
 export default function Welcome({ filesNames, mdContent }) {
     return <DocsPageLayout 
                 title="docs"
-                data="WELCOME"
                 filesNames={filesNames}
-                mdContent={mdContent}
-            />
+            >
+                <DocBody mdContent={mdContent} />
+            </DocsPageLayout>
 }

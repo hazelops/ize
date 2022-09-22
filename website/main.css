@@ -1,0 +1,11 @@
+@tailwind utilities;
+
+@layer utilities {
+    .w-fit {
+        width: fit-content;
+    }
+
+    .h-fit {
+        height: fit-content;
+    }
+}

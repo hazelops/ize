@@ -1,22 +1,21 @@
 import DocsPageLayout from '../../components/docsPageLayout'
-import { readFilesNames, fetchContent } from '../../utilities/docsGlobalProps'
+import Tab from '../../components/tab/tab'
+import { readFilesNames } from '../../utilities/docsGlobalProps'
 
 export async function getStaticProps() {
     const filesNames = await readFilesNames()
-    const mdContent = fetchContent()
     return {
         props: {
-         filesNames,
-         mdContent
+         filesNames
         }
     }
 }
 
-export default function Installation({ filesNames, mdContent }) {
+export default function Installation({ filesNames }) {
     return <DocsPageLayout 
                 title="Installation"
-                data="INSTALLATION"
                 filesNames={filesNames}
-                mdContent={mdContent}
-            />
+            >
+                <Tab />
+            </DocsPageLayout>
 }

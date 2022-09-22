@@ -1,4 +1,5 @@
 import DocsPageLayout from '../../components/docsPageLayout'
+import DocBody from '../../components/docBody'
 import { readFilesNames, fetchContent } from '../../utilities/docsGlobalProps'
 
 export async function getStaticProps() {
@@ -15,8 +16,8 @@ export async function getStaticProps() {
 export default function DeployingECSApp({ filesNames, mdContent }) {
     return <DocsPageLayout 
                 title="Deploying ECS App"
-                data="Deploying ECS App"
                 filesNames={filesNames}
-                mdContent={mdContent}
-            />
+            >
+                <DocBody mdContent={mdContent} />
+            </DocsPageLayout>
 }
