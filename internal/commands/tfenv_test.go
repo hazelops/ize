@@ -36,6 +36,7 @@ func TestTfenv(t *testing.T) {
 		env            map[string]string
 		mockS3Client   func(m *mocks.MockS3API)
 		mockSTSClient  func(m *mocks.MockSTSAPI)
+		withECS        bool
 	}{
 		{
 			name:           "success (only config file)",
@@ -43,6 +44,7 @@ func TestTfenv(t *testing.T) {
 			env:            map[string]string{"ENV": "test", "AWS_PROFILE": "test"},
 			withConfigFile: true,
 			wantErr:        false,
+			withECS:        true,
 			mockS3Client: func(m *mocks.MockS3API) {
 				m.EXPECT().HeadBucket(gomock.Any()).Return(nil, nil).AnyTimes()
 			},
@@ -90,6 +92,7 @@ root_domain_name  = "examples.ize.sh"
 				m.EXPECT().HeadBucket(gomock.Any()).Return(nil, nil).AnyTimes()
 			},
 			mockSTSClient: func(m *mocks.MockSTSAPI) {},
+			withECS:       true,
 			wantBackend: `provider "aws" {
   profile = var.aws_profile
   region  = var.aws_region
@@ -132,6 +135,7 @@ root_domain_name  = "examples.ize.sh"
 			mockS3Client: func(m *mocks.MockS3API) {
 				m.EXPECT().HeadBucket(gomock.Any()).Return(nil, nil).AnyTimes()
 			},
+			withECS:       true,
 			mockSTSClient: func(m *mocks.MockSTSAPI) {},
 			wantBackend: `provider "aws" {
   profile = var.aws_profile
@@ -205,9 +209,7 @@ terraform {
 aws_profile       = "test"
 aws_region        = "us-east-1"
 ec2_key_pair_name = "test-testnut"
-docker_image_tag  = "test"
 ssh_public_key    =
-docker_registry   = "0.dkr.ecr.us-east-1.amazonaws.com"
 namespace         = "testnut"
 `,
 		},
@@ -243,9 +245,7 @@ terraform {
 aws_profile       = "test"
 aws_region        = "us-east-1"
 ec2_key_pair_name = "test-testnut"
-docker_image_tag  = "test"
 ssh_public_key    =
-docker_registry   = "0.dkr.ecr.us-east-1.amazonaws.com"
 namespace         = "testnut"
 `,
 		},
@@ -288,9 +288,7 @@ terraform {
 aws_profile       = "test"
 aws_region        = "us-west-2"
 ec2_key_pair_name = "test-testnut"
-docker_image_tag  = "test"
 ssh_public_key    =
-docker_registry   = "0.dkr.ecr.us-west-2.amazonaws.com"
 namespace         = "testnut"
 `,
 		},
@@ -323,6 +321,16 @@ namespace         = "testnut"
 
 			if tt.withConfigFile {
 				setConfigFile(filepath.Join(temp, "ize.toml"), tfenvToml, t)
+				if tt.withECS {
+					f, err := os.OpenFile(filepath.Join(temp, "ize.toml"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+					if err != nil {
+						panic(err)
+					}
+					defer f.Close()
+					if _, err = f.WriteString("\n\n[ecs.squibby]\ntimeout = 0"); err != nil {
+						panic(err)
+					}
+				}
 			}
 
 			t.Setenv("HOME", temp)
