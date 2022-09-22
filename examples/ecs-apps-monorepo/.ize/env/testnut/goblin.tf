@@ -36,6 +36,7 @@ module "goblin" {
   domain_names = [
     "goblin.${var.root_domain_name}"
   ]
+  https_enabled = false
 
   # Environment variables
   app_secrets = [
