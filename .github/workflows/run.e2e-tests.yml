@@ -101,7 +101,7 @@ jobs:
 
       - name: Destroy Infra
         run: |
-          cd "${{ env.IZE_EXAMPLES_PATH }}/.ize/env/${{ env.ENV }}"
+          cd "${{ env.IZE_EXAMPLES_PATH }}"
           ize down infra
 
   test-tunnel:
@@ -164,7 +164,7 @@ jobs:
 
       - name: Destroy Infra
         run: |
-          cd "${{ env.IZE_EXAMPLES_PATH }}/.ize/env/${{ env.ENV }}"
+          cd "${{ env.IZE_EXAMPLES_PATH }}"
           ize down infra
 
   test-terraform:
@@ -228,5 +228,5 @@ jobs:
 
       - name: Destroy Infra
         run: |
-          cd "${{ env.IZE_EXAMPLES_PATH }}/.ize/env/${{ env.ENV }}"
+          cd "${{ env.IZE_EXAMPLES_PATH }}"
           ize down infra
