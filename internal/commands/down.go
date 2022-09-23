@@ -123,7 +123,7 @@ func (o *DownOptions) Complete(cmd *cobra.Command, args []string) error {
 		}
 
 		if len(o.Config.Terraform["infra"].AwsRegion) == 0 {
-			o.Config.Terraform["infra"].AwsProfile = o.Config.AwsRegion
+			o.Config.Terraform["infra"].AwsRegion = o.Config.AwsRegion
 		}
 
 		if len(o.Config.Terraform["infra"].Version) == 0 {
