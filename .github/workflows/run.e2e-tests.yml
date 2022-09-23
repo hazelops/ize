@@ -225,8 +225,3 @@ jobs:
       - name: Run Tests
         run: |
           go test -v --timeout 0 --tags="e2e terraform" ./test-e2e
-
-      - name: Cleanup Infra
-        run: |
-          cd "${{ env.IZE_EXAMPLES_PATH }}"
-          ize down --auto-approve
