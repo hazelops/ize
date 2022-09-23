@@ -2,17 +2,13 @@ import Link from 'next/link'
 
 import Element from './element'
 
-export default function NestedSection({ hidden, nestedItems, active, onClick }) {
+export default function NestedSection({ hidden, nestedItems, currentPage }) {
     if (hidden) {
         return null
     }
 
     const nestedList = nestedItems.map(el => {
         const ind = nestedItems.indexOf(el)
-
-        const handleClick = function() {
-            return onClick(ind)
-        }
 
         const pathName = el.slice().replaceAll(" ", "-")
         let route = pathName == "welcome" ? "" : pathName
@@ -21,9 +17,7 @@ export default function NestedSection({ hidden, nestedItems, active, onClick }) 
                     <a>
                         <Element 
                             title={el}
-                            id={ind} 
-                            onClick={handleClick}
-                            active={active}
+                            currentPage={currentPage}
                         />
                     </a>
                 </Link>

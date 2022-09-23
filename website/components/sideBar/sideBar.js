@@ -1,37 +1,19 @@
-import { useState } from 'react'
-
 import { sideBarMenu } from '../../utilities/sideBarMenu'
 import Ize from "../ize"
 import TopSection from './topSection'
 
 import styles from './sideBar.module.css'
 
-export default function SideBar({ filesNames }) {
+export default function SideBar({ filesNames, currentPage }) {
     const { mainMenu, seeAlso } = sideBarMenu
-
-    const [activeOuter, setActiveOuter] = useState(0)
-    const [activeInner, setActiveInner] = useState(null)
-    const [innerIds, setInnerIds] = useState([])
-
-    const handleClickOuter = function(id) {
-        setActiveOuter(id)
-    }
-
-    const handleClickInner = function(id) {
-        setActiveInner(id)
-    }
 
     const menuList = mainMenu.map(el => {
         const ind = mainMenu.indexOf(el)
         return (
             <TopSection key={ind}
-                id={ind}
                 title={el.title}
                 nestedItems={el.nestedItems}
-                onClickOuter={handleClickOuter}
-                activeOuter={activeOuter}
-                onClickInner={handleClickInner}
-                activeInner={activeInner}
+                currentPage={currentPage}
              />
         )
     })
@@ -48,11 +30,7 @@ export default function SideBar({ filesNames }) {
                     <TopSection
                         title={seeAlso.title}
                         nestedItems={filesNames}
-                        id={2}
-                        onClickOuter={handleClickOuter}
-                        activeOuter={activeOuter}
-                        onClickInner={handleClickInner}
-                        activeInner={activeInner}
+                        currentPage={currentPage}
                     />
                 </nav>
         </div>
