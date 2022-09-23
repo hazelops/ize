@@ -385,7 +385,7 @@
                 },
                 "create_domain" : {
                     "type": "boolean",
-                    "description": "(optional) Create domain for the serverless domain manager during the deployment."
+                    "description": "(optional) Create domain for the serverless domain manager during the deployment. Enabling this option deletes corresponding domain on destroy."
                 },
                 "path"   : {
                     "type": "string",

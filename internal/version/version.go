@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/Masterminds/semver"
 	"github.com/hazelops/ize/internal/requirements"
+	"github.com/pterm/pterm"
 	"log"
 	"net/http"
 	"runtime"
-
-	"github.com/Masterminds/semver"
-	"github.com/pterm/pterm"
+	"time"
 )
 
 var (
@@ -22,7 +22,7 @@ func FullVersionNumber() string {
 	var versionString bytes.Buffer
 
 	if Version == "development" {
-		return "development"
+		return fmt.Sprintf("development %s", time.Now().Format("2006-01-02T15:04:05"))
 	}
 
 	fmt.Fprintf(&versionString, "%s", Version)

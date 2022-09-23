@@ -86,7 +86,7 @@ func (sls *Manager) Deploy(ui terminal.UI) error {
 
 		if sls.App.CreateDomain {
 			s.Done()
-			s = sg.Add("%s: deploying app [run serverless create domain]...", sls.App.Name)
+			s = sg.Add("%s: deploying app [run serverless create_domain]...", sls.App.Name)
 			err = sls.runCreateDomain(s.TermOutput())
 			if err != nil {
 				return fmt.Errorf("can't run serverless create_domain: %w", err)
@@ -140,10 +140,10 @@ func (sls *Manager) Destroy(ui terminal.UI) error {
 
 		if sls.App.CreateDomain {
 			s.Done()
-			s = sg.Add("%s: destroying app [run serverless delete domain]...", sls.App.Name)
+			s = sg.Add("%s: destroying app [run serverless delete_domain]...", sls.App.Name)
 			err = sls.runRemoveDomain(s.TermOutput())
 			if err != nil {
-				return fmt.Errorf("can't run serverless create_domain: %w", err)
+				return fmt.Errorf("can't run serverless delete_domain: %w", err)
 			}
 		}
 
