@@ -31,9 +31,13 @@ func GenerateVarsTf(opts VarsOpts, path string) error {
 	rootBody.SetAttributeValue("aws_profile", cty.StringVal(opts.AWS_PROFILE))
 	rootBody.SetAttributeValue("aws_region", cty.StringVal(opts.AWS_REGION))
 	rootBody.SetAttributeValue("ec2_key_pair_name", cty.StringVal(opts.EC2_KEY_PAIR_NAME))
-	rootBody.SetAttributeValue("docker_image_tag", cty.StringVal(opts.TAG))
+	if len(opts.TAG) != 0 {
+		rootBody.SetAttributeValue("docker_image_tag", cty.StringVal(opts.TAG))
+	}
 	rootBody.SetAttributeValue("ssh_public_key", cty.StringVal(opts.SSH_PUBLIC_KEY))
-	rootBody.SetAttributeValue("docker_registry", cty.StringVal(opts.DOCKER_REGISTRY))
+	if len(opts.DOCKER_REGISTRY) != 0 {
+		rootBody.SetAttributeValue("docker_registry", cty.StringVal(opts.DOCKER_REGISTRY))
+	}
 	rootBody.SetAttributeValue("namespace", cty.StringVal(opts.NAMESPACE))
 	if len(opts.ROOT_DOMAIN_NAME) > 0 {
 		rootBody.SetAttributeValue("root_domain_name", cty.StringVal(opts.ROOT_DOMAIN_NAME))

@@ -181,7 +181,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     env:
-      IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/ecs-apps-monorepo
+      IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/sls-apps-monorepo
     steps:
       - name: Configure Environment Variables
         run: |
@@ -225,8 +225,3 @@ jobs:
       - name: Run Tests
         run: |
           go test -v --timeout 0 --tags="e2e terraform" ./test-e2e
-
-      - name: Cleanup Infra
-        run: |
-          cd "${{ env.IZE_EXAMPLES_PATH }}"
-          ize down --auto-approve
