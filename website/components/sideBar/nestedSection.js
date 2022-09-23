@@ -1,6 +1,20 @@
 import Link from 'next/link'
 
-import Element from './element'
+import styles from './sideBar.module.css'
+
+function NestedElement({ title, active }) {
+    const color = active ? "selectedElement" : ""
+
+    return (
+        <div
+            className={`${styles.topElement} w-fit py-2 mt-2 cursor-pointer ${color}`}
+        >
+            {title}
+        </div>
+    )
+}
+
+//---------------------------------------------------------- 
 
 export default function NestedSection({ hidden, nestedItems, currentPage }) {
     if (hidden) {
@@ -9,15 +23,23 @@ export default function NestedSection({ hidden, nestedItems, currentPage }) {
 
     const nestedList = nestedItems.map(el => {
         const ind = nestedItems.indexOf(el)
+        let active = false
 
         const pathName = el.slice().replaceAll(" ", "-")
         let route = pathName == "welcome" ? "" : pathName
 
+        if (!currentPage[1] && el == "welcome") {
+            active = true
+        } else {
+            const page = currentPage[currentPage.length - 1]
+            active = page == pathName ? true : false
+        }
+
         return <Link key={ind} href={`/docs/${route}`}>
                     <a>
-                        <Element 
+                        <NestedElement 
                             title={el}
-                            currentPage={currentPage}
+                            active={active}
                         />
                     </a>
                 </Link>
