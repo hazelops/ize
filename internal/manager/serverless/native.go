@@ -65,7 +65,7 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 				--config=%s \
 				--param="service=%s" \
 				--region=%s \
-				--param="profile=%s" \
+				--aws-profile=%s \
 				--stage=%s \
 				--verbose`,
 			nvmDir, sls.App.NodeVersion, sls.App.File,
@@ -80,7 +80,7 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 				--service %s \
 				--verbose \
 				--region %s \
-				--profile %s \
+				--aws-profile %s \
 				--stage %s`,
 			nvmDir, sls.App.NodeVersion, sls.App.File,
 			sls.App.Name, sls.App.AwsRegion,
@@ -111,28 +111,28 @@ func (sls *Manager) runRemove(w io.Writer) error {
 	// SLS v3 has breaking changes in syntax
 	if sls.App.ServerlessVersion == "3" {
 		command = fmt.Sprintf(
-			`source %s/nvm.sh && 
-				nvm use %s &&
+			`source %s/nvm.sh && \
+				nvm use %s && \
 				npx serverless remove \
 				--config=%s \
-				--param="service=%s" \			
+				--param="service=%s" \
 				--region=%s \
-				--param="profile=%s" \
+				--aws-profile=%s \
 				--stage=%s \
-				--verbose \`,
+				--verbose`,
 			nvmDir, sls.App.NodeVersion, sls.App.File,
 			sls.App.Name, sls.App.AwsRegion,
 			sls.App.AwsProfile, sls.Project.Env)
 	} else {
 		command = fmt.Sprintf(
-			`source %s/nvm.sh && 
-				nvm use %s &&
+			`source %s/nvm.sh && \
+				nvm use %s && \
 				npx serverless remove \
 				--config %s \
 				--service %s \
 				--verbose \
-				dion %s \
-				--profile %s \
+				--region %s \
+				--aws-profile %s \
 				--stage %s`,
 			nvmDir, sls.App.NodeVersion, sls.App.File,
 			sls.App.Name, sls.App.AwsRegion,
@@ -158,12 +158,12 @@ func (sls *Manager) runCreateDomain(w io.Writer) error {
 	}
 
 	command := fmt.Sprintf(
-		`source %s/nvm.sh && 
-				nvm use %s &&
+		`source %s/nvm.sh && \
+				nvm use %s && \
 				npx serverless create_domain \
 				--verbose \
 				--region %s \
-				--profile %s \
+				--aws-profile %s \
 				--stage %s`,
 		nvmDir, sls.App.NodeVersion, sls.App.AwsRegion,
 		sls.App.AwsProfile, sls.Project.Env)
@@ -187,14 +187,14 @@ func (sls *Manager) runRemoveDomain(w io.Writer) error {
 	}
 
 	command := fmt.Sprintf(
-		`source %s/nvm.sh && 
-				nvm use %s &&
-				npx serverless remove_domain \
+		`source %s/nvm.sh && \
+				nvm use %s && \
+				npx serverless delete_domain \
 				--verbose \
 				--region %s \
-				--profile %s \
+				--aws-profile %s \
 				--stage %s`,
-		nvmDir, sls.App.Name, sls.App.AwsRegion,
+		nvmDir, sls.App.NodeVersion, sls.App.AwsRegion,
 		sls.App.AwsProfile, sls.Project.Env)
 
 	cmd := exec.Command("bash", "-c", command)

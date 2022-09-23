@@ -37,7 +37,7 @@ func NewDebugCmd(project *config.Project) *cobra.Command {
 				{"TAG", project.Tag},
 				{"INFRA DIR", project.InfraDir},
 				{"PWD", cwd},
-				{"IZE VERSION", version.Version},
+				{"IZE VERSION", version.FullVersionNumber()},
 				{"GIT REVISION", version.GitCommit},
 				{"ENV DIR", project.EnvDir},
 				{"PREFER_RUNTIME", project.PreferRuntime},
