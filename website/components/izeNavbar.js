@@ -23,13 +23,21 @@ export default function IzeNavbar() {
                                 </div>
 
                                 <div className="flex flex-col text-gray-600 capitalize dark:text-gray-300 lg:flex lg:px-16 lg:-mx-4 lg:flex-row lg:items-center">
-                                    <a href="/install"
-                                    className="mt-2 lg:mt-0 lg:mx-4 hover:text-gray-800 dark:hover:text-gray-200">installation</a>
+                                    <Link href="/docs/installation">
+                                        <a className="mt-2 lg:mt-0 lg:mx-4 hover:text-gray-800 dark:hover:text-gray-200">
+                                            installation
+                                        </a>
+                                    </Link>  
+
                                     <Link href="/docs">
-                                        <a>docs</a>
+                                        <a className="mt-2 lg:mt-0 lg:mx-4 hover:text-gray-800 dark:hover:text-gray-200">
+                                            docs
+                                        </a>
                                     </Link>
-                                    <a href="#features"
-                                    className="mt-2 lg:mt-0 lg:mx-4 hover:text-gray-800 dark:hover:text-gray-200">features</a>
+                                    
+                                    <a href="#features" className="mt-2 lg:mt-0 lg:mx-4 hover:text-gray-800 dark:hover:text-gray-200">
+                                        features
+                                    </a>
                                 </div>
                             </div>   
                         </div>
