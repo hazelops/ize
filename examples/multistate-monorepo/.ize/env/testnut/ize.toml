@@ -1,0 +1,14 @@
+aws_region = "us-east-1"                # (required) AWS Region of this environment should be specified here. Can be overriden by AWS_PROFILE env var or --aws-region flag.
+namespace = "testnut"                   # (required) Namespace of the project can be specified here. It is used as a base for all naming. It can be overridden by NAMESPACE env var or --namespace flag.
+terraform_version = "1.2.6"             # (optional) Terraform version can be set here. 1.1.3 by default
+
+[terraform.api]
+state_name = ""
+depends_on = ["vpc"]
+
+[terraform.vpc]
+state_name = ""
+depends_on = ["infra"]
+
+[terraform.main]
+state_name = ""
