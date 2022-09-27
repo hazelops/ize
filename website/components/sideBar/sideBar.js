@@ -20,7 +20,7 @@ export default function SideBar({ filesNames, currentPage }) {
 
     return (
         <nav className={`${styles.outer} flex flex-col px-5 py-3`}>
-            <div className="flex mb-5">
+            <div className="flex pt-2 mb-5">
                 <Ize /> 
                 <div className="text-2xl font-bold text-blue-600 lg:text-3xl ml-5">docs</div>
             </div>
@@ -28,7 +28,7 @@ export default function SideBar({ filesNames, currentPage }) {
             {menuList}
 
             <hr className="my-6 border-gray-200" />
-            
+
             <TopSection
                 title={seeAlso.title}
                 nestedItems={filesNames}

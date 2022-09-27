@@ -46,7 +46,7 @@ export default function NestedSection({ hidden, nestedItems, currentPage }) {
     })
 
     return (
-        <div className="flex flex-col justify-between flex-1 ml-7">
+        <div className="flex flex-col justify-between ml-7">
             {nestedList}
         </div>
     )

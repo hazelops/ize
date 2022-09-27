@@ -3,19 +3,20 @@ import styles from './docsNavbar.module.css'
 
 function NavButton({ title }) {
     return (
-        <button className="capitalize">
+        <div className={`${styles.button} px-2 py-1.5 capitalize`} role="button">
             {title}
-        </button>
+        </div>
     )
 }
 
 export default function DocsNavbar() {
     const listButtons = titles.map(title => {
-        return <NavButton title={title} />
+        const ind = titles.indexOf(title)
+        return <NavButton key={ind} title={title} />
     })
 
     return (
-        <nav className={`${styles.outer} flex justify-between w-1/3 px-10`}>
+        <nav className={`${styles.outer} flex justify-between items-center w-1/3 px-10 pt-5`}>
             {listButtons}
         </nav>
     )

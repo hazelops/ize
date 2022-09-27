@@ -1,8 +1,10 @@
 .outer {
     background-color: #72899e10;
     min-height: 100vh;
-    border-right: 1px solid #cecaca48;
     width: 43%;
+    border-right: 1px solid #cecaca48;
+    font-weight: 350;
+    letter-spacing: 0.5px;
 }
 
 .topElement {
@@ -14,5 +16,5 @@
 }
 
 .topElement:hover {
-    color: #0460d8;
+    color: var(--main-text-color);
 }

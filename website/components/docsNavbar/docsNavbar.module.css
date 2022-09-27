@@ -1,3 +1,18 @@
 .outer {
-    height: 68px;
+    height: fit-content;
+}
+
+.button {
+    font-size: 1.15rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    border: 1px solid #cecaca48;
+    border-radius: 1% 30%;
+    background-color: #72899e10;
+    transition: all 0.3s ease-in-out;
+}
+
+.button:hover {
+    color: var(--main-text-color);
+    border-radius: 30% 1%;
 }

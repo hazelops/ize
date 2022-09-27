@@ -1,6 +1,10 @@
 @tailwind base;
 @tailwind utilities;
 
+:root {
+    --main-text-color: #0460d8;
+}
+
 html, body {
     min-height: 100vh;
 }
@@ -15,7 +19,7 @@ html, body {
     }
 
     .selectedElement {
-        color: #0460d8;
+        color: var(--main-text-color);
         font-weight: 600;
     }
 }

@@ -17,7 +17,7 @@ export default function DocsPageLayout({ children, title, filesNames }) {
                 <SideBar filesNames={filesNames} currentPage={currentPage} />
                 <div className="flex flex-col">
                    <DocsNavbar />
-                    <div className="flex w-full justify-center pl-10">
+                    <div className="flex w-full justify-center pl-10 pt-10">
                         {children}
                     </div> 
                 </div>
