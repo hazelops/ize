@@ -1,4 +1,4 @@
-import DocsPageLayout from '../../components/docsPageLayout'
+import DocsPageLayout from '../../components/layouts/docsPageLayout'
 import Tab from '../../components/tab/tab'
 import { readFilesNames } from '../../utilities/docsGlobalProps'
 

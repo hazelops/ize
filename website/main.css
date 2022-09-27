@@ -16,5 +16,6 @@ html, body {
 
     .selectedElement {
         color: #0460d8;
+        font-weight: 600;
     }
 }
