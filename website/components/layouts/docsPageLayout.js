@@ -13,11 +13,11 @@ export default function DocsPageLayout({ children, title, filesNames }) {
         <>
             <IzeHead title={title} />
 
-            <div className="flex w-full">
+            <div className="flex w-full h-fit">
                 <SideBar filesNames={filesNames} currentPage={currentPage} />
-                <div className="flex flex-col">
+                <div className="flex flex-col w-full">
                    <DocsNavbar />
-                    <div className="flex w-full justify-center pl-10 pt-10">
+                    <div className="flex w-full justify-center px-10 pt-10">
                         {children}
                     </div> 
                 </div>
