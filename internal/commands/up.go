@@ -102,6 +102,7 @@ func NewCmdUp(project *config.Project) *cobra.Command {
 
 	cmd.AddCommand(
 		NewCmdUpInfra(project),
+		NewCmdUpApps(project),
 	)
 
 	return cmd
