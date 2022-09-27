@@ -153,8 +153,6 @@ func deployApp(name string, ui terminal.UI, cfg *config.Project) error {
 	}
 
 	ui.Output("Deploying %s%s app...", icon, name, terminal.WithHeaderStyle())
-	sg := ui.StepGroup()
-	defer sg.Wait()
 
 	// build app container
 	err := m.Build(ui)

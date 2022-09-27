@@ -157,7 +157,7 @@ func TestIzeTerraformInit(t *testing.T) {
 		t.Errorf("unexpected stderr output ize gen tfenv: %s", err)
 	}
 
-	if !strings.Contains(stdout, "Generate terraform files completed") {
+	if !strings.Contains(stdout, "Generate terraform file for \"infra\" completed") {
 		t.Errorf("No success message detected after gen tfenv:\n%s", stdout)
 	}
 

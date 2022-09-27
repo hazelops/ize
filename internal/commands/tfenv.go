@@ -122,9 +122,10 @@ func GenerateTerraformFiles(name string, terraformStateBucketName string, projec
 		TERRAFORM_AWS_PROVIDER_VERSION: "",
 		NAMESPACE:                      project.Namespace,
 	}
-	var statePath string
+
+	statePath := filepath.Join(project.EnvDir, name)
 	if name == "infra" {
-		statePath = filepath.Join(project.EnvDir, name)
+		statePath = project.EnvDir
 	}
 
 	logrus.Debugf("backend opts: %s", backendOpts)
