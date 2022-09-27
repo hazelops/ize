@@ -86,6 +86,11 @@ func (p *Project) GetConfig() error {
 		return err
 	}
 
+	err = findDuplicates(p)
+	if err != nil {
+		return err
+	}
+
 	sess, err := utils.GetSession(&utils.SessionConfig{
 		Region:  p.AwsRegion,
 		Profile: p.AwsProfile,
@@ -290,6 +295,83 @@ func InitConfig() {
 			}
 		}
 	}
+}
+
+func findDuplicates(cfg *Project) error {
+	existingKeys := map[string]string{}
+	duplicateKeys := map[string]map[string]string{}
+
+	for k := range cfg.Terraform {
+		if val, ok := existingKeys[k]; ok {
+			if duplicateKeys[k] == nil {
+				duplicateKeys[k] = map[string]string{}
+			}
+			duplicateKeys[k]["terraform"] = k
+			if _, ok := duplicateKeys[k][val]; !ok {
+				duplicateKeys[k][val] = k
+
+			}
+		}
+		existingKeys[k] = "terraform"
+	}
+
+	for k := range cfg.Ecs {
+		if val, ok := existingKeys[k]; ok {
+			if duplicateKeys[k] == nil {
+				duplicateKeys[k] = map[string]string{}
+			}
+			duplicateKeys[k]["ecs"] = k
+			if _, ok := duplicateKeys[k][val]; !ok {
+				duplicateKeys[k][val] = k
+
+			}
+		}
+		existingKeys[k] = "ecs"
+	}
+
+	for k := range cfg.Serverless {
+		if val, ok := existingKeys[k]; ok {
+			if duplicateKeys[k] == nil {
+				duplicateKeys[k] = map[string]string{}
+			}
+			duplicateKeys[k]["serverless"] = k
+			if _, ok := duplicateKeys[k][val]; !ok {
+				duplicateKeys[k][val] = k
+
+			}
+		}
+		existingKeys[k] = "serverless"
+	}
+
+	for k := range cfg.Alias {
+		if val, ok := existingKeys[k]; ok {
+			if duplicateKeys[k] == nil {
+				duplicateKeys[k] = map[string]string{}
+			}
+			duplicateKeys[k]["alias"] = k
+			if _, ok := duplicateKeys[k][val]; !ok {
+				duplicateKeys[k][val] = k
+
+			}
+		}
+		existingKeys[k] = "alias"
+	}
+
+	errMsg := ""
+	if len(duplicateKeys) != 0 {
+		for name, v := range duplicateKeys {
+			errMsg += fmt.Sprintf("\nOnly one section with the name \"%s\" is allowed. Please rename one of the following:\n", name)
+			for k, v := range v {
+				errMsg += fmt.Sprintf("- [%s.%s]\n", k, v)
+			}
+		}
+	}
+
+	if len(errMsg) != 0 {
+		return fmt.Errorf(errMsg)
+	}
+
+	return nil
 }
 
 func setDefaultInfraDir(cwd string) {
