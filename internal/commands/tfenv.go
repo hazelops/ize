@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 )
 
 type TfenvOptions struct {
@@ -51,6 +52,7 @@ func NewCmdTfenv(project *config.Project) *cobra.Command {
 		Short:   "Generate terraform files",
 		Long:    tfenvLongDesc,
 		Example: tfenvExample,
+		Hidden:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
@@ -69,19 +71,15 @@ func NewCmdTfenv(project *config.Project) *cobra.Command {
 }
 
 func (o *TfenvOptions) Run() error {
-	return GenerateTerraformFiles(
-		o.Config,
-		o.TerraformStateBucketName,
-	)
+	return GenerateTerraformFiles("infra", o.TerraformStateBucketName, o.Config)
 
 }
 
-func GenerateTerraformFiles(project *config.Project, terraformStateBucketName string) error {
-	pterm.DefaultSection.Printfln("Starting generate terraform files")
+func GenerateTerraformFiles(name string, terraformStateBucketName string, project *config.Project) error {
 	var tf config.Terraform
 
 	if project.Terraform != nil {
-		tf = *project.Terraform["infra"]
+		tf = *project.Terraform[name]
 	}
 
 	stateName := tf.StateName
@@ -131,27 +129,19 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 
 	err := template.GenerateBackendTf(
 		backendOpts,
-		envDir,
+		filepath.Join(envDir, name),
 	)
 	if err != nil {
-		pterm.DefaultSection.Println("Generate terraform file not completed")
-		return err
+		pterm.Error.Printfln("Generate terraform file for \"%s\" not completed", name)
+		return fmt.Errorf("can't generate backent.tf: %s", err)
 	}
-
-	pterm.Success.Println("backend.tf generated")
-
-	pterm.Success.Printfln("Read SSH public key")
 
 	home, _ := os.UserHomeDir()
 	key, err := ioutil.ReadFile(fmt.Sprintf("%s/.ssh/id_rsa.pub", home))
 	if err != nil {
-		pterm.DefaultSection.Println("Generate terraform file not completed")
-		return err
-	}
+		pterm.Error.Printfln("Generate terraform file for \"%s\" not completed", name)
+		return fmt.Errorf("can't read public ssh key: %s", err)
 
-	if err != nil {
-		pterm.DefaultSection.Println("Generate terraform file not completed")
-		return err
 	}
 
 	varsOpts := template.VarsOpts{
@@ -174,15 +164,14 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 
 	err = template.GenerateVarsTf(
 		varsOpts,
-		envDir,
+		filepath.Join(envDir, name),
 	)
 	if err != nil {
-		pterm.DefaultSection.Println("Generate terraform file not completed")
-		return err
+		pterm.Error.Printfln("Generate terraform file for \"%s\" not completed", name)
+		return fmt.Errorf("can't generate tfvars: %s", err)
 	}
 
-	pterm.Success.Println("terraform.tfvars generated")
-	pterm.DefaultSection.Printfln("Generate terraform files completed")
+	pterm.Success.Printfln("Generate terraform file for \"%s\" completed", name)
 
 	return nil
 }
