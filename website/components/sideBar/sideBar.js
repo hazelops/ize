@@ -22,7 +22,7 @@ export default function SideBar({ filesNames, currentPage }) {
         <nav className={`${styles.outer} flex flex-col px-5 pt-5`}>
             <div className="flex mb-5">
                 <Ize /> 
-                <div className="text-2xl font-bold text-blue-600 lg:text-3xl ml-5">docs</div>
+                <div className="text-3xl font-bold text-blue-600 ml-5">docs</div>
             </div>
 
             {menuList}

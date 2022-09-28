@@ -1,4 +1,6 @@
 import { titles } from '../../utilities/docsNavbarMenu'
+import GitHubIcon from '../gitHubIcon'
+
 import styles from './docsNavbar.module.css'
 
 function NavButton({ title }) {
@@ -16,8 +18,14 @@ export default function DocsNavbar() {
     })
 
     return (
-        <nav className={`${styles.outer} flex justify-between items-center w-1/3 px-10 pt-5`}>
-            {listButtons}
+        <nav className="flex justify-between">
+            <div className={`${styles.outer} flex justify-between items-center w-1/3 px-10 pt-5`}>
+                {listButtons}
+            </div>
+
+            <div className={`${styles.iconOuter} pt-5 self-center`}>
+                <GitHubIcon />
+            </div>
         </nav>
     )
 }
