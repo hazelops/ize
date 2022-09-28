@@ -168,6 +168,9 @@ func (p *Project) GetStates() map[string]*interface{} {
 	states := map[string]*interface{}{}
 
 	for name, body := range p.Terraform {
+		if name == "infra" {
+			continue
+		}
 		var v interface{}
 		v = map[string]interface{}{
 			"depends_on": body.DependsOn,

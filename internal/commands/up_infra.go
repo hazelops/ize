@@ -1,13 +1,22 @@
 package commands
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/manager"
 	"github.com/hazelops/ize/internal/requirements"
+	"github.com/hazelops/ize/internal/terraform"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"io/ioutil"
+	"path/filepath"
 )
 
 type UpInfraOptions struct {
@@ -132,5 +141,132 @@ func (o *UpInfraOptions) Validate() error {
 func (o *UpInfraOptions) Run() error {
 	ui := o.UI
 
-	return deployInfra(ui, o.Config, o.SkipGen)
+	if _, ok := o.Config.Terraform["infra"]; ok {
+		err := deployInfra("infra", ui, o.Config, o.SkipGen)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := manager.InDependencyOrder(aws.BackgroundContext(), o.Config.GetStates(), func(c context.Context, name string) error {
+		return deployInfra(name, ui, o.Config, o.SkipGen)
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func deployInfra(name string, ui terminal.UI, config *config.Project, skipGen bool) error {
+	if !skipGen {
+		err := GenerateTerraformFiles(name, "", config)
+		if err != nil {
+			return err
+		}
+	}
+
+	var tf terraform.Terraform
+
+	logrus.Infof("infra: %s", config.Terraform["infra"])
+
+	v, err := config.Session.Config.Credentials.Get()
+	if err != nil {
+		return fmt.Errorf("can't get AWS credentials: %w", err)
+	}
+
+	env := []string{
+		fmt.Sprintf("ENV=%v", config.Env),
+		fmt.Sprintf("AWS_PROFILE=%v", config.Terraform["infra"].AwsProfile),
+		fmt.Sprintf("TF_LOG=%v", config.TFLog),
+		fmt.Sprintf("TF_LOG_PATH=%v", config.TFLogPath),
+		fmt.Sprintf("AWS_ACCESS_KEY_ID=%v", v.AccessKeyID),
+		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%v", v.SecretAccessKey),
+		fmt.Sprintf("AWS_SESSION_TOKEN=%v", v.SessionToken),
+	}
+
+	switch config.PreferRuntime {
+	case "docker":
+		tf = terraform.NewDockerTerraform(name, []string{"init", "-input=true"}, env, nil, config)
+	case "native":
+		tf = terraform.NewLocalTerraform(name, []string{"init", "-input=true"}, env, nil, config)
+		err = tf.Prepare()
+		if err != nil {
+			return fmt.Errorf("can't deploy infra: %w", err)
+		}
+	default:
+		return fmt.Errorf("can't supported %s runtime", config.PreferRuntime)
+	}
+
+	ui.Output(fmt.Sprintf("[%s][%s] Running deploy infra...", config.Env, name), terminal.WithHeaderStyle())
+	ui.Output("Execution terraform init...", terminal.WithHeaderStyle())
+
+	err = tf.RunUI(ui)
+	if err != nil {
+		return fmt.Errorf("can't deploy infra: %w", err)
+	}
+
+	ui.Output("Execution terraform plan...", terminal.WithHeaderStyle())
+
+	outPath := filepath.Join(config.EnvDir, name, ".terraform", "tfplan")
+	if name == "infra" {
+		outPath = filepath.Join(config.EnvDir, ".terraform", "tfplan")
+	}
+
+	//terraform plan run options
+	tf.NewCmd([]string{"plan", fmt.Sprintf("-out=%s", outPath)})
+
+	err = tf.RunUI(ui)
+	if err != nil {
+		return fmt.Errorf("can't deploy infra: %w", err)
+	}
+
+	//terraform apply run options
+	tf.NewCmd([]string{"apply", "-auto-approve", outPath})
+
+	ui.Output("Execution terraform apply...", terminal.WithHeaderStyle())
+
+	err = tf.RunUI(ui)
+	if err != nil {
+		return fmt.Errorf("can't deploy infra: %w", err)
+	}
+
+	//terraform output run options
+
+	tf.NewCmd([]string{"output", "-json"})
+
+	var output bytes.Buffer
+
+	tf.SetOut(&output)
+
+	ui.Output("Execution terraform output...", terminal.WithHeaderStyle())
+
+	err = tf.RunUI(ui)
+	if err != nil {
+		return fmt.Errorf("can't deploy infra: %w", err)
+	}
+
+	parameterName := fmt.Sprintf("/%s/terraform-output", config.Env)
+
+	byteValue, _ := ioutil.ReadAll(&output)
+	sDec := base64.StdEncoding.EncodeToString(byteValue)
+	if err != nil {
+		return err
+	}
+
+	_, err = ssm.New(config.Session).PutParameter(&ssm.PutParameterInput{
+		Name:      &parameterName,
+		Value:     aws.String(sDec),
+		Type:      aws.String(ssm.ParameterTypeSecureString),
+		Overwrite: aws.Bool(true),
+		Tier:      aws.String(ssm.ParameterTierIntelligentTiering),
+		DataType:  aws.String("text"),
+	})
+	if err != nil {
+		return err
+	}
+
+	ui.Output("Deploy infra completed!\n", terminal.WithSuccessStyle())
+
+	return nil
 }

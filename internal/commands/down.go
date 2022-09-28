@@ -16,6 +16,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"time"
 )
 
 type DownOptions struct {
@@ -172,7 +173,7 @@ func (o *DownOptions) Run() error {
 			return err
 		}
 	} else {
-		err := destroyApp(ui, o)
+		err := destroyApp(o.AppName, o.Config, ui)
 		if err != nil {
 			return err
 		}
@@ -218,58 +219,34 @@ func destroyAll(ui terminal.UI, o *DownOptions) error {
 	err := manager.InReversDependencyOrder(aws.BackgroundContext(), o.Config.GetApps(), func(c context.Context, name string) error {
 		o.Config.AwsProfile = o.Config.Terraform["infra"].AwsProfile
 
-		var m manager.Manager
-
-		if app, ok := o.Config.Serverless[name]; ok {
-			app.Name = name
-			m = &serverless.Manager{
-				Project: o.Config,
-				App:     app,
-			}
-		}
-		if app, ok := o.Config.Alias[name]; ok {
-			app.Name = name
-			m = &alias.Manager{
-				Project: o.Config,
-				App:     app,
-			}
-		}
-		if app, ok := o.Config.Ecs[name]; ok {
-			app.Name = name
-			m = &ecs.Manager{
-				Project: o.Config,
-				App:     app,
-			}
-		}
-
-		// destroy
-		err := m.Destroy(ui)
-		if err != nil {
-			return fmt.Errorf("can't destroy app: %w", err)
-		}
-
-		return nil
+		return destroyApp(name, o.Config, ui)
 	})
 	if err != nil {
 		return err
 	}
 
-	err = destroyInfra(ui, o.Config, o.SkipGen)
-	if err != nil {
-		return err
+	if _, ok := o.Config.Terraform["infra"]; ok {
+		err = destroyInfra("infra", o.Config, o.SkipGen, ui)
+		if err != nil {
+			return err
+		}
 	}
 
+	err = manager.InReversDependencyOrder(aws.BackgroundContext(), o.Config.GetStates(), func(c context.Context, name string) error {
+		o.Config.AwsProfile = o.Config.Terraform["infra"].AwsProfile
+
+		return destroyInfra(name, o.Config, o.SkipGen, ui)
+	})
+
 	ui.Output("Destroy all completed!\n", terminal.WithSuccessStyle())
+	time.Sleep(time.Millisecond * 200)
 
 	return nil
 }
 
-func destroyInfra(ui terminal.UI, config *config.Project, skipGen bool) error {
+func destroyInfra(state string, config *config.Project, skipGen bool, ui terminal.UI) error {
 	if !skipGen {
-		err := GenerateTerraformFiles(
-			config,
-			"",
-		)
+		err := GenerateTerraformFiles(state, "", config)
 		if err != nil {
 			return err
 		}
@@ -296,9 +273,9 @@ func destroyInfra(ui terminal.UI, config *config.Project, skipGen bool) error {
 
 	switch config.PreferRuntime {
 	case "docker":
-		tf = terraform.NewDockerTerraform(config.Terraform["infra"].Version, []string{"destroy", "-auto-approve"}, env, nil, config)
+		tf = terraform.NewDockerTerraform(state, []string{"destroy", "-auto-approve"}, env, nil, config)
 	case "native":
-		tf = terraform.NewLocalTerraform(config.Terraform["infra"].Version, []string{"destroy", "-auto-approve"}, env, nil, config)
+		tf = terraform.NewLocalTerraform(state, []string{"destroy", "-auto-approve"}, env, nil, config)
 		err = tf.Prepare()
 		if err != nil {
 			return fmt.Errorf("can't destroy infra: %w", err)
@@ -319,35 +296,35 @@ func destroyInfra(ui terminal.UI, config *config.Project, skipGen bool) error {
 	return nil
 }
 
-func destroyApp(ui terminal.UI, o *DownOptions) error {
+func destroyApp(name string, cfg *config.Project, ui terminal.UI) error {
 	var m manager.Manager
 	var icon string
 
 	m = &ecs.Manager{
-		Project: o.Config,
-		App:     &config.Ecs{Name: o.AppName},
+		Project: cfg,
+		App:     &config.Ecs{Name: name},
 	}
 
-	if app, ok := o.Config.Serverless[o.AppName]; ok {
-		app.Name = o.AppName
+	if app, ok := cfg.Serverless[name]; ok {
+		app.Name = name
 		m = &serverless.Manager{
-			Project: o.Config,
+			Project: cfg,
 			App:     app,
 		}
 		icon = app.Icon
 	}
-	if app, ok := o.Config.Alias[o.AppName]; ok {
-		app.Name = o.AppName
+	if app, ok := cfg.Alias[name]; ok {
+		app.Name = name
 		m = &alias.Manager{
-			Project: o.Config,
+			Project: cfg,
 			App:     app,
 		}
 		icon = app.Icon
 	}
-	if app, ok := o.Config.Ecs[o.AppName]; ok {
-		app.Name = o.AppName
+	if app, ok := cfg.Ecs[name]; ok {
+		app.Name = name
 		m = &ecs.Manager{
-			Project: o.Config,
+			Project: cfg,
 			App:     app,
 		}
 		icon = app.Icon
@@ -357,16 +334,14 @@ func destroyApp(ui terminal.UI, o *DownOptions) error {
 		icon += " "
 	}
 
-	ui.Output("Destroying %s%s app...\n", icon, o.AppName, terminal.WithHeaderStyle())
-	sg := ui.StepGroup()
-	defer sg.Wait()
+	ui.Output("Destroying %s%s app...\n", icon, name, terminal.WithHeaderStyle())
 
 	err := m.Destroy(ui)
 	if err != nil {
 		return fmt.Errorf("can't down: %w", err)
 	}
 
-	ui.Output("Destroy app %s%s completed\n", icon, o.AppName, terminal.WithSuccessStyle())
+	ui.Output("Destroy app %s%s completed\n", icon, name, terminal.WithSuccessStyle())
 
 	return nil
 }

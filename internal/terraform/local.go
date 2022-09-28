@@ -35,11 +35,17 @@ type local struct {
 	output  io.Writer
 	tfpath  string
 	project *config.Project
+	state   string
 }
 
-func NewLocalTerraform(version string, command []string, env []string, out io.Writer, project *config.Project) *local {
+func NewLocalTerraform(state string, command []string, env []string, out io.Writer, project *config.Project) *local {
+	if len(project.Terraform[state].Version) == 0 {
+		project.Terraform[state].Version = project.TerraformVersion
+	}
+
 	return &local{
-		version: version,
+		state:   state,
+		version: project.Terraform[state].Version,
 		command: command,
 		env:     env,
 		output:  out,
@@ -52,8 +58,13 @@ func (l *local) Run() error {
 		l.project.EnvDir = "."
 	}
 
+	stateDir := filepath.Join(l.project.EnvDir, l.state)
+	if l.state == "infra" {
+		stateDir = l.project.EnvDir
+	}
+
 	cmd := exec.Command(l.tfpath, l.command...)
-	cmd.Dir = l.project.EnvDir
+	cmd.Dir = stateDir
 
 	err := term.New(term.WithDir(l.project.EnvDir), term.WithStdin(os.Stdin)).InteractiveRun(cmd)
 	if err != nil {
@@ -130,7 +141,7 @@ func (l *local) RunUI(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("[%s] Running terraform v%s...", l.project.Env, l.version)
+	s := sg.Add("[%s][%s] Running terraform v%s...", l.project.Env, l.state, l.version)
 	defer func() { s.Abort(); time.Sleep(time.Millisecond * 100) }()
 
 	stdout := s.TermOutput()
@@ -142,8 +153,13 @@ func (l *local) RunUI(ui terminal.UI) error {
 		l.project.EnvDir = "."
 	}
 
+	stateDir := filepath.Join(l.project.EnvDir, l.state)
+	if l.state == "infra" {
+		stateDir = l.project.EnvDir
+	}
+
 	cmd := exec.Command(l.tfpath, l.command...)
-	cmd.Dir = l.project.EnvDir
+	cmd.Dir = stateDir
 	_, _, err := runCommand(cmd, stdout)
 
 	if err != nil {
