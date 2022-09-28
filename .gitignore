@@ -13,3 +13,5 @@ ize
 .terraform
 examples/**/.ize/env/*
 !examples/**/.ize/env/testnut
+backend.tf
+terraform.tfvars
