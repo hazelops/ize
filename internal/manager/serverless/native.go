@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 func (sls *Manager) runNpmInstall(w io.Writer) error {
@@ -33,14 +34,25 @@ func (sls *Manager) runNvm(w io.Writer) error {
 	if len(nvmDir) == 0 {
 		nvmDir = "$HOME/.nvm"
 	}
+	var command string
+	_, err := os.Stat(filepath.Join(sls.App.Path, ".nvmrc"))
+	if os.IsNotExist(err) {
+		command = fmt.Sprintf("source %s/nvm.sh && nvm install %s", nvmDir, sls.App.NodeVersion)
 
-	command := fmt.Sprintf("source %s/nvm.sh && nvm install %s", nvmDir, sls.App.NodeVersion)
+	} else {
+		file, err := os.ReadFile(filepath.Join(sls.App.Path, ".nvmrc"))
+		if err != nil {
+			return fmt.Errorf("can't read .nvmrc: %w", err)
+		}
+		sls.App.NodeVersion = strings.TrimSpace(string(file))
+		command = fmt.Sprintf("source %s/nvm.sh && nvm install %s", nvmDir, sls.App.NodeVersion)
+	}
 
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Stdout = w
 	cmd.Stderr = w
 	cmd.Dir = filepath.Join(sls.App.Path)
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return err
 	}
