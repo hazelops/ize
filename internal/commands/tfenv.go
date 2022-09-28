@@ -123,17 +123,17 @@ func GenerateTerraformFiles(name string, terraformStateBucketName string, projec
 		NAMESPACE:                      project.Namespace,
 	}
 
-	statePath := filepath.Join(project.EnvDir, name)
+	stackPath := filepath.Join(project.EnvDir, name)
 	if name == "infra" {
-		statePath = project.EnvDir
+		stackPath = project.EnvDir
 	}
 
 	logrus.Debugf("backend opts: %s", backendOpts)
-	logrus.Debugf("state dir path: %s", statePath)
+	logrus.Debugf("state dir path: %s", stackPath)
 
 	err := template.GenerateBackendTf(
 		backendOpts,
-		statePath,
+		stackPath,
 	)
 	if err != nil {
 		pterm.Error.Printfln("Generate terraform file for \"%s\" not completed", name)
@@ -164,11 +164,11 @@ func GenerateTerraformFiles(name string, terraformStateBucketName string, projec
 	}
 
 	logrus.Debugf("backend opts: %s", varsOpts)
-	logrus.Debugf("state dir path: %s", statePath)
+	logrus.Debugf("state dir path: %s", stackPath)
 
 	err = template.GenerateVarsTf(
 		varsOpts,
-		statePath,
+		stackPath,
 	)
 	if err != nil {
 		pterm.Error.Printfln("Generate terraform file for \"%s\" not completed", name)
