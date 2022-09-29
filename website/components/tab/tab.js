@@ -41,7 +41,7 @@ export default function Tab() {
 
     const listButtons = installationMenu.map((el, ind) => {
         return (
-            <TabButton key={index}
+            <TabButton key={ind}
                 field={el} 
                 onClick={handleClick} 
                 id={ind}

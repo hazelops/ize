@@ -1,12 +1,12 @@
 .outer {
     height: fit-content;
     padding-top: 28px;
+    letter-spacing: 0.5px;
 }
 
 .button {
     font-size: 1.15rem;
     font-weight: 600;
-    letter-spacing: 0.5px;
     color: #fff;
     border: 1px solid #cecaca48;
     border-radius: 1% 30%;
