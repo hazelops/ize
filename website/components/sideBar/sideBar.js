@@ -7,8 +7,7 @@ import styles from './sideBar.module.css'
 export default function SideBar({ filesNames, currentPage }) {
     const { mainMenu, seeAlso } = sideBarMenu
 
-    const menuList = mainMenu.map(el => {
-        const ind = mainMenu.indexOf(el)
+    const menuList = mainMenu.map((el, ind) => {
         return (
             <TopSection key={ind}
                 title={el.title}

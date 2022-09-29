@@ -21,8 +21,7 @@ export default function NestedSection({ hidden, nestedItems, currentPage }) {
         return null
     }
 
-    const nestedList = nestedItems.map(el => {
-        const ind = nestedItems.indexOf(el)
+    const nestedList = nestedItems.map((el, ind) => {
         let active = false
 
         const pathName = el.slice().replaceAll(" ", "-")
