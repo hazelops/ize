@@ -1,5 +1,6 @@
 .outer {
     height: fit-content;
+    padding-top: 28px;
 }
 
 .button {

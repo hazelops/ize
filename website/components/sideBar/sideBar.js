@@ -19,11 +19,11 @@ export default function SideBar({ filesNames, currentPage }) {
     })
 
     return (
-        <nav className={`${styles.outer} flex flex-col px-5 pt-5`}>
-            <div className="flex mb-5">
+        <nav className={`${styles.outer} flex flex-col px-5 pt-7`}>
+            <header className="flex mb-5">
                 <Ize /> 
                 <div className="text-3xl font-bold text-blue-600 ml-5">docs</div>
-            </div>
+            </header>
 
             {menuList}
 

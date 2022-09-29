@@ -19,7 +19,7 @@ export default function DocsNavbar() {
 
     return (
         <nav className="flex justify-between">
-            <div className={`${styles.outer} flex justify-between items-center w-1/3 px-10 pt-5`}>
+            <div className={`${styles.outer} flex justify-between items-center w-1/3 px-10`}>
                 {listButtons}
             </div>
 
