@@ -115,20 +115,21 @@ func (o *DownOptions) Complete(cmd *cobra.Command, args []string) error {
 		}
 
 		if o.Config.Terraform == nil {
-			o.Config.Terraform = map[string]*config.Terraform{}
-			o.Config.Terraform["infra"] = &config.Terraform{}
+			return fmt.Errorf("you must specify at least one terraform stack in ize.toml")
 		}
 
-		if len(o.Config.Terraform["infra"].AwsProfile) == 0 {
-			o.Config.Terraform["infra"].AwsProfile = o.Config.AwsProfile
-		}
+		if _, ok := o.Config.Terraform["infra"]; ok {
+			if len(o.Config.Terraform["infra"].AwsProfile) == 0 {
+				o.Config.Terraform["infra"].AwsProfile = o.Config.AwsProfile
+			}
 
-		if len(o.Config.Terraform["infra"].AwsRegion) == 0 {
-			o.Config.Terraform["infra"].AwsRegion = o.Config.AwsRegion
-		}
+			if len(o.Config.Terraform["infra"].AwsRegion) == 0 {
+				o.Config.Terraform["infra"].AwsRegion = o.Config.AwsRegion
+			}
 
-		if len(o.Config.Terraform["infra"].Version) == 0 {
-			o.Config.Terraform["infra"].Version = o.Config.TerraformVersion
+			if len(o.Config.Terraform["infra"].Version) == 0 {
+				o.Config.Terraform["infra"].Version = o.Config.TerraformVersion
+			}
 		}
 	} else {
 		if err := requirements.CheckRequirements(requirements.WithIzeStructure(), requirements.WithConfigFile()); err != nil {
@@ -273,9 +274,9 @@ func destroyInfra(state string, config *config.Project, skipGen bool, ui termina
 
 	switch config.PreferRuntime {
 	case "docker":
-		tf = terraform.NewDockerTerraform(state, []string{"destroy", "-auto-approve"}, env, nil, config)
+		tf = terraform.NewDockerTerraform(state, []string{"init", "-input=true"}, env, nil, config)
 	case "native":
-		tf = terraform.NewLocalTerraform(state, []string{"destroy", "-auto-approve"}, env, nil, config)
+		tf = terraform.NewLocalTerraform(state, []string{"init", "-input=true"}, env, nil, config)
 		err = tf.Prepare()
 		if err != nil {
 			return fmt.Errorf("can't destroy infra: %w", err)
@@ -284,11 +285,21 @@ func destroyInfra(state string, config *config.Project, skipGen bool, ui termina
 		return fmt.Errorf("can't supported %s runtime", config.PreferRuntime)
 	}
 
-	ui.Output("Running terraform destroy...", terminal.WithHeaderStyle())
+	ui.Output("Execution terraform init...", terminal.WithHeaderStyle())
 
 	err = tf.RunUI(ui)
 	if err != nil {
 		return err
+	}
+
+	//terraform destroy run options
+	tf.NewCmd([]string{"destroy", "-auto-approve"})
+
+	ui.Output("Execution terraform destroy...", terminal.WithHeaderStyle())
+
+	err = tf.RunUI(ui)
+	if err != nil {
+		return fmt.Errorf("can't deploy infra: %w", err)
 	}
 
 	ui.Output("Terraform destroy completed!\n", terminal.WithSuccessStyle())
