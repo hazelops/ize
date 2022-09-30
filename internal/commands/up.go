@@ -112,20 +112,21 @@ func (o *UpOptions) Complete(cmd *cobra.Command, args []string) error {
 		}
 
 		if o.Config.Terraform == nil {
-			o.Config.Terraform = map[string]*config.Terraform{}
-			o.Config.Terraform["infra"] = &config.Terraform{}
+			return fmt.Errorf("you must specify at least one terraform stack in ize.toml")
 		}
 
-		if len(o.Config.Terraform["infra"].AwsProfile) == 0 {
-			o.Config.Terraform["infra"].AwsProfile = o.Config.AwsProfile
-		}
+		if _, ok := o.Config.Terraform["infra"]; ok {
+			if len(o.Config.Terraform["infra"].AwsProfile) == 0 {
+				o.Config.Terraform["infra"].AwsProfile = o.Config.AwsProfile
+			}
 
-		if len(o.Config.Terraform["infra"].AwsRegion) == 0 {
-			o.Config.Terraform["infra"].AwsProfile = o.Config.AwsRegion
-		}
+			if len(o.Config.Terraform["infra"].AwsRegion) == 0 {
+				o.Config.Terraform["infra"].AwsRegion = o.Config.AwsRegion
+			}
 
-		if len(o.Config.Terraform["infra"].Version) == 0 {
-			o.Config.Terraform["infra"].Version = o.Config.TerraformVersion
+			if len(o.Config.Terraform["infra"].Version) == 0 {
+				o.Config.Terraform["infra"].Version = o.Config.TerraformVersion
+			}
 		}
 	} else {
 		if err := requirements.CheckRequirements(requirements.WithIzeStructure(), requirements.WithConfigFile()); err != nil {

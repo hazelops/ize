@@ -69,32 +69,33 @@ func (o *DownInfraOptions) Complete() error {
 	}
 
 	if o.Config.Terraform == nil {
-		o.Config.Terraform = map[string]*config.Terraform{}
-		o.Config.Terraform["infra"] = &config.Terraform{}
+		return fmt.Errorf("you must specify at least one terraform stack in ize.toml")
 	}
 
-	if len(o.AwsProfile) != 0 {
-		o.Config.Terraform["infra"].AwsProfile = o.AwsProfile
-	}
+	if _, ok := o.Config.Terraform["infra"]; ok {
+		if len(o.AwsProfile) != 0 {
+			o.Config.Terraform["infra"].AwsProfile = o.AwsProfile
+		}
 
-	if len(o.Config.Terraform["infra"].AwsProfile) == 0 {
-		o.Config.Terraform["infra"].AwsProfile = o.Config.AwsProfile
-	}
+		if len(o.Config.Terraform["infra"].AwsProfile) == 0 {
+			o.Config.Terraform["infra"].AwsProfile = o.Config.AwsProfile
+		}
 
-	if len(o.AwsProfile) != 0 {
-		o.Config.Terraform["infra"].AwsRegion = o.AwsRegion
-	}
+		if len(o.AwsProfile) != 0 {
+			o.Config.Terraform["infra"].AwsRegion = o.AwsRegion
+		}
 
-	if len(o.Config.Terraform["infra"].AwsRegion) == 0 {
-		o.Config.Terraform["infra"].AwsRegion = o.Config.AwsRegion
-	}
+		if len(o.Config.Terraform["infra"].AwsRegion) == 0 {
+			o.Config.Terraform["infra"].AwsRegion = o.Config.AwsRegion
+		}
 
-	if len(o.Version) != 0 {
-		o.Config.Terraform["infra"].Version = o.Version
-	}
+		if len(o.Version) != 0 {
+			o.Config.Terraform["infra"].Version = o.Version
+		}
 
-	if len(o.Config.Terraform["infra"].Version) == 0 {
-		o.Config.Terraform["infra"].Version = o.Config.TerraformVersion
+		if len(o.Config.Terraform["infra"].Version) == 0 {
+			o.Config.Terraform["infra"].Version = o.Config.TerraformVersion
+		}
 	}
 
 	o.ui = terminal.ConsoleUI(context.Background(), o.Config.PlainText)
