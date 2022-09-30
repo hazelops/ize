@@ -112,7 +112,7 @@ func GenerateTerraformFiles(name string, terraformStateBucketName string, projec
 	if name == "infra" {
 		if checkTFStateKey(project, tf.StateBucketName, filepath.Join(project.Env, "terraform.tfstate")) {
 			stateKey = filepath.Join(project.Env, "terraform.tfstate")
-			pterm.Warning.Println("%v/terraform.tfstate location is deprecated, please move to %v/infra.tfstate")
+			pterm.Warning.Printfln("%s/terraform.tfstate location is deprecated, please move to %s/infra.tfstate", project.Env, project.Env)
 		} else {
 			stateKey = filepath.Join(project.Env, "infra.tfstate")
 		}
