@@ -5,7 +5,7 @@ import styles from './docsNavbar.module.css'
 
 function NavButton({ title }) {
     return (
-        <div className={`${styles.button} px-2 py-1.5 capitalize`} role="button">
+        <div className={`${styles.button} px-2 py-1.5`} role="button">
             {title}
         </div>
     )
