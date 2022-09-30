@@ -31,7 +31,7 @@ func (e *Manager) deployLocal(w io.Writer) error {
 	}
 
 	if len(dso.Services) == 0 {
-		return fmt.Errorf("app %s not found", name)
+		return fmt.Errorf("app %s not found not found in %s cluster", name, e.App.Cluster)
 	}
 
 	dtdo, err := svc.DescribeTaskDefinition(&ecssvc.DescribeTaskDefinitionInput{
@@ -64,7 +64,7 @@ func (e *Manager) deployLocal(w io.Writer) error {
 
 			// We are changing the image/tag only for the app-specific container (not sidecars)
 			if *container.Name == e.App.Name {
-				if len(e.Project.Tag) != 0 {
+				if len(e.Project.Tag) != 0 && len(e.App.Image) == 0 {
 					name := strings.Split(*container.Image, ":")[0]
 					image = fmt.Sprintf("%s:%s", name, e.Project.Tag)
 				} else {

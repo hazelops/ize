@@ -177,6 +177,13 @@ func (e *Manager) Push(ui terminal.UI) error {
 	s := sg.Add("%s: push app image...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
+	if len(e.App.Image) != 0 {
+		s.Update("%s: pushing app image... (skipped, using %s) ", e.App.Name, e.App.Image)
+		s.Done()
+
+		return nil
+	}
+
 	image := fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name)
 
 	svc := ecr.New(e.Project.Session)
@@ -231,8 +238,12 @@ func (e *Manager) Push(ui terminal.UI) error {
 
 	tagLatest := fmt.Sprintf("%s-latest", e.Project.Env)
 	imageUri := fmt.Sprintf("%s/%s", e.App.DockerRegistry, image)
+	platform := "linux/amd64"
+	if e.Project.PreferRuntime == "docker-arm64" {
+		platform = "linux/arm64"
+	}
 
-	r := docker.NewRegistry(*repository.RepositoryUri, token)
+	r := docker.NewRegistry(*repository.RepositoryUri, token, platform)
 
 	err = r.Push(context.Background(), s.TermOutput(), imageUri, []string{e.Project.Tag, tagLatest})
 	if err != nil {
@@ -252,6 +263,13 @@ func (e *Manager) Build(ui terminal.UI) error {
 
 	s := sg.Add("%s: building app container...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
+
+	if len(e.App.Image) != 0 {
+		s.Update("%s: building app container... (skipped, using %s)", e.App.Name, e.App.Image)
+
+		s.Done()
+		return nil
+	}
 
 	image := fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name)
 	imageUri := fmt.Sprintf("%s/%s", e.App.DockerRegistry, image)
@@ -277,11 +295,17 @@ func (e *Manager) Build(ui terminal.UI) error {
 
 	cache := []string{fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", e.Project.Env))}
 
+	platform := "linux/amd64"
+	if e.Project.PreferRuntime == "docker-arm64" {
+		platform = "linux/arm64"
+	}
+
 	b := docker.NewBuilder(
 		buildArgs,
 		tags,
 		dockerfile,
 		cache,
+		platform,
 	)
 
 	err = b.Build(ui, s, e.Project.RootDir)
