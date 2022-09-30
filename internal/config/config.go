@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"text/template"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -561,4 +562,19 @@ func GetApps(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirecti
 	}
 
 	return apps, cobra.ShellCompDirectiveNoFileComp
+}
+
+func (p *Project) Generate(tmpl string) error {
+	t := template.New("template")
+	t, err := t.Parse(tmpl)
+	if err != nil {
+		return err
+	}
+
+	err = t.Execute(os.Stdout, p)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

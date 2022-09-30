@@ -26,6 +26,7 @@ type UpInfraOptions struct {
 	AwsRegion  string
 	Version    string
 	UI         terminal.UI
+	Explain    bool
 }
 
 var upInfraLongDesc = templates.LongDesc(`
@@ -80,6 +81,7 @@ func NewCmdUpInfra(project *config.Project) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&o.SkipGen, "skip-gen", false, "skip generating terraform files")
+	cmd.Flags().BoolVar(&o.Explain, "explain", false, "bash alternative shown")
 	cmd.Flags().StringVar(&o.Version, "infra.terraform.version", "", "set terraform version")
 	cmd.Flags().StringVar(&o.AwsRegion, "infra.terraform.aws-region", "", "set aws region")
 	cmd.Flags().StringVar(&o.AwsProfile, "infra.terraform.aws-profile", "", "set aws profile")
@@ -113,9 +115,15 @@ func (o *UpInfraOptions) Complete() error {
 			o.Config.Terraform["infra"].AwsRegion = o.Config.AwsRegion
 		}
 
+
+	  if len(o.Config.Terraform["infra"].StateBucketRegion) == 0 {
+		  o.Config.Terraform["infra"].StateBucketRegion = o.Config.Terraform["infra"].AwsRegion
+	  }
+
 		if len(o.Version) != 0 {
 			o.Config.Terraform["infra"].Version = o.Version
 		}
+
 
 		if len(o.Config.Terraform["infra"].Version) == 0 {
 			o.Config.Terraform["infra"].Version = o.Config.TerraformVersion
@@ -140,6 +148,67 @@ func (o *UpInfraOptions) Validate() error {
 }
 
 func (o *UpInfraOptions) Run() error {
+	if o.Explain {
+		tmpl := `# Change to the dir
+cd {{.EnvDir}}
+
+# Generate Backend.tf
+cat << EOF > backend.tf
+provider "aws" {
+  profile = var.aws_profile
+  region  = var.aws_region
+  default_tags {
+    tags = {
+      env       = "{{.Env}}"
+      namespace = "{{.Namespace}}"
+      terraform = "true"
+    }
+  }
+}
+
+terraform {
+  backend "s3" {
+    bucket         = "{{.Namespace}}-tf-state"
+    key            = "{{.Env}}/terraform.tfstate"
+    region         = "{{.Terraform.infra.StateBucketRegion}}"
+    profile        = "{{.AwsProfile}}"
+    dynamodb_table = "tf-state-lock"
+  }
+}
+
+EOF
+
+# Generate variables.tfvars
+cat << EOF > variables.tfvars
+env               = "{{.Env}}"
+aws_profile       = "{{.AwsProfile}}"
+aws_region        = "{{.AwsRegion}}"
+ec2_key_pair_name = "{{.Env}}-{{.Namespace}}"
+docker_image_tag  = "{{.Tag}}"
+ssh_public_key    = ""
+docker_registry   = "{{.DockerRegistry}}"
+namespace         = "{{.Namespace}}"
+root_domain_name  = "{{.Terraform.infra.RootDomainName}}"
+
+EOF
+
+# Ensure Terraform is v {{.TerraformVersion}}
+terraform --version
+
+# Terraform Plan
+terraform plan
+
+# Terraform Apply
+terraform apply
+`
+		err := o.Config.Generate(tmpl)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	ui := o.UI
 
 	if _, ok := o.Config.Terraform["infra"]; ok {
