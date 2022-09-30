@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"text/template"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -82,6 +83,11 @@ func (p *Project) GetConfig() error {
 	logrus.Debug("config file used:", viper.ConfigFileUsed())
 
 	err = viper.Unmarshal(p)
+	if err != nil {
+		return err
+	}
+
+	err = findDuplicates(p)
 	if err != nil {
 		return err
 	}
@@ -235,7 +241,6 @@ func InitConfig() {
 	viper.SetDefault("PREFER_RUNTIME", "native")
 	viper.SetDefault("CUSTOM_PROMPT", false)
 	viper.SetDefault("PLAIN_TEXT", false)
-	viper.SetDefault("terraform.infra.state_name", "terraform")
 
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -290,6 +295,83 @@ func InitConfig() {
 			}
 		}
 	}
+}
+
+func findDuplicates(cfg *Project) error {
+	existingKeys := map[string]string{}
+	duplicateKeys := map[string]map[string]string{}
+
+	for k := range cfg.Terraform {
+		if val, ok := existingKeys[k]; ok {
+			if duplicateKeys[k] == nil {
+				duplicateKeys[k] = map[string]string{}
+			}
+			duplicateKeys[k]["terraform"] = k
+			if _, ok := duplicateKeys[k][val]; !ok {
+				duplicateKeys[k][val] = k
+
+			}
+		}
+		existingKeys[k] = "terraform"
+	}
+
+	for k := range cfg.Ecs {
+		if val, ok := existingKeys[k]; ok {
+			if duplicateKeys[k] == nil {
+				duplicateKeys[k] = map[string]string{}
+			}
+			duplicateKeys[k]["ecs"] = k
+			if _, ok := duplicateKeys[k][val]; !ok {
+				duplicateKeys[k][val] = k
+
+			}
+		}
+		existingKeys[k] = "ecs"
+	}
+
+	for k := range cfg.Serverless {
+		if val, ok := existingKeys[k]; ok {
+			if duplicateKeys[k] == nil {
+				duplicateKeys[k] = map[string]string{}
+			}
+			duplicateKeys[k]["serverless"] = k
+			if _, ok := duplicateKeys[k][val]; !ok {
+				duplicateKeys[k][val] = k
+
+			}
+		}
+		existingKeys[k] = "serverless"
+	}
+
+	for k := range cfg.Alias {
+		if val, ok := existingKeys[k]; ok {
+			if duplicateKeys[k] == nil {
+				duplicateKeys[k] = map[string]string{}
+			}
+			duplicateKeys[k]["alias"] = k
+			if _, ok := duplicateKeys[k][val]; !ok {
+				duplicateKeys[k][val] = k
+
+			}
+		}
+		existingKeys[k] = "alias"
+	}
+
+	errMsg := ""
+	if len(duplicateKeys) != 0 {
+		for name, v := range duplicateKeys {
+			errMsg += fmt.Sprintf("\nOnly one section with the name \"%s\" is allowed. Please rename one of the following:\n", name)
+			for k, v := range v {
+				errMsg += fmt.Sprintf("- [%s.%s]\n", k, v)
+			}
+		}
+	}
+
+	if len(errMsg) != 0 {
+		return fmt.Errorf(errMsg)
+	}
+
+	return nil
 }
 
 func setDefaultInfraDir(cwd string) {
@@ -480,4 +562,19 @@ func GetApps(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirecti
 	}
 
 	return apps, cobra.ShellCompDirectiveNoFileComp
+}
+
+func (p *Project) Generate(tmpl string) error {
+	t := template.New("template")
+	t, err := t.Parse(tmpl)
+	if err != nil {
+		return err
+	}
+
+	err = t.Execute(os.Stdout, p)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

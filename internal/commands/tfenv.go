@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 )
 
 type TfenvOptions struct {
@@ -51,6 +52,7 @@ func NewCmdTfenv(project *config.Project) *cobra.Command {
 		Short:   "Generate terraform files",
 		Long:    tfenvLongDesc,
 		Example: tfenvExample,
+		Hidden:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 
@@ -69,23 +71,16 @@ func NewCmdTfenv(project *config.Project) *cobra.Command {
 }
 
 func (o *TfenvOptions) Run() error {
-	return GenerateTerraformFiles(
-		o.Config,
-		o.TerraformStateBucketName,
-	)
+	return GenerateTerraformFiles("infra", o.TerraformStateBucketName, o.Config)
 
 }
 
-func GenerateTerraformFiles(project *config.Project, terraformStateBucketName string) error {
-	pterm.DefaultSection.Printfln("Starting generate terraform files")
+func GenerateTerraformFiles(name string, terraformStateBucketName string, project *config.Project) error {
 	var tf config.Terraform
 
 	if project.Terraform != nil {
-		tf = *project.Terraform["infra"]
+		tf = *project.Terraform[name]
 	}
-
-	stateName := tf.StateName
-	stateKey := fmt.Sprintf("%v/%v.tfstate", project.Env, stateName)
 
 	if len(terraformStateBucketName) != 0 {
 		tf.StateBucketName = terraformStateBucketName
@@ -109,6 +104,20 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 		}
 	}
 
+	stateKey := fmt.Sprintf("%v/%v.tfstate", project.Env, name)
+	if len(tf.StateName) != 0 {
+		stateKey = fmt.Sprintf("%v/%v.tfstate", project.Env, tf.StateName)
+	}
+
+	if name == "infra" {
+		if checkTFStateKey(project, tf.StateBucketName, filepath.Join(project.Env, "terraform.tfstate")) {
+			stateKey = filepath.Join(project.Env, "terraform.tfstate")
+			pterm.Warning.Printfln("%s/terraform.tfstate location is deprecated, please move to %s/infra.tfstate", project.Env, project.Env)
+		} else {
+			stateKey = filepath.Join(project.Env, "infra.tfstate")
+		}
+	}
+
 	if len(tf.StateBucketRegion) == 0 {
 		tf.StateBucketRegion = project.AwsRegion
 	}
@@ -124,34 +133,30 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 		TERRAFORM_AWS_PROVIDER_VERSION: "",
 		NAMESPACE:                      project.Namespace,
 	}
-	envDir := project.EnvDir
+
+	stackPath := filepath.Join(project.EnvDir, name)
+	if name == "infra" {
+		stackPath = project.EnvDir
+	}
 
 	logrus.Debugf("backend opts: %s", backendOpts)
-	logrus.Debugf("ENV dir path: %s", envDir)
+	logrus.Debugf("state dir path: %s", stackPath)
 
 	err := template.GenerateBackendTf(
 		backendOpts,
-		envDir,
+		stackPath,
 	)
 	if err != nil {
-		pterm.DefaultSection.Println("Generate terraform file not completed")
-		return err
+		pterm.Error.Printfln("Generate terraform file for \"%s\" not completed", name)
+		return fmt.Errorf("can't generate backent.tf: %s", err)
 	}
-
-	pterm.Success.Println("backend.tf generated")
-
-	pterm.Success.Printfln("Read SSH public key")
 
 	home, _ := os.UserHomeDir()
 	key, err := ioutil.ReadFile(fmt.Sprintf("%s/.ssh/id_rsa.pub", home))
 	if err != nil {
-		pterm.DefaultSection.Println("Generate terraform file not completed")
-		return err
-	}
+		pterm.Error.Printfln("Generate terraform file for \"%s\" not completed", name)
+		return fmt.Errorf("can't read public ssh key: %s", err)
 
-	if err != nil {
-		pterm.DefaultSection.Println("Generate terraform file not completed")
-		return err
 	}
 
 	varsOpts := template.VarsOpts{
@@ -170,19 +175,18 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 	}
 
 	logrus.Debugf("backend opts: %s", varsOpts)
-	logrus.Debugf("ENV dir path: %s", envDir)
+	logrus.Debugf("state dir path: %s", stackPath)
 
 	err = template.GenerateVarsTf(
 		varsOpts,
-		envDir,
+		stackPath,
 	)
 	if err != nil {
-		pterm.DefaultSection.Println("Generate terraform file not completed")
-		return err
+		pterm.Error.Printfln("Generate terraform file for \"%s\" not completed", name)
+		return fmt.Errorf("can't generate tfvars: %s", err)
 	}
 
-	pterm.Success.Println("terraform.tfvars generated")
-	pterm.DefaultSection.Printfln("Generate terraform files completed")
+	pterm.Success.Printfln("Generate terraform file for \"%s\" completed", name)
 
 	return nil
 }
@@ -190,6 +194,25 @@ func GenerateTerraformFiles(project *config.Project, terraformStateBucketName st
 func checkTFStateBucket(project *config.Project, name string) bool {
 	_, err := project.AWSClient.S3Client.HeadBucket(&s3.HeadBucketInput{
 		Bucket: aws.String(name),
+	})
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case s3.ErrCodeNoSuchBucket:
+				return false
+			default:
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+func checkTFStateKey(project *config.Project, bucket, key string) bool {
+	_, err := project.AWSClient.S3Client.HeadObject(&s3.HeadObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
 	})
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {

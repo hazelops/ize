@@ -470,6 +470,10 @@
                 "aws_profile"  : {
                     "type": "string",
                     "description": "(optional) Terraform-specific AWS profile (optional) can be specified here (but normally it should be inherited from a global AWS_PROFILE)."
+                },
+                "depends_on": {
+                    "type": "array",
+                    "description": "(optional) expresses startup and shutdown dependencies between states"
                 }
             },
             "description": "Terraform configuration",

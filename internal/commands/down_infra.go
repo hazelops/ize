@@ -3,7 +3,9 @@ package commands
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/manager"
 	"github.com/hazelops/ize/internal/requirements"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
@@ -16,6 +18,7 @@ type DownInfraOptions struct {
 	AwsProfile string
 	AwsRegion  string
 	SkipGen    bool
+	OnlyInfra  bool
 }
 
 func NewDownInfraFlags(project *config.Project) *DownInfraOptions {
@@ -55,6 +58,7 @@ func NewCmdDownInfra(project *config.Project) *cobra.Command {
 	cmd.Flags().StringVar(&o.AwsProfile, "infra.terraform.aws-profile", "", "set aws profile")
 	cmd.Flags().StringVar(&o.AwsRegion, "infra.terraform.aws-region", "", "set aws region")
 	cmd.Flags().BoolVar(&o.SkipGen, "skip-gen", false, "skip generating terraform files")
+	cmd.Flags().BoolVar(&o.OnlyInfra, "only-infra", false, "down only infra state")
 
 	return cmd
 }
@@ -65,32 +69,33 @@ func (o *DownInfraOptions) Complete() error {
 	}
 
 	if o.Config.Terraform == nil {
-		o.Config.Terraform = map[string]*config.Terraform{}
-		o.Config.Terraform["infra"] = &config.Terraform{}
+		return fmt.Errorf("you must specify at least one terraform stack in ize.toml")
 	}
 
-	if len(o.AwsProfile) != 0 {
-		o.Config.Terraform["infra"].AwsProfile = o.AwsProfile
-	}
+	if _, ok := o.Config.Terraform["infra"]; ok {
+		if len(o.AwsProfile) != 0 {
+			o.Config.Terraform["infra"].AwsProfile = o.AwsProfile
+		}
 
-	if len(o.Config.Terraform["infra"].AwsProfile) == 0 {
-		o.Config.Terraform["infra"].AwsProfile = o.Config.AwsProfile
-	}
+		if len(o.Config.Terraform["infra"].AwsProfile) == 0 {
+			o.Config.Terraform["infra"].AwsProfile = o.Config.AwsProfile
+		}
 
-	if len(o.AwsProfile) != 0 {
-		o.Config.Terraform["infra"].AwsRegion = o.AwsRegion
-	}
+		if len(o.AwsProfile) != 0 {
+			o.Config.Terraform["infra"].AwsRegion = o.AwsRegion
+		}
 
-	if len(o.Config.Terraform["infra"].AwsRegion) == 0 {
-		o.Config.Terraform["infra"].AwsRegion = o.Config.AwsRegion
-	}
+		if len(o.Config.Terraform["infra"].AwsRegion) == 0 {
+			o.Config.Terraform["infra"].AwsRegion = o.Config.AwsRegion
+		}
 
-	if len(o.Version) != 0 {
-		o.Config.Terraform["infra"].Version = o.Version
-	}
+		if len(o.Version) != 0 {
+			o.Config.Terraform["infra"].Version = o.Version
+		}
 
-	if len(o.Config.Terraform["infra"].Version) == 0 {
-		o.Config.Terraform["infra"].Version = o.Config.TerraformVersion
+		if len(o.Config.Terraform["infra"].Version) == 0 {
+			o.Config.Terraform["infra"].Version = o.Config.TerraformVersion
+		}
 	}
 
 	o.ui = terminal.ConsoleUI(context.Background(), o.Config.PlainText)
@@ -108,5 +113,20 @@ func (o *DownInfraOptions) Validate() error {
 
 func (o *DownInfraOptions) Run() error {
 	ui := o.ui
-	return destroyInfra(ui, o.Config, o.SkipGen)
+
+	if _, ok := o.Config.Terraform["infra"]; ok {
+		err := destroyInfra("infra", o.Config, o.SkipGen, ui)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := manager.InReversDependencyOrder(aws.BackgroundContext(), o.Config.GetStates(), func(c context.Context, name string) error {
+		return destroyInfra(name, o.Config, o.SkipGen, ui)
+	})
+	if err != nil {
+
+	}
+
+	return nil
 }

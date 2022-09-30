@@ -6,6 +6,7 @@ import (
 	"github.com/hazelops/ize/internal/config"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -52,11 +53,14 @@ type docker struct {
 	env     []string
 	output  io.Writer
 	project *config.Project
+	state   string
 }
 
-func NewDockerTerraform(version string, command []string, env []string, out io.Writer, project *config.Project) *docker {
+func NewDockerTerraform(state string, command []string, env []string, out io.Writer, project *config.Project) *docker {
+	project.Terraform[state].Version = project.TerraformVersion
 	return &docker{
-		version: version,
+		state:   state,
+		version: project.Terraform[state].Version,
 		command: command,
 		env:     env,
 		output:  out,
@@ -146,6 +150,10 @@ func (d *docker) RunUI(ui terminal.UI) error {
 	}
 
 	logrus.Infof("image name: %s, image tag: %s", imageName, imageTag)
+	stateDir := filepath.Join(d.project.EnvDir, d.state)
+	if d.state == "infra" {
+		stateDir = d.project.EnvDir
+	}
 
 	contConfig := &container.Config{
 		User:         fmt.Sprintf("%v:%v", os.Getuid(), os.Getgid()),
@@ -156,7 +164,7 @@ func (d *docker) RunUI(ui terminal.UI) error {
 		AttachStdout: true,
 		AttachStderr: true,
 		OpenStdin:    true,
-		WorkingDir:   fmt.Sprintf("%v", d.project.EnvDir),
+		WorkingDir:   stateDir,
 		Env:          d.env,
 	}
 
@@ -181,7 +189,7 @@ func (d *docker) RunUI(ui terminal.UI) error {
 		},
 	}
 
-	s.Update("[%s] running terraform image %v:%v...", d.project.Env, imageName, imageTag)
+	s.Update("[%s][%s] running terraform image %v:%v...", d.project.Env, d.state, imageName, imageTag)
 
 	cont, err := cli.ContainerCreate(
 		context.Background(),

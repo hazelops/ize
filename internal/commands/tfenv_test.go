@@ -47,6 +47,7 @@ func TestTfenv(t *testing.T) {
 			withECS:        true,
 			mockS3Client: func(m *mocks.MockS3API) {
 				m.EXPECT().HeadBucket(gomock.Any()).Return(nil, nil).AnyTimes()
+				m.EXPECT().HeadObject(gomock.Any()).Return(nil, nil).AnyTimes()
 			},
 			mockSTSClient: func(m *mocks.MockSTSAPI) {},
 			wantBackend: `provider "aws" {
@@ -90,6 +91,7 @@ root_domain_name  = "examples.ize.sh"
 			wantErr:        false,
 			mockS3Client: func(m *mocks.MockS3API) {
 				m.EXPECT().HeadBucket(gomock.Any()).Return(nil, nil).AnyTimes()
+				m.EXPECT().HeadObject(gomock.Any()).Return(nil, nil).AnyTimes()
 			},
 			mockSTSClient: func(m *mocks.MockSTSAPI) {},
 			withECS:       true,
@@ -134,6 +136,7 @@ root_domain_name  = "examples.ize.sh"
 			wantErr:        false,
 			mockS3Client: func(m *mocks.MockS3API) {
 				m.EXPECT().HeadBucket(gomock.Any()).Return(nil, nil).AnyTimes()
+				m.EXPECT().HeadObject(gomock.Any()).Return(nil, nil).AnyTimes()
 			},
 			withECS:       true,
 			mockSTSClient: func(m *mocks.MockSTSAPI) {},
@@ -177,6 +180,7 @@ root_domain_name  = "test"
 			wantErr: false,
 			mockS3Client: func(m *mocks.MockS3API) {
 				m.EXPECT().HeadBucket(gomock.Any()).Return(nil, awserr.New(s3.ErrCodeNoSuchKey, "message", nil)).Times(1)
+				m.EXPECT().HeadObject(gomock.Any()).Return(nil, nil).AnyTimes()
 			},
 			mockSTSClient: func(m *mocks.MockSTSAPI) {
 				m.EXPECT().GetCallerIdentity(gomock.Any()).Return(&sts.GetCallerIdentityOutput{
@@ -214,10 +218,12 @@ namespace         = "testnut"
 `,
 		},
 		{
-			name:          "success (only flags)",
-			args:          []string{"-e=test", "-r=us-east-1", "-p=test", "-n=testnut", "gen", "tfenv", "--terraform-state-bucket-name=test"},
-			wantErr:       false,
-			mockS3Client:  func(m *mocks.MockS3API) {},
+			name:    "success (only flags)",
+			args:    []string{"-e=test", "-r=us-east-1", "-p=test", "-n=testnut", "gen", "tfenv", "--terraform-state-bucket-name=test"},
+			wantErr: false,
+			mockS3Client: func(m *mocks.MockS3API) {
+				m.EXPECT().HeadObject(gomock.Any()).Return(nil, nil).AnyTimes()
+			},
 			mockSTSClient: func(m *mocks.MockSTSAPI) {},
 			wantBackend: `provider "aws" {
   profile = var.aws_profile
@@ -256,6 +262,7 @@ namespace         = "testnut"
 			wantErr: false,
 			mockS3Client: func(m *mocks.MockS3API) {
 				m.EXPECT().HeadBucket(gomock.Any()).Return(nil, awserr.New(s3.ErrCodeNoSuchBucket, "message", nil)).Times(1)
+				m.EXPECT().HeadObject(gomock.Any()).Return(nil, nil).AnyTimes()
 			},
 			mockSTSClient: func(m *mocks.MockSTSAPI) {
 				m.EXPECT().GetCallerIdentity(gomock.Any()).Return(&sts.GetCallerIdentityOutput{
