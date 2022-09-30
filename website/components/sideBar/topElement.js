@@ -6,6 +6,7 @@ export default function TopElement({ title,  onClick, active }) {
     return (
         <div
             className={`${styles.topElement} w-fit py-2 mt-2 cursor-pointer ${color}`}
+            role="button"
             onClick={onClick}
         >
             {title}

@@ -1,4 +1,4 @@
-import DocsPageLayout from '../../components/docsPageLayout'
+import DocsPageLayout from '../../components/layouts/docsPageLayout'
 import DocBody from '../../components/docBody'
 import { readFilesNames, fetchContent } from '../../utilities/docsGlobalProps'
 

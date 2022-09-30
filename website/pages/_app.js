@@ -1,7 +1,7 @@
 import 'tailwindcss/tailwind.css'
 import '../main.css'
 
-import Layout from '../components/layout'
+import Layout from '../components//layouts/layout'
 
 function MyApp({ Component, pageProps }) {
   return (

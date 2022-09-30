@@ -19,20 +19,21 @@ export default function SideBar({ filesNames, currentPage }) {
     })
 
     return (
-        <div className={`${styles.outer} flex flex-col w-1/6 px-5 py-3`}>
-                <nav className="">
-                    <div className="flex mb-5">
-                        <Ize /> 
-                        <div className="text-2xl font-bold text-blue-600 lg:text-3xl ml-5">docs</div>
-                    </div>
-                    {menuList}
-                    <hr className="my-6 border-gray-200" />
-                    <TopSection
-                        title={seeAlso.title}
-                        nestedItems={filesNames}
-                        currentPage={currentPage}
-                    />
-                </nav>
-        </div>
+        <nav className={`${styles.outer} flex flex-col px-5 pt-5`}>
+            <div className="flex mb-5">
+                <Ize /> 
+                <div className="text-3xl font-bold text-blue-600 ml-5">docs</div>
+            </div>
+
+            {menuList}
+
+            <hr className="my-6 border-gray-200" />
+
+            <TopSection
+                title={seeAlso.title}
+                nestedItems={filesNames}
+                currentPage={currentPage}
+            />
+        </nav>
     )
 }
