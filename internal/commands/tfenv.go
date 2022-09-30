@@ -82,9 +82,6 @@ func GenerateTerraformFiles(name string, terraformStateBucketName string, projec
 		tf = *project.Terraform[name]
 	}
 
-	stateName := tf.StateName
-	stateKey := fmt.Sprintf("%v/%v.tfstate", project.Env, stateName)
-
 	if len(terraformStateBucketName) != 0 {
 		tf.StateBucketName = terraformStateBucketName
 	}
@@ -104,6 +101,20 @@ func GenerateTerraformFiles(name string, terraformStateBucketName string, projec
 
 			// If we haven't found an existing legacy format state bucket use a <NAMESPACE>-<AWS_ACCOUNT>-tf-state bucket as default (unless overridden with other parameters).
 			tf.StateBucketName = fmt.Sprintf("%s-%s-tf-state", project.Namespace, *resp.Account)
+		}
+	}
+
+	stateKey := fmt.Sprintf("%v/%v.tfstate", project.Env, name)
+	if len(tf.StateName) != 0 {
+		stateKey = fmt.Sprintf("%v/%v.tfstate", project.Env, tf.StateName)
+	}
+
+	if name == "infra" {
+		if checkTFStateKey(project, tf.StateBucketName, filepath.Join(project.Env, "terraform.tfstate")) {
+			stateKey = filepath.Join(project.Env, "terraform.tfstate")
+			pterm.Warning.Println("%v/terraform.tfstate location is deprecated, please move to %v/infra.tfstate")
+		} else {
+			stateKey = filepath.Join(project.Env, "infra.tfstate")
 		}
 	}
 
@@ -183,6 +194,25 @@ func GenerateTerraformFiles(name string, terraformStateBucketName string, projec
 func checkTFStateBucket(project *config.Project, name string) bool {
 	_, err := project.AWSClient.S3Client.HeadBucket(&s3.HeadBucketInput{
 		Bucket: aws.String(name),
+	})
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case s3.ErrCodeNoSuchBucket:
+				return false
+			default:
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+func checkTFStateKey(project *config.Project, bucket, key string) bool {
+	_, err := project.AWSClient.S3Client.HeadObject(&s3.HeadObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
 	})
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
