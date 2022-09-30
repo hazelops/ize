@@ -121,7 +121,7 @@ func (o *DownInfraOptions) Run() error {
 		}
 	}
 
-	err := manager.InReversDependencyOrder(aws.BackgroundContext(), o.Config.GetApps(), func(c context.Context, name string) error {
+	err := manager.InReversDependencyOrder(aws.BackgroundContext(), o.Config.GetStates(), func(c context.Context, name string) error {
 		return destroyInfra(name, o.Config, o.SkipGen, ui)
 	})
 	if err != nil {

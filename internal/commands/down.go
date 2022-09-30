@@ -274,9 +274,9 @@ func destroyInfra(state string, config *config.Project, skipGen bool, ui termina
 
 	switch config.PreferRuntime {
 	case "docker":
-		tf = terraform.NewDockerTerraform(state, []string{"destroy", "-auto-approve"}, env, nil, config)
+		tf = terraform.NewDockerTerraform(state, []string{"init", "-input=true"}, env, nil, config)
 	case "native":
-		tf = terraform.NewLocalTerraform(state, []string{"destroy", "-auto-approve"}, env, nil, config)
+		tf = terraform.NewLocalTerraform(state, []string{"init", "-input=true"}, env, nil, config)
 		err = tf.Prepare()
 		if err != nil {
 			return fmt.Errorf("can't destroy infra: %w", err)
@@ -285,11 +285,21 @@ func destroyInfra(state string, config *config.Project, skipGen bool, ui termina
 		return fmt.Errorf("can't supported %s runtime", config.PreferRuntime)
 	}
 
-	ui.Output("Running terraform destroy...", terminal.WithHeaderStyle())
+	ui.Output("Execution terraform init...", terminal.WithHeaderStyle())
 
 	err = tf.RunUI(ui)
 	if err != nil {
 		return err
+	}
+
+	//terraform destroy run options
+	tf.NewCmd([]string{"destroy", "-auto-approve"})
+
+	ui.Output("Execution terraform destroy...", terminal.WithHeaderStyle())
+
+	err = tf.RunUI(ui)
+	if err != nil {
+		return fmt.Errorf("can't deploy infra: %w", err)
 	}
 
 	ui.Output("Terraform destroy completed!\n", terminal.WithSuccessStyle())
