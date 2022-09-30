@@ -1,11 +1,12 @@
 .outer {
     height: fit-content;
+    padding-top: 22.7px;
+    letter-spacing: 0.5px;
 }
 
 .button {
     font-size: 1.1rem;
     font-weight: 600;
-    letter-spacing: 0.5px;
     transition: all 0.3s ease-in-out;
     text-transform: uppercase;
 }
