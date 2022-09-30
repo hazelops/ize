@@ -39,13 +39,12 @@ export default function Tab() {
         return setActive(id)
     }
 
-    const listButtons = installationMenu.map(el => {
-        const index = installationMenu.indexOf(el)
+    const listButtons = installationMenu.map((el, ind) => {
         return (
-            <TabButton key={index}
+            <TabButton key={ind}
                 field={el} 
                 onClick={handleClick} 
-                id={index}
+                id={ind}
                 active={active} 
             />
         )
