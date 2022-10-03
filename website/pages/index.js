@@ -1,27 +1,30 @@
 import Head from 'next/head'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { fas } from '@fortawesome/free-solid-svg-icons'
 
 import { mainPageProps } from '../utilities/mainPageProps'
+import { features } from '../utilities/features'
+
 import IzeNavbar from '../components/izeNavbar'
 import TypeItAnimation from '../components/typeItAnimation'
+import FeatureBlock from '../components/mainPage/featureBlock'
 
 library.add(fas)
 
 export async function getStaticProps() {
     const { pageTitle, description, previewImage } = mainPageProps
+    const titles = features
     return {
         props: {
             pageTitle,
             description,
-            previewImage
+            previewImage,
+            titles
         }
     }
 }
 
-export default function Home({ pageTitle, description, previewImage }) {
-
+export default function Home({ pageTitle, description, previewImage, titles }) {
     return (
         <div className="flex flex-col">
             <Head>
@@ -41,8 +44,7 @@ export default function Home({ pageTitle, description, previewImage }) {
 
             </Head>
 
-           {/* REMOVE HEADER */}
-            <header className="bg-white dark:bg-gray-800">
+            <section className="bg-white dark:bg-gray-800">
                 <IzeNavbar />
 
                 <div className="lg:flex">
@@ -187,20 +189,14 @@ export default function Home({ pageTitle, description, previewImage }) {
                 </div>
 
 
-            </header>
+            </section>
             <section className="text-gray-600 body-font">
                 <div className="container px-5 py-24 mx-auto">
                     <div className="flex flex-wrap w-full mb-20 flex-col items-center text-center">
                         <h1 id="features" className="sm:text-3xl text-2xl font-medium title-font mb-2 text-gray-900">Features</h1>
                     </div>
                     <div className="flex flex-wrap -m-4">
-                        <div className="xl:w-1/3 md:w-1/2 p-4">
-                            <div className="border border-gray-200 p-6 rounded-lg">
-                                <div
-                                    className="w-8 h-8 text-blue-600">
-                                    <FontAwesomeIcon icon="fa-solid fa-diagram-project" />
-                                </div>
-                                <h2 className="text-lg text-gray-900 font-medium title-font mb-2">Coherent Infrastructure Deployment</h2>
+                        <FeatureBlock title={titles[0]} icon="fa-solid fa-diagram-project">
                                 <p className="leading-relaxed text-base">We abstract infrastructure management and
                                     provide a clean coherent way to deploy it.</p>
                                 <p className="leading-relaxed text-base">We integrate with the following tools to
@@ -208,16 +204,9 @@ export default function Home({ pageTitle, description, previewImage }) {
                                 <p className="leading-relaxed text-base">- Terraform</p>
                                 <p className="leading-relaxed text-base">- Ansible*</p>
                                 <p className="leading-relaxed text-base">- Cloudformation*</p>
-                                {/*<p className="leading-relaxed text-base">*Currently under development</p>*/}
-                            </div>
-                        </div>
-                        <div className="xl:w-1/3 md:w-1/2 p-4">
-                            <div className="border border-gray-200 p-6 rounded-lg">
-                                <div
-                                    className="w-8 h-8 text-blue-600">
-                                    <FontAwesomeIcon icon="fa-solid fa-list-check" />
-                                </div>
-                                <h2 className="text-lg text-gray-900 font-medium title-font mb-2">Coherent Application Deployment</h2>
+                        </FeatureBlock>
+
+                        <FeatureBlock title={titles[1]} icon="fa-solid fa-list-check">
                                 <p className="leading-relaxed text-base">We unify application deployment process and
                                     utilize naming conventions to facilitate and streamline deployments.</p>
                                 <p className="leading-relaxed text-base">We allow to describe:</p>
@@ -225,62 +214,28 @@ export default function Home({ pageTitle, description, previewImage }) {
                                     underneath)</p>
                                 <p className="leading-relaxed text-base">- k8s*</p>
                                 <p className="leading-relaxed text-base">- Serverless*</p>
-                                {/*<p className="leading-relaxed text-base">*Currently under development</p>*/}
-                            </div>
-                        </div>
-                        <div className="xl:w-1/3 md:w-1/2 p-4">
-                            <div className="border border-gray-200 p-6 rounded-lg">
-                                <div
-                                    className="w-8 h-8 text-blue-600">
-                                    <FontAwesomeIcon icon="fa-solid fa-building-shield" />
-                                </div>
-                                <h2 className="text-lg text-gray-900 font-medium title-font mb-2">Port Forwarding via Bastion Host</h2>
+                        </FeatureBlock>
+                    
+                        <FeatureBlock title={titles[2]} icon="fa-solid fa-building-shield">
                                 <p className="leading-relaxed text-base">You don’t need to setup VPN solutions to you
                                     private network, if you are just starting out.</p>
                                 <p className="leading-relaxed text-base"> Also you don’t need to compromise with
                                     security.</p>
                                 <p className="leading-relaxed text-base">Establish port forwarding seamlessly to any
-                                    private resource via your bastion host and connect to your private resources securely.</p>
-                                {/*<p className="leading-relaxed text-base">*</p>*/}
-                            </div>
-                        </div>
-                        <div className="xl:w-1/3 md:w-1/2 p-4">
-                            <div className="border border-gray-200 p-6 rounded-lg">
-                                <div
-                                    className="w-8 h-8 text-blue-600">
-                                    <FontAwesomeIcon icon="fa-solid fa-terminal" />
-                                </div>
-                                <h2 className="text-lg text-gray-900 font-medium title-font mb-2">Interactive Console to Fargate Containers</h2>
-                                <p className="leading-relaxed text-base">You can access your containers running on AWS
-                                    Fargate by providing the service name.
-                                    </p>
+                                    private resource via your bastion host and connect to your private resources securely.</p>   
+                        </FeatureBlock>            
+                        
+                        <FeatureBlock title={titles[3]} icon="fa-solid fa-terminal">
+                                <p className="leading-relaxed text-base">You can access your containers running on AWS Fargate by providing the service name.</p>        
+                        </FeatureBlock>
 
-                            </div>
-                        </div>
-
-                        <div className="xl:w-1/3 md:w-1/2 p-4">
-                            <div className="border border-gray-200 p-6 rounded-lg">
-                                <div
-                                    className="w-8 h-8 text-blue-600">
-                                    <FontAwesomeIcon icon="fa-solid fa-key" />
-                                </div>
-                                <h2 className="text-lg text-gray-900 font-medium title-font mb-2">Application Secrets Management</h2>
-                                <p className="leading-relaxed text-base">Push, Remove your secrets to/from AWS Parameter
-                                    Store.</p>
-
-                            </div>
-                        </div>
-                        <div className="xl:w-1/3 md:w-1/2 p-4">
-                            <div className="border border-gray-200 p-6 rounded-lg">
-                                <div
-                                    className="w-8 h-8 text-blue-600">
-                                    <FontAwesomeIcon icon="fa-solid fa-seedling" />
-                                </div>
-                                <h2 className="text-lg text-gray-900 font-medium title-font mb-2">Terraform Environment Management</h2>
-                                <p className="leading-relaxed text-base">Definitions of the environment can be stored in
-                                    a toml file in the local repository.</p>
-                            </div>
-                        </div>
+                        <FeatureBlock title={titles[4]} icon="fa-solid fa-key">
+                                <p className="leading-relaxed text-base">Push, Remove your secrets to/from AWS Parameter Store.</p>   
+                        </FeatureBlock>            
+                       
+                        <FeatureBlock title={titles[5]} icon="fa-solid fa-seedling">
+                                <p className="leading-relaxed text-base">Definitions of the environment can be stored in a toml file in the local repository.</p>    
+                        </FeatureBlock>            
                     </div>
                     <h1 className="mt-16 italic border-0 py-2 px-8">*Currently under development</h1>
                 </div>
