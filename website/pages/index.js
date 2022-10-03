@@ -1,40 +1,43 @@
-// https://tailblocks.cc/
-// https://merakiui.com/
-// https://www.tailwind-kit.com/components#elements
-
 import Head from 'next/head'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { fas } from '@fortawesome/free-solid-svg-icons'
 
+import { mainPageProps } from '../utilities/mainPageProps'
 import IzeNavbar from '../components/izeNavbar'
 import TypeItAnimation from '../components/typeItAnimation'
 
 library.add(fas)
 
-export default function Home() {
-    let props = {
-        pageTitle: "ize: Opinionated Infra Tool",
-        description: "Opinionated Infra Tool",
-        previewImage: "/social-preview.png"
+export async function getStaticProps() {
+    const { pageTitle, description, previewImage } = mainPageProps
+    return {
+        props: {
+            pageTitle,
+            description,
+            previewImage
+        }
     }
+}
+
+export default function Home({ pageTitle, description, previewImage }) {
 
     return (
         <div className="flex flex-col">
             <Head>
-                <title>{props.pageTitle}</title>
+                <title>{pageTitle}</title>
                 <link rel="icon" href="/favicon.ico"/>
                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
                 <meta charSet="utf-8"/>
 
-                <meta name="description" content={props.description}/>
-                <meta property="og:title" content={props.pageTitle} key="ogtitle"/>
-                <meta property="og:description" content={props.description} key="ogdesc"/>
+                <meta name="description" content={description}/>
+                <meta property="og:title" content={pageTitle} key="ogtitle"/>
+                <meta property="og:description" content={description} key="ogdesc"/>
 
                 {/* Open Graph */}
                 {/*<meta property="og:url" content={props.currentURL} key="ogurl" />*/}
-                <meta property="og:image" content={props.previewImage} key="ogimage"/>
-                <meta property="og:site_name" content={props.pageTitle} key="ogsitename"/>
+                <meta property="og:image" content={previewImage} key="ogimage"/>
+                <meta property="og:site_name" content={pageTitle} key="ogsitename"/>
 
             </Head>
 
