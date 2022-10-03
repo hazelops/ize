@@ -1,5 +1,3 @@
-import { commandsList } from "../../utilities/commandsList"
-
 function Command({ title, command }) {
     return (
         <div className="mt-4 flex">
@@ -11,7 +9,7 @@ function Command({ title, command }) {
     )
 }
 
-export default function CommandsBlock() {
+export default function CommandsBlock({ commandsList }) {
     const listCommands = Object.keys(commandsList).map((title, ind) => {
         const command = commandsList[title]
         return (
