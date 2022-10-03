@@ -49,7 +49,7 @@ jobs:
     - name: convert MD to HTML
       uses: baileyjm02/markdown-to-pdf@v1
       with:
-        input_dir: commands
+        input_dir: website/commands
         output_dir: docs
         # Default is true, can set to false to only get PDF files
         build_html: true
@@ -75,7 +75,7 @@ jobs:
         commit_message: 'Add commands from Ize'
 
   create_jira_release:
-    needs: Build
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: create release
