@@ -3,7 +3,7 @@ module "goblin" {
     module.ecs
   ]
   source  = "hazelops/ecs-app/aws"
-  version = "~>1.1"
+  version = "~>1.3"
 
   name             = "goblin"
   app_type         = "web"
