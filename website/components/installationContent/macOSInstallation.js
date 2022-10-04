@@ -1,11 +1,50 @@
+import React from "react";
+
 import CodeTemplate from "../codeTemplate";
 import { data } from "../../utilities/installationPage/macOS";
 
+function Print({ content }) {
+    const descriptions = Object.keys(content)
+    descriptions.map((el, ind) => {
+        if (!content[el]) {
+            return (
+                <React.Fragment key={ind}>
+                    <li className="leading-relaxed text-base">{el}</li>
+                </React.Fragment>
+            )
+        }
+        const listCommands = function() {
+            const commands = content[el]
+            commands.map((command, ind) => {
+                return (
+                    <>
+                      <Chevron /> {command}  
+                    </>
+                    
+                )
+            })
+        }
+        return (
+            <React.Fragment key={ind}>
+                <li className="leading-relaxed text-base">{el}</li>
+                <CodeTemplate>
+                    {listCommands}
+                </CodeTemplate>
+            </React.Fragment>
+        )
+    })
+}
+
+// function ListCommands({ commands }) {
+//     commands.map()
+// }
+
 export default function MacOSInstallation() {
+    const { install, update } = data
     return (
         <>
-            <h3>
-                1. Install the latest version via homebrew on MacOS:
+            <h3 className="text-xl font-medium mb-2 text-gray-700">
+                {install.header}
             </h3>
             <h5 className="leading-relaxed text-base">
                 1.1 Install
@@ -23,8 +62,10 @@ export default function MacOSInstallation() {
             <p className="leading-relaxed text-base">
                 Now you can run ize from command shell by typing <code>ize</code> in console.
             </p>
+
+
             <h5 className="text-xl font-medium mb-2 text-gray-700">
-                2. Update ize:
+                {update.header}
             </h5>
             <p className="leading-relaxed text-base">
                 To update ize you should:
