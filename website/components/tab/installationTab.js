@@ -32,7 +32,7 @@ function TabContent({ active }) {
 
 //---------------------------------------------------------
 
-export default function Tab() {
+export default function InstallationTab() {
     const [active, setActive] = useState(0)
 
     const handleClick = function(id) {
