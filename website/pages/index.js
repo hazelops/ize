@@ -2,10 +2,10 @@ import Head from 'next/head'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { fas } from '@fortawesome/free-solid-svg-icons'
 
-import { mainPageProps } from '../utilities/mainPageProps'
-import { features } from '../utilities/featuresData'
-import { commandsList } from '../utilities/commandsList'
-import { izeDescription, mainFeatures } from '../utilities/izeData'
+import { mainPageProps } from '../utilities/mainPage/mainPageProps'
+import { features } from '../utilities/mainPage/featuresData'
+import { commandsList } from '../utilities/mainPage/commandsList'
+import { izeDescription, mainFeatures } from '../utilities/mainPage/izeData'
 
 import IzeNavbar from '../components/izeNavbar/izeNavbar'
 import TypeItAnimation from '../components/typeItAnimation'
@@ -52,9 +52,8 @@ export default function Home() {
 
                         <CommandsBlock commandsList={commandsList} />
                     </div>
-
-
                 </section>
+                
                 <section className="text-gray-600 body-font">
                     <div className="container px-5 py-24 mx-auto">
                         <div className="flex flex-wrap w-full mb-20 flex-col items-center text-center">

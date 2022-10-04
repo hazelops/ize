@@ -1,9 +1,11 @@
+import Chevron from "../chevron"
+
 function Command({ title, command }) {
     return (
         <div className="mt-4 flex">
             <p className="flex-1 typing items-center pl-0">
                 <span className="text-gray-400">{`# ${title}`}</span><br/>
-                <span className="text-blue-600">❯</span> {command}<br/>
+                <Chevron /> {command} <br/>
             </p>
          </div>
     )
