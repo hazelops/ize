@@ -8,11 +8,11 @@ export const data = {
                 "brew install ize"
             ]
         },
-        extraData: "Now you can run ize from command shell by typing ize in console."
+        finalInfo: "Now you can run ize from command shell by typing ize in console."
     },
     update: {
         header: "Update ize:",
-        extraData: "To update ize you should:",
+        extraInfo: "To update ize you should:",
         content: {
             "Uninstall previous version:": [ "brew uninstall ize" ],
             "Update version in brew repo:": [ "brew tap hazelops/ize" ],
