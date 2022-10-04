@@ -69,7 +69,15 @@ jobs:
         run: ssh-keygen -q -f ~/.ssh/id_rsa
 
       - name: Test
-        run: go test -v ./... -coverprofile=coverage.out -covermode=atomic
+        run: |
+          go install github.com/jstemmer/go-junit-report/v2@latest
+          go test -v ./... -coverprofile=coverage.out -covermode=atomic 2>&1 ./... | go-junit-report -set-exit-code > report.xml
+
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v3
+        if: always() # always run even if the previous step fails
+        with:
+          report_paths: './report.xml'
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
