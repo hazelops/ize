@@ -32,7 +32,7 @@ func Validate(config map[string]interface{}) error {
 		} else {
 			i = strings.ReplaceAll(i[2:], "/", ".")
 		}
-		return fmt.Errorf("%s in %s", m, i)
+		return fmt.Errorf("%s in %s of config file (or environment variables)", m, i)
 	}
 
 	return nil
