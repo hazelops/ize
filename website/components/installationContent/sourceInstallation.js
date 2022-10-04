@@ -1,4 +1,5 @@
 import CodeTemplate from "../codeTemplate";
+import { data } from "../../utilities/installationPage/source";
 
 export default function SourceInstallation() {
     return (
