@@ -1,4 +1,5 @@
 import CodeTemplate from "../codeTemplate"
+import { data } from "../../utilities/installationPage/ubuntu"
 
 export default function UbuntuInstallation() {
     return (

@@ -1,4 +1,5 @@
 import CodeTemplate from "../codeTemplate";
+import { data } from "../../utilities/installationPage/macOS";
 
 export default function MacOSInstallation() {
     return (
