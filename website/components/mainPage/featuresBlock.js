@@ -1,12 +1,7 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import React from 'react'
 
-function Feature({ props }) {
-    return (
-        null
-    )
-}
-
-function FeaturBlock({ data, icon, children }) {
+function FeatureLayout({ title, icon, children }) {
     return (
         <div className="xl:w-1/3 md:w-1/2 p-4">
             <div className="border border-gray-200 p-6 rounded-lg">
@@ -22,9 +17,55 @@ function FeaturBlock({ data, icon, children }) {
     )
 }
 
-export default function FeaturesBlock({ extraData, features, children }) {
+function Paragraph({ text }) {
+    return <p className="leading-relaxed text-base">{text}</p>
+}
+
+function Feature({ feature }) {
+    const { icon, title, content } = feature
+    let renderContent
+
+    if (typeof content === "object" && content.length === undefined) {
+        const paragraphs = Object.keys(content)
+        renderContent = paragraphs.map((el, ind) => {
+            if (content[el]) {
+                const list = content[el].map((listEl, ind) => {
+                    return <li key={ind} className="leading-relaxed text-base list-['-']">{listEl}</li>
+                })
+                return (
+                    <React.Fragment key={ind}>
+                        <Paragraph text={el} />
+                        <ul>
+                            {list}
+                        </ul>
+                    </React.Fragment>
+                )
+            }
+            return <Paragraph key={ind} text={el} />
+        })
+    } else if (typeof content === "object" && content.length != undefined) {
+        renderContent = content.map((el, ind) => {
+            return <Paragraph key={ind} text={el} />
+        })
+    } else {
+        renderContent = <Paragraph text={content} />
+    }
+
+    return (
+        <FeatureLayout title={title} icon={icon}>
+            {renderContent}
+        </FeatureLayout>
+    )
+}
+
+// ---------------------------------------------------------------
+
+export default function FeaturesBlock({ extraData, features }) {
     const { header, underDev } = extraData
-    
+    const listFeatures = features.map((feature, ind) => {
+        return <Feature key={ind} feature={feature} />
+    })
+
     return (
         <section className="text-gray-600 body-font">
             <div className="container px-5 py-24 mx-auto">
@@ -33,7 +74,7 @@ export default function FeaturesBlock({ extraData, features, children }) {
                 </div>
 
                 <div className="flex flex-wrap -m-4">
-                           {/* blocks */}
+                    {listFeatures}
                 </div>
 
                 <h1 className="mt-16 italic border-0 py-2 px-8">{underDev}</h1>
