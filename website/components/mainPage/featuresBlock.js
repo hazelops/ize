@@ -1,10 +1,10 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import React from 'react'
 
 function FeatureLayout({ title, icon, children }) {
     return (
-        <div className="xl:w-1/3 md:w-1/2 p-4">
-            <div className="border border-gray-200 p-6 rounded-lg">
+        // xl:w-1/3 md:w-1/2 sm:w-1/2
+        <div className="p-4 xl:w-1/3 md:w-1/2 sm:w-full w-full">
+            <div className="border border-gray-200 px-6 pt-6 rounded-lg h-full">
                 <div
                     className="w-8 h-8 text-blue-600">
                     <FontAwesomeIcon icon={icon} />
@@ -18,7 +18,7 @@ function FeatureLayout({ title, icon, children }) {
 }
 
 function Paragraph({ text }) {
-    return <p className="leading-relaxed text-base">{text}</p>
+    return <p className="leading-relaxed text-base pb-3">{text}</p>
 }
 
 function Feature({ feature }) {
@@ -30,15 +30,19 @@ function Feature({ feature }) {
         renderContent = paragraphs.map((el, ind) => {
             if (content[el]) {
                 const list = content[el].map((listEl, ind) => {
-                    return <li key={ind} className="leading-relaxed text-base list-['-']">{listEl}</li>
+                    return (
+                        <li key={ind} className="leading-relaxed text-base list-inside">
+                            <span className="pl-1">{listEl}</span>
+                        </li>
+                    )
                 })
                 return (
-                    <React.Fragment key={ind}>
+                    <div key={ind} className="pb-3">
                         <Paragraph text={el} />
-                        <ul>
+                        <ul className="list-['-']">
                             {list}
                         </ul>
-                    </React.Fragment>
+                    </div>
                 )
             }
             return <Paragraph key={ind} text={el} />
@@ -69,11 +73,11 @@ export default function FeaturesBlock({ extraData, features }) {
     return (
         <section className="text-gray-600 body-font">
             <div className="container px-5 py-24 mx-auto">
-                <div className="flex flex-wrap w-full mb-20 flex-col items-center text-center">
+                <div className="flex flex-wrap w-full mb-10 flex-col items-center text-center">
                     <h1 id="features" className="sm:text-3xl text-2xl font-medium title-font mb-2 text-gray-900">{header}</h1>
                 </div>
 
-                <div className="flex flex-wrap -m-4">
+                <div className="flex flex-wrap justify-between">
                     {listFeatures}
                 </div>
 
