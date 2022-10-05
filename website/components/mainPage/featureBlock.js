@@ -8,6 +8,7 @@ export default function FeatureBlock({ title, icon, children }) {
                     className="w-8 h-8 text-blue-600">
                     <FontAwesomeIcon icon={icon} />
                 </div>
+                
                 <h2 className="text-lg text-gray-900 font-medium title-font mb-2">{title}</h2>
                 {children}
             </div>
