@@ -1,10 +1,10 @@
 import React from 'react'
 import Ize from '../ize'
-import { headers } from '../../utilities/welcomePageHeaders'
 
 import styles from './welcomeContent.module.css'
 
-function Quickstart({ title }) {
+function Quickstart({ data }) {
+    const { title, content } = data
     return (
         <>
             <h2 className={`${styles.contentHeader} pt-8`}>{title}</h2>
@@ -13,8 +13,9 @@ function Quickstart({ title }) {
     )
 }
 
-function WhatIsIze({ title }) {
-    const listSubHeaders = headers[title].map((subHeader, ind) => {
+function WhatIsIze({ data }) {
+    const { title, content } = data
+    const listSubHeaders = content.map((subHeader, ind) => {
         return (
             <React.Fragment key={ind}>
                 <h3 className={styles.contentSubHeader}>{subHeader}</h3>
@@ -33,9 +34,10 @@ function WhatIsIze({ title }) {
     )
 }
 
-export default function WelcomeContent() {
-    const [quickstart, whatIsIze] = Object.keys(headers)
+// --------------------------------------------
 
+export default function WelcomeContent({ headers }) {
+    const [ quickstart, whatIsIze ] = headers
     return (
         <section className={styles.outer}>
             <header className={styles.header}>
@@ -48,8 +50,8 @@ export default function WelcomeContent() {
                 </h1>
             </header>
 
-            <Quickstart title={quickstart} />
-            <WhatIsIze title={whatIsIze} />
+            <Quickstart data={quickstart} />
+            <WhatIsIze data={whatIsIze} />
         </section>
     )
 }
