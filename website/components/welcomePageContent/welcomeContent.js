@@ -6,14 +6,16 @@ import Ize from '../ize'
 import Chevron from '../chevron'
 import styles from './welcomeContent.module.css'
 
-function QuickstartBlock({ blockHeader, icon, text }) {
+function QuickstartBlock({ blockHeader, icon, text, path }) {
     return (
-        <div className="flex flex-col items-center border border-gray-200 rounded-lg p-4">
+        <div className="w-[310px] flex flex-col items-center border border-gray-200 rounded-lg p-4 mr-10">
             <div className="flex items-center mb-4">
                 <div className="inline-block w-[1rem] h-[1rem] text-blue-600 mx-2">
                     <FontAwesomeIcon icon={icon} />
-                </div> 
+                </div>
+
                 <div className={styles.blockHeader}>{blockHeader}</div>
+
                 <div className="inline-block w-[1rem] h-[1rem] text-blue-600 mx-2">
                     <FontAwesomeIcon icon={icon} />
                 </div> 
@@ -24,7 +26,7 @@ function QuickstartBlock({ blockHeader, icon, text }) {
             </div>
 
             <div className={styles.link}>
-                <Link href="#">
+                <Link href={path}>
                     <a>
                         Continue
                         <span className="ml-2">
@@ -43,19 +45,22 @@ function Quickstart({ data }) {
     const listBlocks = blockHeaders.map((blockHeader, ind) => {
         const icon = content[blockHeader].icon
         const text = content[blockHeader].text.concat(".")
+        // temporary solution, until the other paths are known
+        const path = blockHeader.toLowerCase() == "installation" ? "/docs/installation" : "#"
         return (
             <QuickstartBlock key={ind} 
                 blockHeader={blockHeader}
                 icon={icon}
                 text={text}
+                path={path}
             />
         )
     })
 
     return (
-        <div className="w-1/2">
+        <div className="">
             <h2 className={`${styles.contentHeader} mt-4`}>{title}</h2>
-            <div className="flex justify-between mt-9">
+            <div className="flex justify-start mt-9">
                 {listBlocks}
             </div>
         </div>
@@ -67,8 +72,8 @@ function WhatIsIze({ data }) {
     const listSubHeaders = content.map((subHeader, ind) => {
         return (
             <React.Fragment key={ind}>
-                <h3 className={styles.contentSubHeader}>{subHeader}</h3>
-                <div className={styles.content}>
+                <h3 className={styles.contentSubHeader}>{subHeader.concat(":")}</h3>
+                <div className="mt-3">
                     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque at urna ultricies, iaculis mi accumsan, faucibus nisl. Ut id ullamcorper nunc. Duis dignissim tempor tortor, id blandit dui volutpat sit amet. Cras ornare lectus vel mi aliquet tristique. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Ut in massa metus. Nulla at quam sem. Donec a tincidunt ipsum, vitae laoreet purus. Vestibulum commodo, enim quis imperdiet consectetur, risus ligula cursus mi, eget elementum neque lectus vel diam. Integer consectetur euismod justo eleifend eleifend. Cras maximus interdum cursus. Etiam consectetur leo sit amet enim vulputate elementum.
                 </div>
             </React.Fragment>

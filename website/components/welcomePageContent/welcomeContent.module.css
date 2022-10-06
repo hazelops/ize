@@ -1,16 +1,15 @@
 .outer {
     letter-spacing: 0.5px;
     font-weight: 300;
+    margin-top: 40px;
 }
 
 .header {
-    padding-top: 63px;
     font-size: 2rem;
 }
 
 .contentHeader {
     font-size: 1.8rem;
-    color: #122155;
 }
 
 .blockHeader {
@@ -22,6 +21,8 @@
 
 .contentSubHeader {
     font-size: 1.5rem;
+    color: #122155;
+    margin-top: 15px;
 }
 
 .link {
