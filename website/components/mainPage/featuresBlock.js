@@ -5,8 +5,7 @@ function FeatureLayout({ title, icon, children }) {
         // xl:w-1/3 md:w-1/2 sm:w-1/2
         <div className="p-4 xl:w-1/3 md:w-1/2 sm:w-full w-full">
             <div className="border border-gray-200 px-6 pt-6 rounded-lg h-full">
-                <div
-                    className="w-8 h-8 text-blue-600">
+                <div className="w-8 h-8 text-blue-600">
                     <FontAwesomeIcon icon={icon} />
                 </div>
                 

@@ -1,15 +1,55 @@
 import React from 'react'
-import Ize from '../ize'
+import Link from 'next/link'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
+import Ize from '../ize'
 import styles from './welcomeContent.module.css'
+
+function QuickstartBlock({ blockHeader, icon, text }) {
+    return (
+        <div className="border border-gray-200 rounded-lg">
+            <div>
+                <div className="inline-block w-8 h-8 text-blue-600 mr-2">
+                    <FontAwesomeIcon icon={icon} /> 
+                </div> 
+                <span>{blockHeader}</span>
+            </div>
+
+            <div>
+                {text}
+            </div>
+
+            <div>
+                <Link href="#">
+                    <a>Continue</a>
+                </Link>
+            </div> 
+        </div>
+    )
+}
 
 function Quickstart({ data }) {
     const { title, content } = data
+    const blockHeaders = Object.keys(content)
+    const listBlocks = blockHeaders.map((blockHeader, ind) => {
+        const icon = content[blockHeader].icon
+        const text = content[blockHeader].text.concat(".")
+        return (
+            <QuickstartBlock key={ind} 
+                blockHeader={blockHeader}
+                icon={icon}
+                text={text}
+            />
+        )
+    })
+
     return (
-        <>
+        <div className="w-2/3">
             <h2 className={`${styles.contentHeader} pt-8`}>{title}</h2>
-            <span>BLOCK BLOCK BLOCK</span>
-        </>
+            <div className="flex justify-evenly">
+                {listBlocks}
+            </div>
+        </div>
     )
 }
 
