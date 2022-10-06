@@ -2,7 +2,7 @@
     background-color: #72899e10;
     min-height: 100vh;
     width: 18%;
-    border-right: 1px solid #cecaca48;
+    border-right: 1px solid var(--pale-border-color);
     font-weight: 350;
     letter-spacing: 0.5px;
 }

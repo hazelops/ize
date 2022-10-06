@@ -3,7 +3,7 @@ export const headers = [
         title: "Quickstart",
         content: {
             "Installation": {
-                icon: "fa-solid fa-gears",
+                icon: "fa-solid fa-screwdriver-wrench",
                 text: "Get ize installed"
             },
             "Running ize": {
@@ -11,7 +11,7 @@ export const headers = [
                 text: "How to run ize locally"
             }, 
             "Continuous integration": {
-                icon: "fa-solid fa-infinity",
+                icon: "fa-solid fa-rotate",
                 text: "How to run ize on CI/CD system"
             }
         }

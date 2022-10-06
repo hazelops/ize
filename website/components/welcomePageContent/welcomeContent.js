@@ -3,25 +3,34 @@ import Link from 'next/link'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 import Ize from '../ize'
+import Chevron from '../chevron'
 import styles from './welcomeContent.module.css'
 
 function QuickstartBlock({ blockHeader, icon, text }) {
     return (
-        <div className="border border-gray-200 rounded-lg">
-            <div>
-                <div className="inline-block w-8 h-8 text-blue-600 mr-2">
-                    <FontAwesomeIcon icon={icon} /> 
+        <div className="flex flex-col items-center border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center mb-4">
+                <div className="inline-block w-[1rem] h-[1rem] text-blue-600 mx-2">
+                    <FontAwesomeIcon icon={icon} />
                 </div> 
-                <span>{blockHeader}</span>
+                <div className={styles.blockHeader}>{blockHeader}</div>
+                <div className="inline-block w-[1rem] h-[1rem] text-blue-600 mx-2">
+                    <FontAwesomeIcon icon={icon} />
+                </div> 
             </div>
 
-            <div>
+            <div className="mb-4">
                 {text}
             </div>
 
-            <div>
+            <div className={styles.link}>
                 <Link href="#">
-                    <a>Continue</a>
+                    <a>
+                        Continue
+                        <span className="ml-2">
+                            <Chevron />
+                        </span>
+                    </a>
                 </Link>
             </div> 
         </div>
@@ -44,9 +53,9 @@ function Quickstart({ data }) {
     })
 
     return (
-        <div className="w-2/3">
-            <h2 className={`${styles.contentHeader} pt-8`}>{title}</h2>
-            <div className="flex justify-evenly">
+        <div className="w-1/2">
+            <h2 className={`${styles.contentHeader} mt-4`}>{title}</h2>
+            <div className="flex justify-between mt-9">
                 {listBlocks}
             </div>
         </div>
@@ -67,10 +76,10 @@ function WhatIsIze({ data }) {
     })
 
     return (
-        <>
-            <h2 className={`${styles.contentHeader} pt-10`}>{title}</h2>
+        <div>
+            <h2 className={`${styles.contentHeader} mt-8`}>{title}</h2>
             {listSubHeaders}
-        </>
+        </div>
     )
 }
 
