@@ -1,6 +1,4 @@
 import Head from 'next/head'
-import { library } from '@fortawesome/fontawesome-svg-core'
-import { fas } from '@fortawesome/free-solid-svg-icons'
 
 import { mainPageProps } from '../utilities/mainPage/mainPageProps'
 import { extraData, features } from '../utilities/mainPage/featuresData'
@@ -15,7 +13,6 @@ import IzeMainInfo from '../components/mainPage/izeMainInfo'
 import FeaturesBlock from '../components/mainPage/featuresBlock'
 
 export default function Home() {
-    library.add(fas)
     const { pageTitle, description, previewImage } = mainPageProps
     return (
         <>

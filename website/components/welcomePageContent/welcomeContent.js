@@ -1,24 +1,79 @@
 import React from 'react'
-import Ize from '../ize'
-import { headers } from '../../utilities/welcomePageHeaders'
+import Link from 'next/link'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
+import Ize from '../ize'
+import Chevron from '../chevron'
 import styles from './welcomeContent.module.css'
 
-function Quickstart({ title }) {
+function QuickstartBlock({ blockHeader, icon, text, path }) {
     return (
-        <>
-            <h2 className={`${styles.contentHeader} pt-8`}>{title}</h2>
-            <span>BLOCK BLOCK BLOCK</span>
-        </>
+        <div className="w-[310px] flex flex-col items-center border border-gray-200 rounded-lg p-4 mr-10">
+            <div className="flex items-center mb-4">
+                <div className="inline-block w-[1rem] h-[1rem] text-blue-600 mx-2">
+                    <FontAwesomeIcon icon={icon} />
+                </div>
+
+                <div className={styles.blockHeader}>{blockHeader}</div>
+
+                <div className="inline-block w-[1rem] h-[1rem] text-blue-600 mx-2">
+                    <FontAwesomeIcon icon={icon} />
+                </div> 
+            </div>
+
+            <div className="mb-4">
+                {text}
+            </div>
+
+            <div className={styles.link}>
+                <Link href={path}>
+                    <a>
+                        Continue
+                        <span className="ml-2">
+                            <Chevron />
+                        </span>
+                    </a>
+                </Link>
+            </div> 
+        </div>
     )
 }
 
-function WhatIsIze({ title }) {
-    const listSubHeaders = headers[title].map((subHeader, ind) => {
+function Quickstart({ data }) {
+    const { title, content } = data
+    const blockHeaders = Object.keys(content)
+    const listBlocks = blockHeaders.map((blockHeader, ind) => {
+        const icon = content[blockHeader].icon
+        const text = content[blockHeader].text.concat(".")
+        // temporary solution, until the other paths are known
+        const path = blockHeader.toLowerCase() == "installation" ? "/docs/installation" : "#"
+        return (
+            <QuickstartBlock key={ind} 
+                blockHeader={blockHeader}
+                icon={icon}
+                text={text}
+                path={path}
+            />
+        )
+    })
+
+    return (
+        <div className="">
+            <h2 className={`${styles.contentHeader} mt-4`}>{title}</h2>
+            <div className="flex justify-start mt-9">
+                {listBlocks}
+            </div>
+        </div>
+    )
+}
+
+function WhatIsIze({ data }) {
+    const { title, content } = data
+    const listSubHeaders = content.map((subHeader, ind) => {
         return (
             <React.Fragment key={ind}>
-                <h3 className={styles.contentSubHeader}>{subHeader}</h3>
-                <div className={styles.content}>
+                <h3 className={styles.contentSubHeader}>{subHeader.concat(":")}</h3>
+                <div className="mt-3">
                     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque at urna ultricies, iaculis mi accumsan, faucibus nisl. Ut id ullamcorper nunc. Duis dignissim tempor tortor, id blandit dui volutpat sit amet. Cras ornare lectus vel mi aliquet tristique. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Ut in massa metus. Nulla at quam sem. Donec a tincidunt ipsum, vitae laoreet purus. Vestibulum commodo, enim quis imperdiet consectetur, risus ligula cursus mi, eget elementum neque lectus vel diam. Integer consectetur euismod justo eleifend eleifend. Cras maximus interdum cursus. Etiam consectetur leo sit amet enim vulputate elementum.
                 </div>
             </React.Fragment>
@@ -26,16 +81,17 @@ function WhatIsIze({ title }) {
     })
 
     return (
-        <>
-            <h2 className={`${styles.contentHeader} pt-10`}>{title}</h2>
+        <div>
+            <h2 className={`${styles.contentHeader} mt-8`}>{title}</h2>
             {listSubHeaders}
-        </>
+        </div>
     )
 }
 
-export default function WelcomeContent() {
-    const [quickstart, whatIsIze] = Object.keys(headers)
+// --------------------------------------------
 
+export default function WelcomeContent({ headers }) {
+    const [ quickstart, whatIsIze ] = headers
     return (
         <section className={styles.outer}>
             <header className={styles.header}>
@@ -48,8 +104,8 @@ export default function WelcomeContent() {
                 </h1>
             </header>
 
-            <Quickstart title={quickstart} />
-            <WhatIsIze title={whatIsIze} />
+            <Quickstart data={quickstart} />
+            <WhatIsIze data={whatIsIze} />
         </section>
     )
 }
