@@ -2,14 +2,15 @@ package commands
 
 import (
 	"fmt"
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/hazelops/ize/internal/schema"
 	"github.com/hazelops/ize/internal/version"
+	"golang.org/x/sys/unix"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/hazelops/ize/examples"
 	"github.com/hazelops/ize/internal/generate"
 	"github.com/hazelops/ize/pkg/templates"
@@ -102,6 +103,11 @@ func (o *InitOptions) Validate() error {
 }
 
 func (o *InitOptions) Run() error {
+	isTTY := true
+	_, err := unix.IoctlGetWinsize(int(os.Stdout.Fd()), unix.TIOCGWINSZ)
+	if err != nil {
+		isTTY = false
+	}
 	if len(o.Template) != 0 {
 		dest, err := generate.GenerateFiles(o.Template, o.Output)
 		if err != nil {
@@ -129,57 +135,62 @@ func (o *InitOptions) Run() error {
 		}
 	}
 
-	dir, err := filepath.Abs(o.Output)
+	dir, err = filepath.Abs(o.Output)
 	if err != nil {
 		return fmt.Errorf("can't init: %w", err)
 	}
 
 	namespace = filepath.Base(dir)
-	err = survey.AskOne(
-		&survey.Input{
-			Message: fmt.Sprintf("Namespace:"),
-			Default: namespace,
-		},
-		&namespace,
-		survey.WithValidator(survey.Required),
-	)
-	if err != nil {
-		return fmt.Errorf("can't init: %w", err)
-	}
 
-	err = survey.AskOne(
-		&survey.Input{
-			Message: fmt.Sprintf("Environment:"),
-			Default: env,
-		},
-		&env,
-		survey.WithValidator(survey.Required),
-	)
-	if err != nil {
-		return fmt.Errorf("can't init: %w", err)
-	}
-
-	envList = append(envList, env)
-	env = ""
-
-	for {
+	if isTTY {
 		err = survey.AskOne(
 			&survey.Input{
-				Message: fmt.Sprintf("Another environment? [enter - skip]"),
-				Default: env,
+				Message: fmt.Sprintf("Namespace:"),
+				Default: namespace,
 			},
-			&env,
+			&namespace,
+			survey.WithValidator(survey.Required),
 		)
 		if err != nil {
 			return fmt.Errorf("can't init: %w", err)
 		}
 
-		if env == "" {
-			break
+		err = survey.AskOne(
+			&survey.Input{
+				Message: fmt.Sprintf("Environment:"),
+				Default: env,
+			},
+			&env,
+			survey.WithValidator(survey.Required),
+		)
+		if err != nil {
+			return fmt.Errorf("can't init: %w", err)
 		}
 
 		envList = append(envList, env)
 		env = ""
+
+		for {
+			err = survey.AskOne(
+				&survey.Input{
+					Message: fmt.Sprintf("Another environment? [enter - skip]"),
+					Default: env,
+				},
+				&env,
+			)
+			if err != nil {
+				return fmt.Errorf("can't init: %w", err)
+			}
+
+			if env == "" {
+				break
+			}
+
+			envList = append(envList, env)
+			env = ""
+		}
+	} else {
+		envList = append(envList, env)
 	}
 
 	for _, v := range envList {
