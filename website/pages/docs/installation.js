@@ -1,5 +1,5 @@
 import DocsPageLayout from '../../components/layouts/docsPageLayout'
-import InstallationTab from '../../components/tab/InstallationTab'
+import InstallationTab from '../../components/tab/installationTab'
 import { readFilesNames } from '../../utilities/docsGlobalProps'
 
 export async function getStaticProps() {
