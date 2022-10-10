@@ -1,17 +1,17 @@
 package ecs
 
 import (
-	"context"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/elbv2"
+	"github.com/cirruslabs/echelon"
 	"github.com/golang/mock/gomock"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/generate"
+	"github.com/hazelops/ize/pkg/logs"
 	"github.com/hazelops/ize/pkg/mocks"
-	"github.com/hazelops/ize/pkg/terminal"
 	"os"
 	"testing"
 )
@@ -21,12 +21,14 @@ import (
 //go:generate mockgen -package=mocks -destination ../../../pkg/mocks/mock_elb.go github.com/aws/aws-sdk-go/service/elbv2/elbv2iface ELBV2API
 
 func TestManager_Build(t *testing.T) {
+	ui, c := logs.GetLogger(false, false, os.Stdout)
+	defer c()
 	type fields struct {
 		Project *config.Project
 		App     *config.Ecs
 	}
 	type args struct {
-		ui terminal.UI
+		ui *echelon.Logger
 	}
 
 	tests := []struct {
@@ -44,7 +46,7 @@ func TestManager_Build(t *testing.T) {
 					Name: "goblin",
 				},
 			},
-			args: args{ui: terminal.ConsoleUI(context.TODO(), true)},
+			args: args{ui: ui},
 			env: map[string]string{
 				"ENV":         "test",
 				"AWS_PROFILE": "test",
@@ -62,7 +64,7 @@ func TestManager_Build(t *testing.T) {
 					Image: "test",
 				},
 			},
-			args: args{ui: terminal.ConsoleUI(context.TODO(), true)},
+			args: args{ui: ui},
 			env: map[string]string{
 				"ENV":         "test",
 				"AWS_PROFILE": "test",
@@ -80,7 +82,7 @@ func TestManager_Build(t *testing.T) {
 					Path: "invalid",
 				},
 			},
-			args: args{ui: terminal.ConsoleUI(context.TODO(), true)},
+			args: args{ui: ui},
 			env: map[string]string{
 				"ENV":         "test",
 				"AWS_PROFILE": "test",
@@ -134,12 +136,14 @@ func TestManager_Build(t *testing.T) {
 }
 
 func TestManager_Deploy(t *testing.T) {
+	ui, c := logs.GetLogger(false, false, os.Stdout)
+	defer c()
 	type fields struct {
 		Project *config.Project
 		App     *config.Ecs
 	}
 	type args struct {
-		ui terminal.UI
+		ui *echelon.Logger
 	}
 	tests := []struct {
 		name    string
@@ -159,7 +163,7 @@ func TestManager_Deploy(t *testing.T) {
 					Name: "goblin",
 				},
 			},
-			args: args{ui: terminal.ConsoleUI(context.TODO(), true)},
+			args: args{ui: ui},
 			env: map[string]string{
 				"ENV":         "test",
 				"AWS_PROFILE": "test",
@@ -233,7 +237,7 @@ func TestManager_Deploy(t *testing.T) {
 					DependsOn: nil,
 				},
 			},
-			args: args{ui: terminal.ConsoleUI(context.TODO(), true)},
+			args: args{ui: ui},
 			env: map[string]string{
 				"ENV":         "test",
 				"AWS_PROFILE": "test",
@@ -314,7 +318,7 @@ func TestManager_Deploy(t *testing.T) {
 					Unsafe: true,
 				},
 			},
-			args: args{ui: terminal.ConsoleUI(context.TODO(), true)},
+			args: args{ui: ui},
 			env: map[string]string{
 				"ENV":         "test",
 				"AWS_PROFILE": "test",
@@ -404,7 +408,7 @@ func TestManager_Deploy(t *testing.T) {
 					Timeout: 15,
 				},
 			},
-			args: args{ui: terminal.ConsoleUI(context.TODO(), true)},
+			args: args{ui: ui},
 			env: map[string]string{
 				"ENV":         "test",
 				"AWS_PROFILE": "test",
@@ -541,12 +545,14 @@ func TestManager_Deploy(t *testing.T) {
 }
 
 func TestManager_Redeploy(t *testing.T) {
+	ui, c := logs.GetLogger(false, false, os.Stdout)
+	defer c()
 	type fields struct {
 		Project *config.Project
 		App     *config.Ecs
 	}
 	type args struct {
-		ui terminal.UI
+		ui *echelon.Logger
 	}
 	tests := []struct {
 		name    string
@@ -567,7 +573,7 @@ func TestManager_Redeploy(t *testing.T) {
 					TaskDefinitionRevision: "1",
 				},
 			},
-			args: args{ui: terminal.ConsoleUI(context.TODO(), true)},
+			args: args{ui: ui},
 			env: map[string]string{
 				"ENV":         "test",
 				"AWS_PROFILE": "test",
@@ -635,7 +641,7 @@ func TestManager_Redeploy(t *testing.T) {
 					TaskDefinitionRevision: "current",
 				},
 			},
-			args: args{ui: terminal.ConsoleUI(context.TODO(), true)},
+			args: args{ui: ui},
 			env: map[string]string{
 				"ENV":         "test",
 				"AWS_PROFILE": "test",
@@ -704,7 +710,7 @@ func TestManager_Redeploy(t *testing.T) {
 					Unsafe:                 true,
 				},
 			},
-			args: args{ui: terminal.ConsoleUI(context.TODO(), true)},
+			args: args{ui: ui},
 			env: map[string]string{
 				"ENV":         "test",
 				"AWS_PROFILE": "test",
@@ -791,7 +797,7 @@ func TestManager_Redeploy(t *testing.T) {
 					TaskDefinitionRevision: "1",
 				},
 			},
-			args: args{ui: terminal.ConsoleUI(context.TODO(), true)},
+			args: args{ui: ui},
 			env: map[string]string{
 				"ENV":         "test",
 				"AWS_PROFILE": "test",
@@ -902,12 +908,14 @@ func TestManager_Redeploy(t *testing.T) {
 }
 
 func TestManager_Destroy(t *testing.T) {
+	ui, c := logs.GetLogger(false, false, os.Stdout)
+	defer c()
 	type fields struct {
 		Project *config.Project
 		App     *config.Ecs
 	}
 	type args struct {
-		ui terminal.UI
+		ui *echelon.Logger
 	}
 
 	env := map[string]string{
@@ -940,7 +948,7 @@ func TestManager_Destroy(t *testing.T) {
 			App: &config.Ecs{
 				Name: "goblin",
 			},
-		}, args: args{ui: terminal.ConsoleUI(context.TODO(), true)}, wantErr: false},
+		}, args: args{ui: ui}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

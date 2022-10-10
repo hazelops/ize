@@ -3,12 +3,11 @@ package docker
 import (
 	"context"
 	"fmt"
-	"io"
-	"os"
-
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
+	"io"
+	"os"
 )
 
 type Registry struct {
@@ -52,6 +51,9 @@ func (r *Registry) Push(ctx context.Context, w io.Writer, image string, tags []s
 	if err != nil {
 		return fmt.Errorf("unable to push image: %s", err)
 	}
+	if err != nil {
+		return fmt.Errorf("unable to push image: %s", err)
+	}
 
 	var termFd uintptr
 	if f, ok := w.(*os.File); ok {
@@ -62,7 +64,7 @@ func (r *Registry) Push(ctx context.Context, w io.Writer, image string, tags []s
 		resp,
 		w,
 		termFd,
-		true,
+		false,
 		nil,
 	)
 	if err != nil {

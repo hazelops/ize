@@ -2,12 +2,10 @@ package serverless
 
 import (
 	"fmt"
+	"github.com/cirruslabs/echelon"
 	"github.com/hazelops/ize/internal/config"
 	"os"
 	"path/filepath"
-	"time"
-
-	"github.com/hazelops/ize/pkg/terminal"
 )
 
 type Manager struct {
@@ -59,122 +57,124 @@ func (sls *Manager) prepare() {
 	sls.App.Env = append(sls.App.Env, "SLS_DEBUG=*")
 }
 
-func (sls *Manager) Deploy(ui terminal.UI) error {
+type Writer struct {
+	logger *echelon.Logger
+}
+
+func (w *Writer) Write(p []byte) (n int, err error) {
+	w.logger.Infof(string(p))
+	return len(p), err
+}
+
+func (w *Writer) WriteHeader(status int) {
+	return
+}
+
+func (sls *Manager) Deploy(ui *echelon.Logger) error {
 	sls.prepare()
 
-	sg := ui.StepGroup()
-	defer sg.Wait()
-
-	s := sg.Add("%s: deploying app...", sls.App.Name)
-	defer func() { s.Abort(); time.Sleep(time.Millisecond * 200) }()
+	sg := ui.Scoped(fmt.Sprintf("%s: deploying app...", sls.App.Name))
 
 	switch sls.Project.PreferRuntime {
 	case "native":
-		s.Update("%s: deploying app [run nvm use]...", sls.App.Name)
-
-		err := sls.runNvm(s.TermOutput())
+		s := sg.Scoped(fmt.Sprintf("%s: deploying app [run nvm use]...", sls.App.Name))
+		err := sls.runNvm(&Writer{s})
 		if err != nil {
 			return fmt.Errorf("can't run nvm: %w", err)
 		}
+		s.Finish(true)
 
-		s.Done()
-		s = sg.Add("%s: deploying app [run npm install]...", sls.App.Name)
-		err = sls.runNpmInstall(s.TermOutput())
+		s = sg.Scoped(fmt.Sprintf("%s: deploying app [run npm install]...", sls.App.Name))
+		err = sls.runNpmInstall(&Writer{s})
 		if err != nil {
 			return fmt.Errorf("can't run npm install: %w", err)
 		}
+		s.Finish(true)
 
 		if sls.App.CreateDomain {
-			s.Done()
-			s = sg.Add("%s: deploying app [run serverless create_domain]...", sls.App.Name)
-			err = sls.runCreateDomain(s.TermOutput())
+			s = sg.Scoped(fmt.Sprintf("%s: deploying app [run serverless create_domain]...", sls.App.Name))
+			err = sls.runCreateDomain(&Writer{s})
 			if err != nil {
 				return fmt.Errorf("can't run serverless create_domain: %w", err)
 			}
+			s.Finish(true)
 		}
 
-		s.Done()
-		s = sg.Add("%s: deploying app [run serverless deploy]...", sls.App.Name)
-		err = sls.runDeploy(s.TermOutput())
+		s = sg.Scoped(fmt.Sprintf("%s: deploying app [run serverless deploy]...", sls.App.Name))
+		err = sls.runDeploy(&Writer{s})
 		if err != nil {
 			return fmt.Errorf("can't run serverless deploy: %w", err)
 		}
+		s.Finish(true)
 	case "docker":
-		err := sls.deployWithDocker(s)
+		err := sls.deployWithDocker(sg)
 		if err != nil {
 			return err
 		}
 	}
 
-	s.Done()
-	s = sg.Add("%s: deployment completed!", sls.App.Name)
-	s.Done()
+	sg.Finish(true)
 
 	return nil
 }
 
-func (sls *Manager) Destroy(ui terminal.UI) error {
+func (sls *Manager) Destroy(ui *echelon.Logger) error {
 	sls.prepare()
 
-	sg := ui.StepGroup()
-	defer sg.Wait()
-
-	s := sg.Add("%s: destroying app...", sls.App.Name)
-	defer func() { s.Abort(); time.Sleep(time.Millisecond * 200) }()
+	sg := ui.Scoped(fmt.Sprintf("%s: destroying app...", sls.App.Name))
 
 	switch sls.Project.PreferRuntime {
 	case "native":
-		s.Update("%s: destroying app [run nvm use]...", sls.App.Name)
+		s := sg.Scoped(fmt.Sprintf("%s: destroying app [run nvm use]...", sls.App.Name))
 
-		err := sls.runNvm(s.TermOutput())
+		err := sls.runNvm(&Writer{logger: s})
 		if err != nil {
 			return fmt.Errorf("can't run nvm: %w", err)
 		}
+		s.Finish(true)
 
-		s.Done()
-		s = sg.Add("%s: destroying app [run npm install]...", sls.App.Name)
-		err = sls.runNpmInstall(s.TermOutput())
+		s = sg.Scoped(fmt.Sprintf("%s: destroying app [run npm install]...", sls.App.Name))
+		err = sls.runNpmInstall(&Writer{logger: s})
 		if err != nil {
 			return fmt.Errorf("can't run npm install: %w", err)
 		}
+		s.Finish(true)
 
 		if sls.App.CreateDomain {
-			s.Done()
-			s = sg.Add("%s: destroying app [run serverless delete_domain]...", sls.App.Name)
-			err = sls.runRemoveDomain(s.TermOutput())
+			s = sg.Scoped(fmt.Sprintf("%s: destroying app [run serverless delete_domain]...", sls.App.Name))
+			err = sls.runRemoveDomain(&Writer{logger: s})
 			if err != nil {
 				return fmt.Errorf("can't run serverless delete_domain: %w", err)
 			}
+			s.Finish(true)
 		}
 
-		s.Done()
-		s = sg.Add("%s: destroying app [run serverless remove]...", sls.App.Name)
-		err = sls.runRemove(s.TermOutput())
+		s = sg.Scoped(fmt.Sprintf("%s: destroying app [run serverless remove]...", sls.App.Name))
+		err = sls.runRemove(&Writer{logger: s})
 		if err != nil {
 			return fmt.Errorf("can't run serverless deploy: %w", err)
 		}
+		s.Finish(true)
 	case "docker":
-		err := sls.removeWithDocker(s)
+		err := sls.removeWithDocker(sg)
 		if err != nil {
 			return err
 		}
 	}
 
-	s.Done()
-	s = sg.Add("%s: destroy completed!", sls.App.Name)
-	s.Done()
+	sg.Finish(true)
 
 	return nil
 }
 
-func (sls *Manager) Push(ui terminal.UI) error {
+func (sls *Manager) Push(ui *echelon.Logger) error {
 	return nil
 }
 
-func (sls *Manager) Build(ui terminal.UI) error {
+func (sls *Manager) Build(ui *echelon.Logger) error {
 	return nil
 }
 
-func (sls *Manager) Redeploy(ui terminal.UI) error {
+func (sls *Manager) Redeploy(ui *echelon.Logger) error {
 	return nil
 }

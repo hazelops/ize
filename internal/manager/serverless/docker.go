@@ -3,6 +3,7 @@ package serverless
 import (
 	"context"
 	"fmt"
+	"github.com/cirruslabs/echelon"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -11,12 +12,14 @@ import (
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/hazelops/ize/pkg/terminal"
+	"github.com/docker/docker/pkg/stdcopy"
+	"io"
 	"os"
+	"path/filepath"
 	"time"
 )
 
-func (sls *Manager) deployWithDocker(s terminal.Step) error {
+func (sls *Manager) deployWithDocker(ui *echelon.Logger) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return err
@@ -24,7 +27,7 @@ func (sls *Manager) deployWithDocker(s terminal.Step) error {
 
 	image := "node:" + sls.App.NodeVersion
 
-	s.Update("%s: checking for Docker image: %s", sls.App.Name, image)
+	s := ui.Scoped(fmt.Sprintf("%s: checking for Docker image: %s", sls.App.Name, image))
 
 	imageRef, err := reference.ParseNormalizedNamed(image)
 	if err != nil {
@@ -40,9 +43,10 @@ func (sls *Manager) deployWithDocker(s terminal.Step) error {
 	if err != nil {
 		return err
 	}
+	s.Finish(true)
 
 	if len(imageList) == 0 {
-		s.Update("%s: pulling image: %s", sls.App.Name, image)
+		s = ui.Scoped(fmt.Sprintf("%s: pulling image: %s", sls.App.Name, image))
 
 		resp, err := cli.ImagePull(context.Background(), reference.FamiliarString(imageRef), types.ImagePullOptions{})
 		if err != nil {
@@ -50,23 +54,24 @@ func (sls *Manager) deployWithDocker(s terminal.Step) error {
 		}
 		defer resp.Close()
 
-		err = jsonmessage.DisplayJSONMessagesStream(resp, s.TermOutput(), os.Stdout.Fd(), true, nil)
+		err = jsonmessage.DisplayJSONMessagesStream(resp, &Writer{logger: s}, os.Stdout.Fd(), true, nil)
 		if err != nil {
 			return fmt.Errorf("unable to stream pull logs to the terminal: %s", err)
 		}
+		s.Finish(true)
+		time.Sleep(time.Millisecond * 200)
 	}
 
-	s.Update("%s: downloading npm modules...", sls.App.Name)
-
+	s = ui.Scoped(fmt.Sprintf("%s: downloading npm modules...", sls.App.Name))
 	err = sls.npm(cli, []string{"npm", "install", "--save-dev"}, s)
+	time.Sleep(time.Millisecond * 50)
 	if err != nil {
 		return fmt.Errorf("can't deploy %s: %w", sls.App.Name, err)
 	}
-
-	s.Done()
+	s.Finish(true)
 
 	if sls.App.CreateDomain {
-		s.Update("%s: creating domain...", sls.App.Name)
+		s = ui.Scoped(fmt.Sprintf("%s: creating domain...", sls.App.Name))
 		err = sls.serverless(cli, []string{
 			"create_domain",
 			"--verbose",
@@ -78,10 +83,10 @@ func (sls *Manager) deployWithDocker(s terminal.Step) error {
 			return err
 		}
 
-		s.Done()
+		s.Finish(true)
 	}
 
-	s.Update("%s: deploying app...", sls.App.Name)
+	s = ui.Scoped(fmt.Sprintf("%s: deploying app...", sls.App.Name))
 
 	err = sls.serverless(cli, []string{
 		"deploy",
@@ -93,15 +98,16 @@ func (sls *Manager) deployWithDocker(s terminal.Step) error {
 		"--stage", sls.Project.Env,
 	}, s)
 	if err != nil {
-		s.Abort()
 		time.Sleep(time.Second)
 		return err
 	}
 
+	s.Finish(true)
+
 	return nil
 }
 
-func (sls *Manager) removeWithDocker(s terminal.Step) error {
+func (sls *Manager) removeWithDocker(ui *echelon.Logger) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return err
@@ -109,7 +115,7 @@ func (sls *Manager) removeWithDocker(s terminal.Step) error {
 
 	image := "node:" + sls.App.NodeVersion
 
-	s.Update("%s: checking for Docker image: %s", sls.App.Name, image)
+	s := ui.Scoped(fmt.Sprintf("%s: checking for Docker image: %s", sls.App.Name, image))
 
 	imageRef, err := reference.ParseNormalizedNamed(image)
 	if err != nil {
@@ -125,9 +131,10 @@ func (sls *Manager) removeWithDocker(s terminal.Step) error {
 	if err != nil {
 		return err
 	}
+	s.Finish(true)
 
 	if len(imageList) == 0 {
-		s.Update("%s: pulling image: %s", sls.App.Name, image)
+		s := ui.Scoped(fmt.Sprintf("%s: pulling image: %s", sls.App.Name, image))
 
 		resp, err := cli.ImagePull(context.Background(), reference.FamiliarString(imageRef), types.ImagePullOptions{})
 		if err != nil {
@@ -135,14 +142,14 @@ func (sls *Manager) removeWithDocker(s terminal.Step) error {
 		}
 		defer resp.Close()
 
-		err = jsonmessage.DisplayJSONMessagesStream(resp, s.TermOutput(), os.Stdout.Fd(), true, nil)
+		err = jsonmessage.DisplayJSONMessagesStream(resp, &Writer{logger: s}, os.Stdout.Fd(), true, nil)
 		if err != nil {
 			return fmt.Errorf("unable to stream pull logs to the terminal: %s", err)
 		}
+		s.Finish(true)
 	}
 
-	s.Done()
-	s.Update("%s: destroying app...", sls.App.Name)
+	s = ui.Scoped(fmt.Sprintf("%s: destroying app...", sls.App.Name))
 
 	err = sls.serverless(cli, []string{
 		"remove",
@@ -154,14 +161,15 @@ func (sls *Manager) removeWithDocker(s terminal.Step) error {
 		"--profile", sls.App.AwsProfile,
 	}, s)
 	if err != nil {
-		s.Abort()
 		return err
 	}
+
+	s.Finish(true)
 
 	return nil
 }
 
-func (sls *Manager) serverless(cli *client.Client, cmd []string, step terminal.Step) error {
+func (sls *Manager) serverless(cli *client.Client, cmd []string, ui *echelon.Logger) error {
 	command := []string{"serverless"}
 	command = append(command, cmd...)
 
@@ -170,11 +178,9 @@ func (sls *Manager) serverless(cli *client.Client, cmd []string, step terminal.S
 		Entrypoint:   strslice.StrSlice{"/usr/local/bin/npx"},
 		WorkingDir:   "/app",
 		Env:          sls.App.Env,
-		Tty:          true,
+		Tty:          false,
 		Cmd:          command,
-		AttachStdin:  true,
 		AttachStdout: true,
-		AttachStderr: true,
 	}
 
 	contHostConfig := sls.getHostConfig(sls.Project.Home, sls.Project.RootDir)
@@ -195,37 +201,21 @@ func (sls *Manager) serverless(cli *client.Client, cmd []string, step terminal.S
 		return fmt.Errorf("can't deploy app: %w", err)
 	}
 
-	body, err := cli.ContainerAttach(context.Background(), cont.ID, types.ContainerAttachOptions{Stream: true, Stdout: true, Stderr: true, Stdin: true})
+	body, err := cli.ContainerAttach(context.Background(), cont.ID, types.ContainerAttachOptions{Stream: true, Stdout: true, Stderr: true, Stdin: false})
+	if err != nil {
+		return err
+	}
+	defer body.Close()
+
+	_, err = stdcopy.StdCopy(stdcopy.NewStdWriter(&Writer{logger: ui}, stdcopy.Stdout), stdcopy.NewStdWriter(&Writer{logger: ui}, stdcopy.Stderr), body.Reader)
+	if err != nil {
+		return err
+	}
 	if err != nil {
 		return err
 	}
 
-	msgs := make(chan []byte)
-	msgsErr := make(chan error)
-
-	go func() {
-		for {
-			msg, er := body.Reader.ReadBytes('\n')
-			if er != nil {
-				msgsErr <- er
-				return
-			}
-			msgs <- msg
-		}
-	}()
-
-msgLoop:
-	for {
-		select {
-		case msg := <-msgs:
-			fmt.Fprintf(step.TermOutput(), "%s", msg)
-		case <-msgsErr:
-			break msgLoop
-		}
-	}
-
 	wait, errC := cli.ContainerWait(context.Background(), cont.ID, container.WaitConditionRemoved)
-
 	select {
 	case status := <-wait:
 		if status.StatusCode == 0 {
@@ -235,9 +225,11 @@ msgLoop:
 	case err := <-errC:
 		return fmt.Errorf("can't deploy app: %w", err)
 	}
+
+	return nil
 }
 
-func (sls *Manager) npm(cli *client.Client, cmd []string, s terminal.Step) error {
+func (sls *Manager) npm(cli *client.Client, cmd []string, ui *echelon.Logger) error {
 	contConfig := &container.Config{
 		WorkingDir:   "/app",
 		Image:        fmt.Sprintf("node:%v", sls.App.NodeVersion),
@@ -267,41 +259,20 @@ func (sls *Manager) npm(cli *client.Client, cmd []string, s terminal.Step) error
 		return fmt.Errorf("can't deploy app: %w", err)
 	}
 
-	body, err := cli.ContainerAttach(context.Background(), cont.ID, types.ContainerAttachOptions{Stream: true, Stdout: true})
+	body, err := cli.ContainerAttach(context.Background(), cont.ID, types.ContainerAttachOptions{Stream: true, Stdout: true, Stderr: true})
 	if err != nil {
 		return err
 	}
-
-	msgs := make(chan []byte)
-	msgsErr := make(chan error)
-
+	defer body.Close()
+	//_, err = stdcopy.StdCopy(&Writer{logger: ui}, &Writer{logger: ui}, body.Reader)
 	go func() {
-		for {
-			msg, er := body.Reader.ReadBytes('\n')
-			if er != nil {
-				msgsErr <- er
-				return
-			}
-			msgs <- msg
+		_, err = io.Copy(&Writer{logger: ui}, body.Reader)
+		if err != nil {
+			ui.Errorf("error copying: %v", err)
 		}
 	}()
 
-msgLoop:
-	for {
-		select {
-		case msg := <-msgs:
-			fmt.Fprintf(s.TermOutput(), "%s", msg)
-		case <-msgsErr:
-			break msgLoop
-		}
-	}
-
-	defer close(msgs)
-	defer close(msgsErr)
-	defer body.Close()
-
-	wait, errC := cli.ContainerWait(context.Background(), cont.ID, container.WaitConditionNotRunning)
-
+	wait, errC := cli.ContainerWait(context.Background(), cont.ID, container.WaitConditionRemoved)
 	select {
 	case status := <-wait:
 		if status.StatusCode == 0 {
@@ -311,6 +282,8 @@ msgLoop:
 	case err := <-errC:
 		return fmt.Errorf("can't deploy app: %w", err)
 	}
+
+	return nil
 }
 
 func (sls *Manager) getHostConfig(homeDir, rootDir string) *container.HostConfig {
@@ -325,17 +298,16 @@ func (sls *Manager) getHostConfig(homeDir, rootDir string) *container.HostConfig
 			},
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%s/%s", rootDir, sls.App.Path),
+				Source: sls.App.Path,
 				Target: "/app",
 			},
 			{
 				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%s/%s/.serverless/", rootDir, sls.App.Path),
+				Source: filepath.Join(sls.App.Path, ".serverless"),
 				Target: "/root/.config",
 			},
 			{
-				Type:   mount.TypeBind,
-				Source: fmt.Sprintf("%s/.npm/", rootDir),
+				Type:   mount.TypeTmpfs,
 				Target: "/root/.npm",
 			},
 			{

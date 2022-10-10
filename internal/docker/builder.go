@@ -15,7 +15,6 @@ import (
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/oklog/ulid"
 )
 
@@ -37,7 +36,7 @@ func NewBuilder(buildArgs map[string]*string, tags []string, dockerfile string, 
 	}
 }
 
-func (b *Builder) Build(ui terminal.UI, s terminal.Step, contextDir string) error {
+func (b *Builder) Build(w io.Writer, contextDir string) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return fmt.Errorf("unable to create Docker client: %s", err)
@@ -74,7 +73,7 @@ func (b *Builder) Build(ui terminal.UI, s terminal.Step, contextDir string) erro
 		return fmt.Errorf("unable to create Docker context: %s", err)
 	}
 
-	if err := b.buildWithDocker(ui, s, cli, contextDir, relDockerfile, b.Tags, b.BuildArgs); err != nil {
+	if err := b.buildWithDocker(w, cli, contextDir, relDockerfile, b.Tags, b.BuildArgs); err != nil {
 		return err
 	}
 
@@ -82,8 +81,7 @@ func (b *Builder) Build(ui terminal.UI, s terminal.Step, contextDir string) erro
 }
 
 func (b *Builder) buildWithDocker(
-	ui terminal.UI,
-	s terminal.Step,
+	w io.Writer,
 	cli *client.Client,
 	contextDir string,
 	relDockerfile string,
@@ -124,17 +122,11 @@ func (b *Builder) buildWithDocker(
 	}
 	defer resp.Body.Close()
 
-	stdout, _, err := ui.OutputWriters()
 	if err != nil {
 		return err
 	}
 
-	var termFd uintptr
-	if f, ok := stdout.(*os.File); ok {
-		termFd = f.Fd()
-	}
-
-	err = jsonmessage.DisplayJSONMessagesStream(resp.Body, s.TermOutput(), termFd, true, nil)
+	err = jsonmessage.DisplayJSONMessagesStream(resp.Body, w, os.Stdout.Fd(), true, nil)
 	if err != nil {
 		return fmt.Errorf("unable to stream build logs to the terminal: %s", err)
 	}

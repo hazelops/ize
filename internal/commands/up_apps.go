@@ -4,20 +4,21 @@ import (
 	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/cirruslabs/echelon"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager"
 	"github.com/hazelops/ize/internal/manager/alias"
 	"github.com/hazelops/ize/internal/manager/ecs"
 	"github.com/hazelops/ize/internal/manager/serverless"
 	"github.com/hazelops/ize/internal/requirements"
+	"github.com/hazelops/ize/pkg/logs"
 	"github.com/hazelops/ize/pkg/templates"
-	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 type UpAppsOptions struct {
 	Config *config.Project
-	UI     terminal.UI
 }
 
 var upAppsLongDesc = templates.LongDesc(`
@@ -85,8 +86,6 @@ func (o *UpAppsOptions) Complete() error {
 		}
 	}
 
-	o.UI = terminal.ConsoleUI(context.Background(), o.Config.PlainText)
-
 	return nil
 }
 
@@ -95,8 +94,10 @@ func (o *UpAppsOptions) Validate() error {
 }
 
 func (o *UpAppsOptions) Run() error {
-	ui := o.UI
-	ui.Output("Deploying apps...", terminal.WithHeaderStyle())
+	ui, cancel := logs.GetLogger(false, o.Config.PlainText, os.Stdout)
+	defer cancel()
+
+	s := ui.Scoped("Deploy apps")
 
 	err := manager.InDependencyOrder(aws.BackgroundContext(), o.Config.GetApps(), func(c context.Context, name string) error {
 		o.Config.AwsProfile = o.Config.Terraform["infra"].AwsProfile
@@ -112,12 +113,12 @@ func (o *UpAppsOptions) Run() error {
 		return err
 	}
 
-	ui.Output("Deploy all completed!\n", terminal.WithSuccessStyle())
+	s.Finish(true)
 
 	return nil
 }
 
-func deployApp(name string, ui terminal.UI, cfg *config.Project) error {
+func deployApp(name string, ui *echelon.Logger, cfg *config.Project) error {
 	var m manager.Manager
 	var icon string
 
@@ -152,27 +153,27 @@ func deployApp(name string, ui terminal.UI, cfg *config.Project) error {
 		icon += " "
 	}
 
-	ui.Output("Deploying %s%s app...", icon, name, terminal.WithHeaderStyle())
+	s := ui.Scoped(fmt.Sprintf("Deploy %s%s app", icon, name))
 
 	// build app container
-	err := m.Build(ui)
+	err := m.Build(s)
 	if err != nil {
 		return fmt.Errorf("can't build app: %w", err)
 	}
 
 	// push app image
-	err = m.Push(ui)
+	err = m.Push(s)
 	if err != nil {
 		return fmt.Errorf("can't push app: %w", err)
 	}
 
 	// deploy app image
-	err = m.Deploy(ui)
+	err = m.Deploy(s)
 	if err != nil {
 		return fmt.Errorf("can't deploy app: %w", err)
 	}
 
-	ui.Output("Deploy app %s%s completed\n", icon, name, terminal.WithSuccessStyle())
+	s.Finish(true)
 
 	return nil
 }

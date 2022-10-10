@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/cirruslabs/echelon"
 	"github.com/hazelops/ize/internal/aws/utils"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/templates"
@@ -17,7 +18,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/docker/docker/api/types"
 	"github.com/hazelops/ize/internal/docker"
-	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 )
@@ -59,11 +59,8 @@ func (e *Manager) prepare() {
 }
 
 // Deploy deploys app container to ECS via ECS deploy
-func (e *Manager) Deploy(ui terminal.UI) error {
+func (e *Manager) Deploy(ui *echelon.Logger) error {
 	e.prepare()
-
-	sg := ui.StepGroup()
-	defer sg.Wait()
 
 	if len(e.App.AwsRegion) != 0 && len(e.App.AwsProfile) != 0 {
 		sess, err := utils.GetSession(&utils.SessionConfig{
@@ -78,9 +75,8 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 	}
 
 	if e.App.SkipDeploy {
-		s := sg.Add("%s: deploy will be skipped", e.App.Name)
-		defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
-		s.Done()
+		s := ui.Scoped(fmt.Sprintf("%s: deploy will be skipped", e.App.Name))
+		s.Finish(true)
 		return nil
 	}
 
@@ -93,8 +89,8 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 			- Unhealthy Threshold Count: 2`))
 	}
 
-	s := sg.Add("%s: deploying app container...", e.App.Name)
-	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
+	s := ui.Scoped(fmt.Sprintf("%s: deploying app container...", e.App.Name))
+	defer s.Finish(false)
 
 	if e.App.Image == "" {
 		e.App.Image = fmt.Sprintf("%s/%s:%s",
@@ -104,30 +100,25 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 	}
 
 	if e.Project.PreferRuntime == "native" {
-		err := e.deployLocal(s.TermOutput())
+		err := e.deployLocal(s.AsWriter(echelon.InfoLevel))
 		pterm.SetDefaultOutput(os.Stdout)
 		if err != nil {
 			return fmt.Errorf("unable to deploy app: %w", err)
 		}
 	} else {
-		err := e.deployWithDocker(s.TermOutput())
+		err := e.deployWithDocker(s.AsWriter(echelon.InfoLevel))
 		if err != nil {
 			return fmt.Errorf("unable to deploy app: %w", err)
 		}
 	}
 
-	s.Done()
-	s = sg.Add("%s: deployment completed!", e.App.Name)
-	s.Done()
+	s.Finish(true)
 
 	return nil
 }
 
-func (e *Manager) Redeploy(ui terminal.UI) error {
+func (e *Manager) Redeploy(ui *echelon.Logger) error {
 	e.prepare()
-
-	sg := ui.StepGroup()
-	defer sg.Wait()
 
 	if len(e.App.AwsRegion) != 0 && len(e.App.AwsProfile) != 0 {
 		sess, err := utils.GetSession(&utils.SessionConfig{
@@ -141,44 +132,36 @@ func (e *Manager) Redeploy(ui terminal.UI) error {
 		e.Project.SettingAWSClient(sess)
 	}
 
-	s := sg.Add("%s: redeploying app container...", e.App.Name)
-	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
+	s := ui.Scoped(fmt.Sprintf("%s: redeploying app container...", e.App.Name))
 
 	if e.Project.PreferRuntime == "native" {
-		err := e.redeployLocal(s.TermOutput())
+		err := e.redeployLocal(s.AsWriter(echelon.InfoLevel))
 		pterm.SetDefaultOutput(os.Stdout)
 		if err != nil {
 			return fmt.Errorf("unable to redeploy app: %w", err)
 		}
 	} else {
-		err := e.redeployWithDocker(s.TermOutput())
+		err := e.redeployWithDocker(s.AsWriter(echelon.InfoLevel))
 		if err != nil {
 			return fmt.Errorf("unable to redeploy app: %w", err)
 		}
 	}
 
-	s.Done()
-	s = sg.Add("%s: redeployment completed!", e.App.Name)
-	s.Done()
+	s.Finish(true)
 
 	return nil
 }
 
-func (e *Manager) Push(ui terminal.UI) error {
+func (e *Manager) Push(ui *echelon.Logger) error {
 	e.prepare()
 
-	sg := ui.StepGroup()
-	defer sg.Wait()
-
-	s := sg.Add("%s: push app image...", e.App.Name)
-	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
-
 	if len(e.App.Image) != 0 {
-		s.Update("%s: pushing app image... (skipped, using %s) ", e.App.Name, e.App.Image)
-		s.Done()
-
+		s := ui.Scoped(fmt.Sprintf("%s: pushing app image... (skipped, using %s) ", e.App.Name, e.App.Image))
+		s.Finish(true)
 		return nil
 	}
+
+	s := ui.Scoped(fmt.Sprintf("%s: push app image...", e.App.Name))
 
 	image := fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name)
 
@@ -241,31 +224,26 @@ func (e *Manager) Push(ui terminal.UI) error {
 
 	r := docker.NewRegistry(*repository.RepositoryUri, token, platform)
 
-	err = r.Push(context.Background(), s.TermOutput(), imageUri, []string{e.Project.Tag, tagLatest})
+	err = r.Push(context.Background(), s.AsWriter(echelon.InfoLevel), imageUri, []string{e.Project.Tag, tagLatest})
 	if err != nil {
 		return fmt.Errorf("can't push image: %w", err)
 	}
 
-	s.Done()
+	s.Finish(true)
 
 	return nil
 }
 
-func (e *Manager) Build(ui terminal.UI) error {
+func (e *Manager) Build(ui *echelon.Logger) error {
 	e.prepare()
 
-	sg := ui.StepGroup()
-	defer sg.Wait()
-
-	s := sg.Add("%s: building app container...", e.App.Name)
-	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
-
 	if len(e.App.Image) != 0 {
-		s.Update("%s: building app container... (skipped, using %s)", e.App.Name, e.App.Image)
-
-		s.Done()
+		s := ui.Scoped(fmt.Sprintf("%s: building app container... (skipped, using %s)", e.App.Name, e.App.Image))
+		s.Finish(true)
 		return nil
 	}
+
+	s := ui.Scoped(fmt.Sprintf("%s: building app container...", e.App.Name))
 
 	image := fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name)
 	imageUri := fmt.Sprintf("%s/%s", e.App.DockerRegistry, image)
@@ -304,26 +282,19 @@ func (e *Manager) Build(ui terminal.UI) error {
 		platform,
 	)
 
-	err = b.Build(ui, s, e.Project.RootDir)
+	err = b.Build(s.AsWriter(echelon.InfoLevel), e.Project.RootDir)
 	if err != nil {
 		return fmt.Errorf("unable to build image: %w", err)
 	}
 
-	s.Done()
+	s.Finish(true)
 
 	return nil
 }
 
-func (e *Manager) Destroy(ui terminal.UI) error {
-	sg := ui.StepGroup()
-	defer sg.Wait()
-
-	ui.Output("Destroying ECS applications requires destroying the infrastructure.", terminal.WithWarningStyle())
-	time.Sleep(time.Millisecond * 100)
-
-	s := sg.Add("%s: destroying completed!", e.App.Name)
-	defer func() { s.Abort() }()
-	s.Done()
+func (e *Manager) Destroy(ui *echelon.Logger) error {
+	ui.Infof("Destroying ECS applications requires destroying the infrastructure.")
+	time.Sleep(time.Millisecond * 50)
 
 	return nil
 }

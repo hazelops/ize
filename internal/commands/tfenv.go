@@ -6,11 +6,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/cirruslabs/echelon"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/template"
 	"github.com/hazelops/ize/pkg/templates"
-	"github.com/pterm/pterm"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"os"
@@ -71,11 +70,12 @@ func NewCmdTfenv(project *config.Project) *cobra.Command {
 }
 
 func (o *TfenvOptions) Run() error {
-	return GenerateTerraformFiles("infra", o.TerraformStateBucketName, o.Config)
+	return GenerateTerraformFiles("infra", o.TerraformStateBucketName, o.Config, nil)
 
 }
 
-func GenerateTerraformFiles(name string, terraformStateBucketName string, project *config.Project) error {
+func GenerateTerraformFiles(name string, terraformStateBucketName string, project *config.Project, logger *echelon.Logger) error {
+	defer logger.Finish(false)
 	var tf config.Terraform
 
 	if project.Terraform != nil {
@@ -112,7 +112,7 @@ func GenerateTerraformFiles(name string, terraformStateBucketName string, projec
 	if name == "infra" {
 		if checkTFStateKey(project, tf.StateBucketName, filepath.Join(project.Env, "terraform.tfstate")) {
 			stateKey = filepath.Join(project.Env, "terraform.tfstate")
-			pterm.Warning.Printfln("%s/terraform.tfstate location is deprecated, please move to %s/infra.tfstate", project.Env, project.Env)
+			logger.Warnf("%s/terraform.tfstate location is deprecated, please move to %s/infra.tfstate", project.Env, project.Env)
 		} else {
 			stateKey = filepath.Join(project.Env, "infra.tfstate")
 		}
@@ -139,22 +139,22 @@ func GenerateTerraformFiles(name string, terraformStateBucketName string, projec
 		stackPath = project.EnvDir
 	}
 
-	logrus.Debugf("backend opts: %s", backendOpts)
-	logrus.Debugf("state dir path: %s", stackPath)
+	logger.Debugf("backend opts: %v", backendOpts)
+	logger.Debugf("state dir path: %v", stackPath)
 
 	err := template.GenerateBackendTf(
 		backendOpts,
 		stackPath,
 	)
 	if err != nil {
-		pterm.Error.Printfln("Generate terraform file for \"%s\" not completed", name)
+		logger.Errorf("Generate terraform file for \"%s\" not completed", name)
 		return fmt.Errorf("can't generate backent.tf: %s", err)
 	}
 
 	home, _ := os.UserHomeDir()
 	key, err := ioutil.ReadFile(fmt.Sprintf("%s/.ssh/id_rsa.pub", home))
 	if err != nil {
-		pterm.Error.Printfln("Generate terraform file for \"%s\" not completed", name)
+		logger.Errorf("Generate terraform file for \"%s\" not completed", name)
 		return fmt.Errorf("can't read public ssh key: %s", err)
 
 	}
@@ -174,19 +174,19 @@ func GenerateTerraformFiles(name string, terraformStateBucketName string, projec
 		varsOpts.DOCKER_REGISTRY = project.DockerRegistry
 	}
 
-	logrus.Debugf("backend opts: %s", varsOpts)
-	logrus.Debugf("state dir path: %s", stackPath)
+	logger.Debugf("backend opts: %s", varsOpts)
+	logger.Debugf("state dir path: %s", stackPath)
 
 	err = template.GenerateVarsTf(
 		varsOpts,
 		stackPath,
 	)
 	if err != nil {
-		pterm.Error.Printfln("Generate terraform file for \"%s\" not completed", name)
+		logger.Errorf("Generate terraform file for \"%s\" not completed", name)
 		return fmt.Errorf("can't generate tfvars: %s", err)
 	}
 
-	pterm.Success.Printfln("Generate terraform file for \"%s\" completed", name)
+	logger.Finish(true)
 
 	return nil
 }

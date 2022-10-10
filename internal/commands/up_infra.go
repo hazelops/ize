@@ -7,16 +7,18 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/cirruslabs/echelon"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager"
 	"github.com/hazelops/ize/internal/requirements"
 	"github.com/hazelops/ize/internal/terraform"
+	"github.com/hazelops/ize/pkg/logs"
 	"github.com/hazelops/ize/pkg/templates"
-	"github.com/hazelops/ize/pkg/terminal"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"io/ioutil"
+	"os"
 	"path/filepath"
+	"time"
 )
 
 type UpInfraOptions struct {
@@ -25,7 +27,6 @@ type UpInfraOptions struct {
 	AwsProfile string
 	AwsRegion  string
 	Version    string
-	UI         terminal.UI
 	Explain    bool
 }
 
@@ -115,22 +116,18 @@ func (o *UpInfraOptions) Complete() error {
 			o.Config.Terraform["infra"].AwsRegion = o.Config.AwsRegion
 		}
 
-
-	  if len(o.Config.Terraform["infra"].StateBucketRegion) == 0 {
-		  o.Config.Terraform["infra"].StateBucketRegion = o.Config.Terraform["infra"].AwsRegion
-	  }
+		if len(o.Config.Terraform["infra"].StateBucketRegion) == 0 {
+			o.Config.Terraform["infra"].StateBucketRegion = o.Config.Terraform["infra"].AwsRegion
+		}
 
 		if len(o.Version) != 0 {
 			o.Config.Terraform["infra"].Version = o.Version
 		}
 
-
 		if len(o.Config.Terraform["infra"].Version) == 0 {
 			o.Config.Terraform["infra"].Version = o.Config.TerraformVersion
 		}
 	}
-
-	o.UI = terminal.ConsoleUI(context.Background(), o.Config.PlainText)
 
 	return nil
 }
@@ -209,7 +206,8 @@ terraform apply
 		return nil
 	}
 
-	ui := o.UI
+	ui, cancel := logs.GetLogger(false, o.Config.PlainText, os.Stdout)
+	defer cancel()
 
 	if _, ok := o.Config.Terraform["infra"]; ok {
 		err := deployInfra("infra", ui, o.Config, o.SkipGen)
@@ -228,9 +226,10 @@ terraform apply
 	return nil
 }
 
-func deployInfra(name string, ui terminal.UI, config *config.Project, skipGen bool) error {
+func deployInfra(name string, ui *echelon.Logger, config *config.Project, skipGen bool) error {
 	if !skipGen {
-		err := GenerateTerraformFiles(name, "", config)
+		sg := ui.Scoped(fmt.Sprintf("[%s][%s] Generate terraform files", config.Env, name))
+		err := GenerateTerraformFiles(name, "", config, sg)
 		if err != nil {
 			return err
 		}
@@ -238,7 +237,7 @@ func deployInfra(name string, ui terminal.UI, config *config.Project, skipGen bo
 
 	var tf terraform.Terraform
 
-	logrus.Infof("infra: %s", config.Terraform[name])
+	ui.Debugf("infra: %v", config.Terraform[name])
 
 	v, err := config.Session.Config.Credentials.Get()
 	if err != nil {
@@ -268,15 +267,12 @@ func deployInfra(name string, ui terminal.UI, config *config.Project, skipGen bo
 		return fmt.Errorf("can't supported %s runtime", config.PreferRuntime)
 	}
 
-	ui.Output(fmt.Sprintf("[%s][%s] Running deploy infra...", config.Env, name), terminal.WithHeaderStyle())
-	ui.Output("Execution terraform init...", terminal.WithHeaderStyle())
+	sg := ui.Scoped(fmt.Sprintf("[%s][%s] Deploy infrastructure", config.Env, name))
 
-	err = tf.RunUI(ui)
+	err = tf.RunUI(sg)
 	if err != nil {
 		return fmt.Errorf("can't deploy infra: %w", err)
 	}
-
-	ui.Output("Execution terraform plan...", terminal.WithHeaderStyle())
 
 	outPath := filepath.Join(config.EnvDir, name, ".terraform", "tfplan")
 	if name == "infra" {
@@ -286,7 +282,7 @@ func deployInfra(name string, ui terminal.UI, config *config.Project, skipGen bo
 	//terraform plan run options
 	tf.NewCmd([]string{"plan", fmt.Sprintf("-out=%s", outPath)})
 
-	err = tf.RunUI(ui)
+	err = tf.RunUI(sg)
 	if err != nil {
 		return fmt.Errorf("can't deploy infra: %w", err)
 	}
@@ -294,9 +290,7 @@ func deployInfra(name string, ui terminal.UI, config *config.Project, skipGen bo
 	//terraform apply run options
 	tf.NewCmd([]string{"apply", "-auto-approve", outPath})
 
-	ui.Output("Execution terraform apply...", terminal.WithHeaderStyle())
-
-	err = tf.RunUI(ui)
+	err = tf.RunUI(sg)
 	if err != nil {
 		return fmt.Errorf("can't deploy infra: %w", err)
 	}
@@ -309,9 +303,7 @@ func deployInfra(name string, ui terminal.UI, config *config.Project, skipGen bo
 
 	tf.SetOut(&output)
 
-	ui.Output("Execution terraform output...", terminal.WithHeaderStyle())
-
-	err = tf.RunUI(ui)
+	err = tf.RunUI(sg)
 	if err != nil {
 		return fmt.Errorf("can't deploy infra: %w", err)
 	}
@@ -336,7 +328,9 @@ func deployInfra(name string, ui terminal.UI, config *config.Project, skipGen bo
 		return err
 	}
 
-	ui.Output("Deploy infra completed!\n", terminal.WithSuccessStyle())
+	sg.Finish(true)
+
+	time.Sleep(time.Millisecond)
 
 	return nil
 }

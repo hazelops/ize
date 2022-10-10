@@ -1,14 +1,12 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/templates"
-	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
@@ -18,7 +16,6 @@ type SecretsRemoveOptions struct {
 	AppName     string
 	Backend     string
 	SecretsPath string
-	ui          terminal.UI
 }
 
 var secretsRemoveExample = templates.Examples(`
@@ -72,8 +69,6 @@ func (o *SecretsRemoveOptions) Complete(cmd *cobra.Command) error {
 	if o.SecretsPath == "" {
 		o.SecretsPath = fmt.Sprintf("/%s/%s", o.Config.Env, o.AppName)
 	}
-
-	o.ui = terminal.ConsoleUI(context.Background(), o.Config.PlainText)
 
 	return nil
 }

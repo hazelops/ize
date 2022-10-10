@@ -1,13 +1,13 @@
 package manager
 
 import (
-	"github.com/hazelops/ize/pkg/terminal"
+	"github.com/cirruslabs/echelon"
 )
 
 type Manager interface {
-	Deploy(ui terminal.UI) error
-	Destroy(ui terminal.UI) error
-	Build(ui terminal.UI) error
-	Push(ui terminal.UI) error
-	Redeploy(ui terminal.UI) error
+	Deploy(ui *echelon.Logger) error
+	Destroy(ui *echelon.Logger) error
+	Build(ui *echelon.Logger) error
+	Push(ui *echelon.Logger) error
+	Redeploy(ui *echelon.Logger) error
 }

@@ -1,18 +1,22 @@
 package alias
 
 import (
+	"github.com/cirruslabs/echelon"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/pkg/terminal"
+	"github.com/hazelops/ize/pkg/logs"
+	"os"
 	"testing"
 )
 
 func TestManager_Build(t *testing.T) {
+	ui, c := logs.GetLogger(false, false, os.Stdout)
+	defer c()
 	type fields struct {
 		Project *config.Project
 		App     *config.Alias
 	}
 	type args struct {
-		ui terminal.UI
+		ui *echelon.Logger
 	}
 	tests := []struct {
 		name    string
@@ -27,7 +31,7 @@ func TestManager_Build(t *testing.T) {
 				Icon:      "!",
 				DependsOn: nil,
 			},
-		}, args: args{ui: terminal.ConsoleUI(nil, false)}, wantErr: false},
+		}, args: args{ui: ui}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -43,12 +47,14 @@ func TestManager_Build(t *testing.T) {
 }
 
 func TestManager_Deploy(t *testing.T) {
+	ui, c := logs.GetLogger(false, false, os.Stdout)
+	defer c()
 	type fields struct {
 		Project *config.Project
 		App     *config.Alias
 	}
 	type args struct {
-		ui terminal.UI
+		ui *echelon.Logger
 	}
 	tests := []struct {
 		name    string
@@ -63,7 +69,7 @@ func TestManager_Deploy(t *testing.T) {
 				Icon:      "!",
 				DependsOn: nil,
 			},
-		}, args: args{ui: terminal.ConsoleUI(nil, false)}, wantErr: false},
+		}, args: args{ui: ui}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -79,12 +85,14 @@ func TestManager_Deploy(t *testing.T) {
 }
 
 func TestManager_Destroy(t *testing.T) {
+	ui, c := logs.GetLogger(false, false, os.Stdout)
+	defer c()
 	type fields struct {
 		Project *config.Project
 		App     *config.Alias
 	}
 	type args struct {
-		ui terminal.UI
+		ui *echelon.Logger
 	}
 	tests := []struct {
 		name    string
@@ -99,7 +107,7 @@ func TestManager_Destroy(t *testing.T) {
 				Icon:      "!",
 				DependsOn: nil,
 			},
-		}, args: args{ui: terminal.ConsoleUI(nil, false)}, wantErr: false},
+		}, args: args{ui: ui}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -115,12 +123,14 @@ func TestManager_Destroy(t *testing.T) {
 }
 
 func TestManager_Push(t *testing.T) {
+	ui, c := logs.GetLogger(false, false, os.Stdout)
+	defer c()
 	type fields struct {
 		Project *config.Project
 		App     *config.Alias
 	}
 	type args struct {
-		ui terminal.UI
+		ui *echelon.Logger
 	}
 	tests := []struct {
 		name    string
@@ -135,7 +145,7 @@ func TestManager_Push(t *testing.T) {
 				Icon:      "!",
 				DependsOn: nil,
 			},
-		}, args: args{ui: terminal.ConsoleUI(nil, false)}, wantErr: false},
+		}, args: args{ui: ui}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -151,12 +161,14 @@ func TestManager_Push(t *testing.T) {
 }
 
 func TestManager_Redeploy(t *testing.T) {
+	ui, c := logs.GetLogger(false, false, os.Stdout)
+	defer c()
 	type fields struct {
 		Project *config.Project
 		App     *config.Alias
 	}
 	type args struct {
-		ui terminal.UI
+		ui *echelon.Logger
 	}
 	tests := []struct {
 		name    string
@@ -171,7 +183,7 @@ func TestManager_Redeploy(t *testing.T) {
 				Icon:      "!",
 				DependsOn: nil,
 			},
-		}, args: args{ui: terminal.ConsoleUI(nil, false)}, wantErr: false},
+		}, args: args{ui: ui}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

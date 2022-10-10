@@ -1,17 +1,13 @@
 package commands
 
 import (
-	"context"
 	"fmt"
-
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
 )
 
 type TunnelStatusOptions struct {
 	Config *config.Project
-	UI     terminal.UI
 }
 
 func NewTunnelStatusOptions(project *config.Project) *TunnelStatusOptions {
@@ -52,8 +48,6 @@ func NewCmdTunnelStatus(project *config.Project) *cobra.Command {
 }
 
 func (o *TunnelStatusOptions) Complete() error {
-	o.UI = terminal.ConsoleUI(context.Background(), o.Config.PlainText)
-
 	return nil
 }
 
@@ -66,10 +60,6 @@ func (o *TunnelStatusOptions) Validate() error {
 }
 
 func (o *TunnelStatusOptions) Run() error {
-	ui := o.UI
-	sg := ui.StepGroup()
-	defer sg.Wait()
-
 	isUp, err := checkTunnel(o.Config.EnvDir)
 	if err != nil {
 		return fmt.Errorf("can't get tunnel status: %w", err)

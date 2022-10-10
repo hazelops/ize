@@ -7,13 +7,13 @@ import (
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager"
 	"github.com/hazelops/ize/internal/requirements"
-	"github.com/hazelops/ize/pkg/terminal"
+	"github.com/hazelops/ize/pkg/logs"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 type DownInfraOptions struct {
 	Config     *config.Project
-	ui         terminal.UI
 	Version    string
 	AwsProfile string
 	AwsRegion  string
@@ -98,8 +98,6 @@ func (o *DownInfraOptions) Complete() error {
 		}
 	}
 
-	o.ui = terminal.ConsoleUI(context.Background(), o.Config.PlainText)
-
 	return nil
 }
 
@@ -112,7 +110,8 @@ func (o *DownInfraOptions) Validate() error {
 }
 
 func (o *DownInfraOptions) Run() error {
-	ui := o.ui
+	ui, cancel := logs.GetLogger(false, o.Config.PlainText, os.Stdout)
+	defer cancel()
 
 	if _, ok := o.Config.Terraform["infra"]; ok {
 		err := destroyInfra("infra", o.Config, o.SkipGen, ui)

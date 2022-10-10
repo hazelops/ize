@@ -1,10 +1,10 @@
 package terraform
 
 import (
-	"context"
 	"fmt"
+	"github.com/cirruslabs/echelon"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/pkg/terminal"
+	"github.com/hazelops/ize/pkg/logs"
 	"io"
 	"os"
 	"testing"
@@ -171,6 +171,8 @@ func Test_local_Run(t *testing.T) {
 }
 
 func Test_local_RunUI(t *testing.T) {
+	ui, c := logs.GetLogger(false, false, os.Stdout)
+	defer c()
 	mirror := defaultMirror
 	version, err := installVersion("1.1.3", &mirror)
 	if err != nil {
@@ -187,7 +189,7 @@ func Test_local_RunUI(t *testing.T) {
 		project *config.Project
 	}
 	type args struct {
-		ui terminal.UI
+		ui *echelon.Logger
 	}
 	tests := []struct {
 		name    string
@@ -205,7 +207,7 @@ func Test_local_RunUI(t *testing.T) {
 				tfpath:  version,
 				project: &config.Project{},
 			},
-			args:    args{ui: terminal.ConsoleUI(context.TODO(), true)},
+			args:    args{ui: ui},
 			wantErr: false,
 		},
 	}

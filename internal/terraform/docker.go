@@ -3,13 +3,7 @@ package terraform
 import (
 	"context"
 	"fmt"
-	"github.com/hazelops/ize/internal/config"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
-
+	"github.com/cirruslabs/echelon"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -17,10 +11,14 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/docker/utils"
-	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	t "golang.org/x/crypto/ssh/terminal"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 const (
@@ -80,25 +78,23 @@ func (d *docker) SetOut(out io.Writer) {
 	d.output = out
 }
 
-func (d *docker) RunUI(ui terminal.UI) error {
-	sg := ui.StepGroup()
-	defer sg.Wait()
-
-	s := sg.Add("Initializing Docker client...")
-	defer func() { s.Abort(); time.Sleep(time.Millisecond * 50) }()
+func (d *docker) RunUI(ui *echelon.Logger) error {
+	s := ui.Scoped("Initialize Docker client")
+	defer s.Finish(true)
 
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return err
 	}
+	s.Finish(true)
 
-	s.Done()
-	s = sg.Add("Cleanuping old containers...")
+	s = ui.Scoped("Cleanup old containers")
 
 	err = cleanupOldContainers(cli)
 	if err != nil {
 		return err
 	}
+	s.Finish(true)
 
 	imageName := "hashicorp/terraform"
 	imageTag := d.version
@@ -118,18 +114,8 @@ func (d *docker) RunUI(ui terminal.UI) error {
 		return err
 	}
 
-	stdout, _, err := ui.OutputWriters()
-	if err != nil {
-		return err
-	}
-
-	var termFd uintptr
-	if f, ok := stdout.(*os.File); ok {
-		termFd = f.Fd()
-	}
-
 	if len(imageList) == 0 {
-		s.Update("pulling terraform image %v:%v...", imageName, imageTag)
+		s = ui.Scoped(fmt.Sprintf("Pull terraform image %v:%v...", imageName, imageTag))
 		out, err := cli.ImagePull(context.Background(), reference.FamiliarString(imageRef), types.ImagePullOptions{})
 		if err != nil {
 			return err
@@ -140,13 +126,11 @@ func (d *docker) RunUI(ui terminal.UI) error {
 			return err
 		}
 
-		err = jsonmessage.DisplayJSONMessagesStream(out, s.TermOutput(), termFd, true, nil)
+		err = jsonmessage.DisplayJSONMessagesStream(out, s.AsWriter(echelon.InfoLevel), os.Stdout.Fd(), true, nil)
 		if err != nil {
 			return fmt.Errorf("unable to stream pull logs to the terminal: %s", err)
 		}
-
-		s.Done()
-		s = sg.Add("")
+		s.Finish(true)
 	}
 
 	logrus.Infof("image name: %s, image tag: %s", imageName, imageTag)
@@ -189,7 +173,7 @@ func (d *docker) RunUI(ui terminal.UI) error {
 		},
 	}
 
-	s.Update("[%s][%s] running terraform image %v:%v...", d.project.Env, d.state, imageName, imageTag)
+	s = ui.Scoped(fmt.Sprintf("[%s][%s] running terraform image %v:%v...", d.project.Env, d.state, imageName, imageTag))
 
 	cont, err := cli.ContainerCreate(
 		context.Background(),
@@ -226,7 +210,7 @@ func (d *docker) RunUI(ui terminal.UI) error {
 		io.Copy(d.output, reader)
 
 	} else {
-		io.Copy(s.TermOutput(), reader)
+		io.Copy(s.AsWriter(echelon.InfoLevel), reader)
 	}
 
 	wait, errC := cli.ContainerWait(context.Background(), cont.ID, container.WaitConditionRemoved)
@@ -236,7 +220,7 @@ func (d *docker) RunUI(ui terminal.UI) error {
 		if status.StatusCode != 0 {
 			return fmt.Errorf("container exit status code %d\n", status.StatusCode)
 		}
-		s.Done()
+		s.Finish(true)
 		return nil
 	case err := <-errC:
 		return err

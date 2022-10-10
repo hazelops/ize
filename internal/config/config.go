@@ -229,6 +229,7 @@ func InitConfig() {
 	replacer := strings.NewReplacer(".", "__")
 	viper.SetEnvKeyReplacer(replacer)
 	viper.AutomaticEnv()
+	viper.AllowEmptyMap(true)
 
 	_ = viper.BindEnv("ENV", "ENV")
 	_ = viper.BindEnv("TAG", "TAG")

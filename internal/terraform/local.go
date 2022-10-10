@@ -3,6 +3,7 @@ package terraform
 import (
 	"bufio"
 	"fmt"
+	"github.com/cirruslabs/echelon"
 	"github.com/hazelops/ize/internal/config"
 	"io"
 	"log"
@@ -14,12 +15,10 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
-
 	"time"
 
 	"github.com/hashicorp/go-version"
 	"github.com/hazelops/ize/pkg/term"
-	"github.com/hazelops/ize/pkg/terminal"
 	tfswitcher "github.com/psihachina/terraform-switcher/lib"
 )
 
@@ -109,21 +108,12 @@ func runCommand(cmd *exec.Cmd, out io.Writer) (stdout, stderr string, err error)
 	signal.Ignore(os.Interrupt)
 	defer signal.Reset(os.Interrupt)
 
-	outReader, err := cmd.StdoutPipe()
-	if err != nil {
-		return
-	}
-	errReader, err := cmd.StderrPipe()
-	if err != nil {
-		return
-	}
+	cmd.Stdout = out
+	cmd.Stderr = out
 
 	if err = cmd.Start(); err != nil {
 		return
 	}
-
-	go printOutput(outReader, out)
-	go printOutput(errReader, out)
 
 	err = cmd.Wait()
 
@@ -137,14 +127,11 @@ func runCommand(cmd *exec.Cmd, out io.Writer) (stdout, stderr string, err error)
 	return
 }
 
-func (l *local) RunUI(ui terminal.UI) error {
-	sg := ui.StepGroup()
-	defer sg.Wait()
+func (l *local) RunUI(ui *echelon.Logger) error {
+	s := ui.Scoped(fmt.Sprintf("[%s][%s] terraform %s (v%s)", l.project.Env, l.state, strings.Join(l.command, " "), l.version))
 
-	s := sg.Add("[%s][%s] Running terraform v%s...", l.project.Env, l.state, l.version)
-	defer func() { s.Abort(); time.Sleep(time.Millisecond * 100) }()
-
-	stdout := s.TermOutput()
+	var stdout io.Writer
+	stdout = s.AsWriter(echelon.InfoLevel)
 	if l.output != nil {
 		stdout = l.output
 	}
@@ -166,7 +153,8 @@ func (l *local) RunUI(ui terminal.UI) error {
 		return err
 	}
 
-	s.Done()
+	s.Finish(true)
+	time.Sleep(time.Millisecond)
 
 	return nil
 }

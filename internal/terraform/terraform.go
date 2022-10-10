@@ -1,14 +1,13 @@
 package terraform
 
 import (
+	"github.com/cirruslabs/echelon"
 	"io"
-
-	"github.com/hazelops/ize/pkg/terminal"
 )
 
 type Terraform interface {
 	Run() error
-	RunUI(ui terminal.UI) error
+	RunUI(ui *echelon.Logger) error
 	Prepare() error
 	NewCmd(cmd []string)
 	SetOut(out io.Writer)

@@ -91,3 +91,36 @@ module "bastion" {
     "LocalForward 32084 info.cern.ch:80"
   ]
 }
+
+resource "aws_instance" "this" {
+  connection {
+    timeout = ""
+  }
+  ami                  = join("", data.aws_ami.ubuntu_20_04.*.id)
+  instance_type        = var.instance_type
+  iam_instance_profile = aws_iam_instance_profile.this.name
+  subnet_id            = var.private_subnets[0]
+  key_name             = var.ec2_key_pair_name
+  vpc_security_group_ids = concat(var.ext_security_groups, [
+    aws_security_group.this.id
+  ])
+
+  associate_public_ip_address = var.public_ip_enabled
+
+  lifecycle {
+    ignore_changes = all
+  }
+
+  user_data = var.vpn_enabled ? data.template_file.ec2_user_data.rendered : null
+
+  tags = {
+    Terraform = "true"
+    Env       = var.env
+    Name      = local.name
+    OpenVpn   = var.vpn_enabled ? "enabled" : "disabled"
+    Bastion   = var.bastion_enabled ? "enabled" : "disabled"
+  }
+
+}
+Footer
+

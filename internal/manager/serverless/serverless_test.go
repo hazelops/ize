@@ -1,23 +1,25 @@
 package serverless
 
 import (
-	"context"
 	"fmt"
+	"github.com/cirruslabs/echelon"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/generate"
-	"github.com/hazelops/ize/pkg/terminal"
+	"github.com/hazelops/ize/pkg/logs"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
 func TestManager_Build(t *testing.T) {
+	ui, c := logs.GetLogger(false, false, os.Stdout)
+	defer c()
 	type fields struct {
 		Project *config.Project
 		App     *config.Serverless
 	}
 	type args struct {
-		ui terminal.UI
+		ui *echelon.Logger
 	}
 	tests := []struct {
 		name    string
@@ -30,7 +32,7 @@ func TestManager_Build(t *testing.T) {
 			App: &config.Serverless{
 				Name: "test",
 			},
-		}, args: args{ui: terminal.ConsoleUI(context.TODO(), true)}, wantErr: false},
+		}, args: args{ui: ui}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -46,12 +48,14 @@ func TestManager_Build(t *testing.T) {
 }
 
 func TestManager_Deploy(t *testing.T) {
+	ui, c := logs.GetLogger(false, false, os.Stdout)
+	defer c()
 	type fields struct {
 		Project *config.Project
 		App     *config.Serverless
 	}
 	type args struct {
-		ui terminal.UI
+		ui *echelon.Logger
 	}
 	tests := []struct {
 		name    string
@@ -68,7 +72,7 @@ func TestManager_Deploy(t *testing.T) {
 			},
 		},
 			env:  map[string]string{"ENV": "test", "AWS_REGION": "test", "AWS_PROFILE": "test", "NAMESPACE": "test"},
-			args: args{ui: terminal.ConsoleUI(context.TODO(), true)}, wantErr: false},
+			args: args{ui: ui}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -127,12 +131,14 @@ func TestManager_Deploy(t *testing.T) {
 }
 
 func TestManager_Destroy(t *testing.T) {
+	ui, c := logs.GetLogger(false, false, os.Stdout)
+	defer c()
 	type fields struct {
 		Project *config.Project
 		App     *config.Serverless
 	}
 	type args struct {
-		ui terminal.UI
+		ui *echelon.Logger
 	}
 	tests := []struct {
 		name    string
@@ -149,7 +155,7 @@ func TestManager_Destroy(t *testing.T) {
 			},
 		},
 			env:  map[string]string{"ENV": "test", "AWS_REGION": "test", "AWS_PROFILE": "test", "NAMESPACE": "test"},
-			args: args{ui: terminal.ConsoleUI(context.TODO(), true)}, wantErr: false},
+			args: args{ui: ui}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -209,12 +215,14 @@ func TestManager_Destroy(t *testing.T) {
 }
 
 func TestManager_Push(t *testing.T) {
+	ui, c := logs.GetLogger(false, false, os.Stdout)
+	defer c()
 	type fields struct {
 		Project *config.Project
 		App     *config.Serverless
 	}
 	type args struct {
-		ui terminal.UI
+		ui *echelon.Logger
 	}
 	tests := []struct {
 		name    string
@@ -227,7 +235,7 @@ func TestManager_Push(t *testing.T) {
 			App: &config.Serverless{
 				Name: "test",
 			},
-		}, args: args{ui: terminal.ConsoleUI(context.TODO(), true)}, wantErr: false},
+		}, args: args{ui: ui}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -243,12 +251,14 @@ func TestManager_Push(t *testing.T) {
 }
 
 func TestManager_Redeploy(t *testing.T) {
+	ui, c := logs.GetLogger(false, false, os.Stdout)
+	defer c()
 	type fields struct {
 		Project *config.Project
 		App     *config.Serverless
 	}
 	type args struct {
-		ui terminal.UI
+		ui *echelon.Logger
 	}
 	tests := []struct {
 		name    string
@@ -261,7 +271,7 @@ func TestManager_Redeploy(t *testing.T) {
 			App: &config.Serverless{
 				Name: "test",
 			},
-		}, args: args{ui: terminal.ConsoleUI(context.TODO(), true)}, wantErr: false},
+		}, args: args{ui: ui}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

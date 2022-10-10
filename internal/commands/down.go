@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/cirruslabs/echelon"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager"
 	"github.com/hazelops/ize/internal/manager/alias"
@@ -11,11 +12,11 @@ import (
 	"github.com/hazelops/ize/internal/manager/serverless"
 	"github.com/hazelops/ize/internal/requirements"
 	"github.com/hazelops/ize/internal/terraform"
+	"github.com/hazelops/ize/pkg/logs"
 	"github.com/hazelops/ize/pkg/templates"
-	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"os"
 	"time"
 )
 
@@ -25,7 +26,6 @@ type DownOptions struct {
 	SkipBuildAndPush bool
 	AutoApprove      bool
 	SkipGen          bool
-	ui               terminal.UI
 }
 
 var downLongDesc = templates.LongDesc(`
@@ -145,8 +145,6 @@ func (o *DownOptions) Complete(cmd *cobra.Command, args []string) error {
 		o.AppName = cmd.Flags().Args()[0]
 	}
 
-	o.ui = terminal.ConsoleUI(context.Background(), o.Config.PlainText)
-
 	return nil
 }
 
@@ -167,7 +165,9 @@ func (o *DownOptions) Validate() error {
 }
 
 func (o *DownOptions) Run() error {
-	ui := o.ui
+	ui, cancel := logs.GetLogger(false, o.Config.PlainText, os.Stdout)
+	defer cancel()
+
 	if o.AppName == "" {
 		err := destroyAll(ui, o)
 		if err != nil {
@@ -211,43 +211,42 @@ func (o *DownOptions) validateAll() error {
 	return nil
 }
 
-func destroyAll(ui terminal.UI, o *DownOptions) error {
-
-	ui.Output("Destroying apps...", terminal.WithHeaderStyle())
-	sg := ui.StepGroup()
-	defer sg.Wait()
+func destroyAll(ui *echelon.Logger, o *DownOptions) error {
+	s := ui.Scoped("Destroy apps")
 
 	err := manager.InReversDependencyOrder(aws.BackgroundContext(), o.Config.GetApps(), func(c context.Context, name string) error {
 		o.Config.AwsProfile = o.Config.Terraform["infra"].AwsProfile
-
-		return destroyApp(name, o.Config, ui)
+		return destroyApp(name, o.Config, s)
 	})
 	if err != nil {
 		return err
 	}
+	s.Finish(true)
 
+	s = ui.Scoped("Destroy infrastructure")
 	if _, ok := o.Config.Terraform["infra"]; ok {
-		err = destroyInfra("infra", o.Config, o.SkipGen, ui)
+		err = destroyInfra("infra", o.Config, o.SkipGen, s)
 		if err != nil {
 			return err
 		}
 	}
 
 	err = manager.InReversDependencyOrder(aws.BackgroundContext(), o.Config.GetStates(), func(c context.Context, name string) error {
-		o.Config.AwsProfile = o.Config.Terraform["infra"].AwsProfile
+		o.Config.AwsProfile = o.Config.Terraform[name].AwsProfile
 
-		return destroyInfra(name, o.Config, o.SkipGen, ui)
+		return destroyInfra(name, o.Config, o.SkipGen, s)
 	})
 
-	ui.Output("Destroy all completed!\n", terminal.WithSuccessStyle())
-	time.Sleep(time.Millisecond * 200)
+	s.Finish(true)
 
 	return nil
 }
 
-func destroyInfra(state string, config *config.Project, skipGen bool, ui terminal.UI) error {
+func destroyInfra(state string, config *config.Project, skipGen bool, ui *echelon.Logger) error {
+	var s *echelon.Logger
 	if !skipGen {
-		err := GenerateTerraformFiles(state, "", config)
+		s = ui.Scoped(fmt.Sprintf("Generate terraform file for \"%s\"", state))
+		err := GenerateTerraformFiles(state, "", config, s)
 		if err != nil {
 			return err
 		}
@@ -255,7 +254,7 @@ func destroyInfra(state string, config *config.Project, skipGen bool, ui termina
 
 	var tf terraform.Terraform
 
-	logrus.Infof("infra: %s", tf)
+	ui.Debugf("%v", tf)
 
 	v, err := config.Session.Config.Credentials.Get()
 	if err != nil {
@@ -285,29 +284,31 @@ func destroyInfra(state string, config *config.Project, skipGen bool, ui termina
 		return fmt.Errorf("can't supported %s runtime", config.PreferRuntime)
 	}
 
-	ui.Output("Execution terraform init...", terminal.WithHeaderStyle())
+	sg := ui.Scoped(fmt.Sprintf("[%s][%s] Run destroy infra", config.Env, state))
+	defer sg.Finish(false)
 
-	err = tf.RunUI(ui)
+	s = sg.Scoped("Execute terraform init")
+	err = tf.RunUI(s)
 	if err != nil {
 		return err
 	}
+	s.Finish(true)
 
 	//terraform destroy run options
 	tf.NewCmd([]string{"destroy", "-auto-approve"})
 
-	ui.Output("Execution terraform destroy...", terminal.WithHeaderStyle())
-
-	err = tf.RunUI(ui)
+	s = sg.Scoped("Execute terraform destroy")
+	err = tf.RunUI(s)
 	if err != nil {
 		return fmt.Errorf("can't deploy infra: %w", err)
 	}
-
-	ui.Output("Terraform destroy completed!\n", terminal.WithSuccessStyle())
+	s.Finish(true)
+	sg.Finish(true)
 
 	return nil
 }
 
-func destroyApp(name string, cfg *config.Project, ui terminal.UI) error {
+func destroyApp(name string, cfg *config.Project, ui *echelon.Logger) error {
 	var m manager.Manager
 	var icon string
 
@@ -345,14 +346,15 @@ func destroyApp(name string, cfg *config.Project, ui terminal.UI) error {
 		icon += " "
 	}
 
-	ui.Output("Destroying %s%s app...\n", icon, name, terminal.WithHeaderStyle())
+	s := ui.Scoped(fmt.Sprintf("Destroy %s%s app", icon, name))
 
-	err := m.Destroy(ui)
+	err := m.Destroy(s)
 	if err != nil {
 		return fmt.Errorf("can't down: %w", err)
 	}
+	s.Finish(true)
 
-	ui.Output("Destroy app %s%s completed\n", icon, name, terminal.WithSuccessStyle())
+	time.Sleep(time.Millisecond)
 
 	return nil
 }

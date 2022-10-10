@@ -4,13 +4,15 @@ import (
 	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/cirruslabs/echelon"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager"
 	"github.com/hazelops/ize/internal/requirements"
+	"github.com/hazelops/ize/pkg/logs"
 	"github.com/hazelops/ize/pkg/templates"
-	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 type UpOptions struct {
@@ -19,7 +21,6 @@ type UpOptions struct {
 	SkipBuildAndPush bool
 	SkipGen          bool
 	AutoApprove      bool
-	UI               terminal.UI
 }
 
 type Apps map[string]*interface{}
@@ -142,8 +143,6 @@ func (o *UpOptions) Complete(cmd *cobra.Command, args []string) error {
 		o.AppName = cmd.Flags().Args()[0]
 	}
 
-	o.UI = terminal.ConsoleUI(context.Background(), o.Config.PlainText)
-
 	return nil
 }
 
@@ -164,7 +163,9 @@ func (o *UpOptions) Validate() error {
 }
 
 func (o *UpOptions) Run() error {
-	ui := o.UI
+	ui, cancel := logs.GetLogger(false, o.Config.PlainText, os.Stdout)
+	defer cancel()
+
 	if o.AppName == "" {
 		err := deployAll(ui, o)
 		if err != nil {
@@ -215,27 +216,30 @@ func (o *UpOptions) validateAll() error {
 	return nil
 }
 
-func deployAll(ui terminal.UI, o *UpOptions) error {
+func deployAll(ui *echelon.Logger, o *UpOptions) error {
+	s := ui.Scoped("Deploy infrastructure")
+
 	if _, ok := o.Config.Terraform["infra"]; ok {
-		err := deployInfra("infra", ui, o.Config, o.SkipGen)
+		err := deployInfra("infra", s, o.Config, o.SkipGen)
 		if err != nil {
 			return err
 		}
 	}
 
 	err := manager.InDependencyOrder(aws.BackgroundContext(), o.Config.GetStates(), func(c context.Context, name string) error {
-		return deployInfra(name, ui, o.Config, o.SkipGen)
+		return deployInfra(name, s, o.Config, o.SkipGen)
 	})
 	if err != nil {
 		return err
 	}
+	s.Finish(true)
 
-	ui.Output("Deploying apps...", terminal.WithHeaderStyle())
+	s = ui.Scoped("Deploy apps")
 
 	err = manager.InDependencyOrder(aws.BackgroundContext(), o.Config.GetApps(), func(c context.Context, name string) error {
 		o.Config.AwsProfile = o.Config.Terraform["infra"].AwsProfile
 
-		err := deployApp(name, ui, o.Config)
+		err := deployApp(name, s, o.Config)
 		if err != nil {
 			return err
 		}
@@ -245,8 +249,7 @@ func deployAll(ui terminal.UI, o *UpOptions) error {
 	if err != nil {
 		return err
 	}
-
-	ui.Output("Deploy all completed!\n", terminal.WithSuccessStyle())
+	s.Finish(true)
 
 	return nil
 }

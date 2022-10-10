@@ -1,8 +1,9 @@
 package alias
 
 import (
+	"fmt"
+	"github.com/cirruslabs/echelon"
 	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/pkg/terminal"
 	"time"
 )
 
@@ -11,37 +12,30 @@ type Manager struct {
 	App     *config.Alias
 }
 
-func (a *Manager) Deploy(ui terminal.UI) error {
-	sg := ui.StepGroup()
-	defer sg.Wait()
-
-	s := sg.Add("%s: deployment completed!", a.App.Name)
-	defer func() { s.Abort(); time.Sleep(time.Millisecond * 200) }()
-	s.Done()
-
-	time.Sleep(time.Millisecond * 200)
+func (a *Manager) Deploy(ui *echelon.Logger) error {
+	s := ui.Scoped(fmt.Sprintf("%s: deployment completed!", a.App.Name))
+	s.Finish(true)
+	time.Sleep(time.Millisecond * 50)
 
 	return nil
 }
 
-func (a *Manager) Destroy(ui terminal.UI) error {
-	sg := ui.StepGroup()
-	defer sg.Wait()
-
-	s := sg.Add("%s: destroy completed!", a.App.Name)
-	s.Done()
+func (a *Manager) Destroy(ui *echelon.Logger) error {
+	s := ui.Scoped(fmt.Sprintf("%s: destroy completed!", a.App.Name))
+	s.Finish(true)
+	time.Sleep(time.Millisecond * 50)
 
 	return nil
 }
 
-func (a *Manager) Push(ui terminal.UI) error {
+func (a *Manager) Push(ui *echelon.Logger) error {
 	return nil
 }
 
-func (a *Manager) Build(ui terminal.UI) error {
+func (a *Manager) Build(ui *echelon.Logger) error {
 	return nil
 }
 
-func (a *Manager) Redeploy(ui terminal.UI) error {
+func (a *Manager) Redeploy(ui *echelon.Logger) error {
 	return nil
 }

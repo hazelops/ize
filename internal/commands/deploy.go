@@ -2,16 +2,17 @@ package commands
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager"
 	"github.com/hazelops/ize/internal/manager/alias"
 	"github.com/hazelops/ize/internal/manager/ecs"
 	"github.com/hazelops/ize/internal/manager/serverless"
 	"github.com/hazelops/ize/internal/requirements"
+	"github.com/hazelops/ize/pkg/logs"
 	"github.com/hazelops/ize/pkg/templates"
-	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
+	"os"
+	"time"
 )
 
 type DeployOptions struct {
@@ -122,11 +123,11 @@ func (o *DeployOptions) Validate() error {
 }
 
 func (o *DeployOptions) Run() error {
-	ui := terminal.ConsoleUI(aws.BackgroundContext(), o.Config.PlainText)
+	ui, cancel := logs.GetLogger(false, o.Config.PlainText, os.Stdout)
+	defer cancel()
 
-	ui.Output("Deploying %s app...\n", o.AppName, terminal.WithHeaderStyle())
-	sg := ui.StepGroup()
-	defer sg.Wait()
+	s := ui.Scoped(fmt.Sprintf("Deploy %s app", o.AppName))
+	defer s.Finish(false)
 
 	var m manager.Manager
 
@@ -164,22 +165,21 @@ func (o *DeployOptions) Run() error {
 	}
 
 	if len(o.TaskDefinitionRevision) != 0 {
-		err := m.Redeploy(ui)
+		err := m.Redeploy(s)
 		if err != nil {
 			return err
 		}
 
-		ui.Output("Redeploy app %s completed\n", o.AppName, terminal.WithSuccessStyle())
-
+		s.Scoped(fmt.Sprintf("Redeploy app %s completed", o.AppName))
+		s.Finish(true)
 		return nil
 	}
 
-	err := m.Deploy(ui)
+	err := m.Deploy(s)
 	if err != nil {
 		return err
 	}
-
-	ui.Output("Deploy app %s completed\n", o.AppName, terminal.WithSuccessStyle())
-
+	s.Finish(true)
+	time.Sleep(time.Millisecond * 50)
 	return nil
 }

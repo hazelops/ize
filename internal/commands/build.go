@@ -1,15 +1,14 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager"
 	"github.com/hazelops/ize/internal/manager/alias"
 	"github.com/hazelops/ize/internal/manager/ecs"
 	"github.com/hazelops/ize/internal/manager/serverless"
+	"github.com/hazelops/ize/pkg/logs"
 	"github.com/hazelops/ize/pkg/templates"
-	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/spf13/cobra"
 	"os"
 )
@@ -91,7 +90,8 @@ func (o *BuildOptions) Validate() error {
 }
 
 func (o *BuildOptions) Run() error {
-	ui := terminal.ConsoleUI(context.Background(), o.Config.PlainText)
+	ui, cancel := logs.GetLogger(false, o.Config.PlainText, os.Stdout)
+	defer cancel()
 
 	var m manager.Manager
 

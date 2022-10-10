@@ -215,6 +215,8 @@ func (o *TunnelUpOptions) upTunnel() (string, error) {
 func (o *TunnelUpOptions) runSSH(args []string) error {
 	c := exec.Command("ssh", args...)
 
+	fmt.Println(args)
+
 	c.Dir = o.Config.EnvDir
 
 	runner := term.New(term.WithStdin(os.Stdin))
