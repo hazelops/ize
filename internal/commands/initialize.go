@@ -5,7 +5,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/hazelops/ize/internal/schema"
 	"github.com/hazelops/ize/internal/version"
-	"golang.org/x/sys/unix"
+	"golang.org/x/term"
 	"os"
 	"path/filepath"
 	"sort"
@@ -103,11 +103,7 @@ func (o *InitOptions) Validate() error {
 }
 
 func (o *InitOptions) Run() error {
-	isTTY := true
-	_, err := unix.IoctlGetWinsize(int(os.Stdout.Fd()), unix.TIOCGWINSZ)
-	if err != nil {
-		isTTY = false
-	}
+	isTTY := term.IsTerminal(int(os.Stdout.Fd()))
 	if len(o.Template) != 0 {
 		dest, err := generate.GenerateFiles(o.Template, o.Output)
 		if err != nil {
@@ -135,7 +131,7 @@ func (o *InitOptions) Run() error {
 		}
 	}
 
-	dir, err = filepath.Abs(o.Output)
+	dir, err := filepath.Abs(o.Output)
 	if err != nil {
 		return fmt.Errorf("can't init: %w", err)
 	}
