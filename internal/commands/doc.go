@@ -95,6 +95,6 @@ type Section struct {
 var sectionTmpl = `# {{.Name}} Section
 | Parameter | Required | Description |
 | --- | --- | --- |
-{{range $k, $v := .Items}}| {{$k}} | {{if $v.Required}}yes{{else}}no {{end}}| {{$v.Description}} |
+{{range $k, $v := .Items}}| {{$k}} | {{if $v.Required}}yes{{else}}no{{end}}| {{$v.Description}} |
 {{end}}
 `
