@@ -53,26 +53,26 @@ jobs:
         output_dir: docs
         # Default is true, can set to false to only get PDF files
         build_html: true
-# Disabled due to lack of access to ize.sh
-#     - name: remove pdfs and rename links #This needs because action creates PDF by default
-#       run: |
-#         cd docs
-#         sudo rm *.pdf
-#         sudo mv ize.html index.html
-#         sudo sed -i 's/.md/.html/g' *
-#         sudo sed -i 's/ize.html/index.html/g' *
 
-#     - name: Pushes ize commands to ize.sh
-#       uses: dmnemec/copy_file_to_another_repo_action@main
-#       env:
-#         API_TOKEN_GITHUB: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
-#       with:
-#         source_file: 'docs'
-#         destination_repo: 'hazelops/ize.sh'
-#         destination_folder: 'public'
-#         user_email: 'ize@hazelops.com'
-#         user_name: 'ize'
-#         commit_message: 'Add commands from Ize'
+    - name: remove pdfs and rename links #This needs because action creates PDF by default
+      run: |
+        cd docs
+        sudo rm *.pdf
+        sudo mv ize.html index.html
+        sudo sed -i 's/.md/.html/g' *
+        sudo sed -i 's/ize.html/index.html/g' *
+
+    - name: Pushes ize commands to ize.sh
+      uses: dmnemec/copy_file_to_another_repo_action@main
+      env:
+        API_TOKEN_GITHUB: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+      with:
+        source_file: 'docs'
+        destination_repo: 'hazelops/ize.sh'
+        destination_folder: 'public'
+        user_email: 'ize@hazelops.com'
+        user_name: 'ize'
+        commit_message: 'Add commands from Ize'
 
   create_jira_release:
     needs: build
