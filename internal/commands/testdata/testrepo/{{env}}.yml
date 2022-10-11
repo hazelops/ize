@@ -1,0 +1,4 @@
+{{.Env}}
+{{.Namespace}}
+{{.AwsRegion}}
+{{.AwsProfile}}
