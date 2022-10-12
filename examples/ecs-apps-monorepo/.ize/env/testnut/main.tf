@@ -10,7 +10,7 @@ resource "aws_key_pair" "root" {
 }
 
 module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
+  source  = "registry.terraform.io/terraform-aws-modules/vpc/aws"
   version = "~> 3.0"
 
   name = "${var.env}-vpc"
@@ -31,13 +31,8 @@ module "vpc" {
     "10.0.4.0/24"
   ]
 
-  enable_nat_gateway = true
+  enable_nat_gateway                  = true
   single_nat_gateway                  = true
-  enable_s3_endpoint                  = true
-  enable_ecr_api_endpoint             = true
-  ecr_api_endpoint_security_group_ids = [aws_security_group.default_permissive.id]
-  enable_ecr_dkr_endpoint             = true
-  ecr_dkr_endpoint_security_group_ids = [aws_security_group.default_permissive.id]
   enable_dns_hostnames                = true
   manage_default_network_acl          = true
   default_network_acl_name            = "${var.env}-${var.namespace}"
@@ -92,14 +87,14 @@ resource "aws_security_group" "default_permissive" {
 }
 
 module "ecs" {
-  source  = "terraform-aws-modules/ecs/aws"
+  source  = "registry.terraform.io/terraform-aws-modules/ecs/aws"
   version = "~> 3.0"
   name    = "${var.env}-${var.namespace}"
 
 }
 
 module "ec2_profile" {
-  source      = "terraform-aws-modules/ecs/aws//modules/ecs-instance-profile"
+  source      = "registry.terraform.io/terraform-aws-modules/ecs/aws//modules/ecs-instance-profile"
   version     = "~> 3.0"
   name        = "${var.env}-${var.namespace}"
   include_ssm = true
