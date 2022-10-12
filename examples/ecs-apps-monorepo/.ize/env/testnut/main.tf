@@ -11,7 +11,7 @@ resource "aws_key_pair" "root" {
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 2.0"
+  version = "~> 3.0"
 
   name = "${var.env}-vpc"
   cidr = "10.0.0.0/16"
@@ -93,14 +93,14 @@ resource "aws_security_group" "default_permissive" {
 
 module "ecs" {
   source  = "terraform-aws-modules/ecs/aws"
-  version = "~> 2.0"
+  version = "~> 3.0"
   name    = "${var.env}-${var.namespace}"
 
 }
 
 module "ec2_profile" {
   source      = "terraform-aws-modules/ecs/aws//modules/ecs-instance-profile"
-  version     = "~> 2.0"
+  version     = "~> 3.0"
   name        = "${var.env}-${var.namespace}"
   include_ssm = true
 }
