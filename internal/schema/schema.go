@@ -33,7 +33,18 @@ func Validate(config map[string]interface{}) error {
 		} else {
 			i = strings.ReplaceAll(i[2:], "/", ".")
 		}
-		return fmt.Errorf("%s in %s of config file (or environment variables)", m, i)
+		errMsg := fmt.Sprintf("%s in %s of config file (or environment variables)", m, i)
+		if strings.Contains(errMsg, "additionalProperties") {
+			errMsg += ". The following options are available:\n"
+			properties := GetSchema()
+			if i != "root" {
+				properties = properties[strings.Split(i, ".")[0]].Items
+			}
+			for k := range properties {
+				errMsg += fmt.Sprintf("- %s\n", k)
+			}
+		}
+		return fmt.Errorf(errMsg)
 	}
 
 	return nil
