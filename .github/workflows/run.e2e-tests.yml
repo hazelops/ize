@@ -98,6 +98,7 @@ jobs:
       - name: Run Tests
         run: |
           go test -v --timeout 0 --tags="e2e ecs_apps" ./test-e2e
+        continue-on-error: true
 
       - name: Cleanup Infra
         run: |
@@ -161,6 +162,7 @@ jobs:
       - name: Run Tests
         run: |
           go test -v --timeout 0 --tags="e2e bastion_tunnel" ./test-e2e
+        continue-on-error: true
 
       - name: Cleanup Infra
         run: |
