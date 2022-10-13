@@ -219,7 +219,14 @@ func TestManager_Deploy(t *testing.T) {
 				}, nil).Times(1)
 				m.EXPECT().DeregisterTaskDefinition(gomock.Any()).Return(&ecs.DeregisterTaskDefinitionOutput{
 					TaskDefinition: &ecs.TaskDefinition{},
-				}, nil).Times(2)
+				}, nil).Times(1)
+				m.EXPECT().RegisterTaskDefinition(gomock.Any()).Return(&ecs.RegisterTaskDefinitionOutput{
+					TaskDefinition: &ecs.TaskDefinition{
+						Family:            aws.String("test"),
+						Revision:          aws.Int64(1),
+						TaskDefinitionArn: aws.String("test"),
+					},
+				}, nil).Times(1)
 			},
 			mockELB: func(m *mocks.MockELBV2API) {},
 			wantErr: false,
@@ -293,7 +300,7 @@ func TestManager_Deploy(t *testing.T) {
 				}, nil).Times(1)
 				m.EXPECT().DeregisterTaskDefinition(gomock.Any()).Return(&ecs.DeregisterTaskDefinitionOutput{
 					TaskDefinition: &ecs.TaskDefinition{},
-				}, nil).Times(2)
+				}, nil).Times(1)
 				m.EXPECT().RegisterTaskDefinition(gomock.Any()).Return(&ecs.RegisterTaskDefinitionOutput{
 					TaskDefinition: &ecs.TaskDefinition{
 						Family:            aws.String("test"),
@@ -334,6 +341,13 @@ func TestManager_Deploy(t *testing.T) {
 						},
 					},
 				}, nil).Times(2)
+				m.EXPECT().RegisterTaskDefinition(gomock.Any()).Return(&ecs.RegisterTaskDefinitionOutput{
+					TaskDefinition: &ecs.TaskDefinition{
+						Family:            aws.String("test"),
+						Revision:          aws.Int64(1),
+						TaskDefinitionArn: aws.String("test"),
+					},
+				}, nil).Times(1)
 				m.EXPECT().ListTaskDefinitions(gomock.Any()).Return(&ecs.ListTaskDefinitionsOutput{
 					TaskDefinitionArns: []*string{aws.String("test")},
 				}, nil).Times(1)
@@ -374,7 +388,7 @@ func TestManager_Deploy(t *testing.T) {
 				}, nil).Times(1)
 				m.EXPECT().DeregisterTaskDefinition(gomock.Any()).Return(&ecs.DeregisterTaskDefinitionOutput{
 					TaskDefinition: &ecs.TaskDefinition{},
-				}, nil).Times(2)
+				}, nil).Times(1)
 			},
 			mockELB: func(m *mocks.MockELBV2API) {
 				m.EXPECT().DescribeTargetGroups(gomock.Any()).Return(&elbv2.DescribeTargetGroupsOutput{
@@ -428,6 +442,13 @@ func TestManager_Deploy(t *testing.T) {
 				}, nil).Times(1)
 			},
 			mockECS: func(m *mocks.MockECSAPI) {
+				m.EXPECT().RegisterTaskDefinition(gomock.Any()).Return(&ecs.RegisterTaskDefinitionOutput{
+					TaskDefinition: &ecs.TaskDefinition{
+						Family:            aws.String("test"),
+						Revision:          aws.Int64(1),
+						TaskDefinitionArn: aws.String("test"),
+					},
+				}, nil).Times(1)
 				m.EXPECT().DescribeServices(gomock.Any()).Return(&ecs.DescribeServicesOutput{
 					Services: []*ecs.Service{
 						{

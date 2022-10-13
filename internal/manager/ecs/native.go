@@ -52,51 +52,8 @@ func (e *Manager) deployLocal(w io.Writer) error {
 	var oldTaskDef ecs.TaskDefinition
 	var newTaskDef ecs.TaskDefinition
 
-	oldTaskDef = *dtdo.TaskDefinition
-
 	if *dtdo.TaskDefinition.TaskDefinitionArn == *definitions.TaskDefinitionArns[0] {
-		pterm.Printfln("Deploying based on task definition: %s:%d", *dtdo.TaskDefinition.Family, *dtdo.TaskDefinition.Revision)
-
-		var image string
-
-		for i := 0; i < len(dtdo.TaskDefinition.ContainerDefinitions); i++ {
-			container := dtdo.TaskDefinition.ContainerDefinitions[i]
-
-			// We are changing the image/tag only for the app-specific container (not sidecars)
-			if *container.Name == e.App.Name {
-				if len(e.Project.Tag) != 0 && len(e.App.Image) == 0 {
-					name := strings.Split(*container.Image, ":")[0]
-					image = fmt.Sprintf("%s:%s", name, e.Project.Tag)
-				} else {
-					image = e.App.Image
-				}
-
-				pterm.Printfln(`Changed image of container "%s" to : "%s" (was: "%s")`, *container.Name, image, *container.Image)
-				container.Image = &image
-			}
-		}
-
-		pterm.Println("Creating new task definition revision")
-
-		rtdo, err := svc.RegisterTaskDefinition(&ecs.RegisterTaskDefinitionInput{
-			ContainerDefinitions:    dtdo.TaskDefinition.ContainerDefinitions,
-			Family:                  dtdo.TaskDefinition.Family,
-			Volumes:                 dtdo.TaskDefinition.Volumes,
-			TaskRoleArn:             dtdo.TaskDefinition.TaskRoleArn,
-			ExecutionRoleArn:        dtdo.TaskDefinition.ExecutionRoleArn,
-			RuntimePlatform:         dtdo.TaskDefinition.RuntimePlatform,
-			RequiresCompatibilities: dtdo.TaskDefinition.RequiresCompatibilities,
-			NetworkMode:             dtdo.TaskDefinition.NetworkMode,
-			Cpu:                     dtdo.TaskDefinition.Cpu,
-			Memory:                  dtdo.TaskDefinition.Memory,
-		})
-		if err != nil {
-			return err
-		}
-
-		newTaskDef = *rtdo.TaskDefinition
-
-		pterm.Printfln("Successfully created revision: %s:%d", *rtdo.TaskDefinition.Family, *rtdo.TaskDefinition.Revision)
+		oldTaskDef = *dtdo.TaskDefinition
 	} else {
 		definition, err := svc.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
 			TaskDefinition: definitions.TaskDefinitionArns[0],
@@ -105,8 +62,51 @@ func (e *Manager) deployLocal(w io.Writer) error {
 			return err
 		}
 
-		newTaskDef = *definition.TaskDefinition
+		oldTaskDef = *definition.TaskDefinition
 	}
+
+	pterm.Printfln("Deploying based on task definition: %s:%d", *oldTaskDef.Family, *oldTaskDef.Revision)
+
+	var image string
+
+	for i := 0; i < len(oldTaskDef.ContainerDefinitions); i++ {
+		container := oldTaskDef.ContainerDefinitions[i]
+
+		// We are changing the image/tag only for the app-specific container (not sidecars)
+		if *container.Name == e.App.Name {
+			if len(e.Project.Tag) != 0 && len(e.App.Image) == 0 {
+				name := strings.Split(*container.Image, ":")[0]
+				image = fmt.Sprintf("%s:%s", name, e.Project.Tag)
+			} else {
+				image = e.App.Image
+			}
+
+			pterm.Printfln(`Changed image of container "%s" to : "%s" (was: "%s")`, *container.Name, image, *container.Image)
+			container.Image = &image
+		}
+	}
+
+	pterm.Println("Creating new task definition revision")
+
+	rtdo, err := svc.RegisterTaskDefinition(&ecs.RegisterTaskDefinitionInput{
+		ContainerDefinitions:    oldTaskDef.ContainerDefinitions,
+		Family:                  oldTaskDef.Family,
+		Volumes:                 oldTaskDef.Volumes,
+		TaskRoleArn:             oldTaskDef.TaskRoleArn,
+		ExecutionRoleArn:        oldTaskDef.ExecutionRoleArn,
+		RuntimePlatform:         oldTaskDef.RuntimePlatform,
+		RequiresCompatibilities: oldTaskDef.RequiresCompatibilities,
+		NetworkMode:             oldTaskDef.NetworkMode,
+		Cpu:                     oldTaskDef.Cpu,
+		Memory:                  oldTaskDef.Memory,
+	})
+	if err != nil {
+		return err
+	}
+
+	newTaskDef = *rtdo.TaskDefinition
+
+	pterm.Printfln("Successfully created revision: %s:%d", *rtdo.TaskDefinition.Family, *rtdo.TaskDefinition.Revision)
 
 	if err = e.updateTaskDefinition(&newTaskDef, &oldTaskDef, name, "Deploying new task definition"); err != nil {
 		err := e.getLastContainerLogs(fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name))
@@ -130,10 +130,6 @@ func (e *Manager) deployLocal(w io.Writer) error {
 		pterm.Println("Rollback successful")
 
 		return fmt.Errorf("deployment failed, but service has been rolled back to previous task definition: %s", *oldTaskDef.Family)
-	}
-
-	if err = deregisterTaskDefinition(svc, &oldTaskDef); err != nil {
-		return err
 	}
 
 	return nil
