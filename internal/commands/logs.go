@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
 	"os"
 	"strings"
 	"time"
@@ -107,8 +108,14 @@ func (o *LogsOptions) Run() error {
 	var token *string
 	logStreamName := fmt.Sprintf("main/%s/%s", o.AppName, taskID)
 
+	GetLogs(o.Config.AWSClient.CloudWatchLogsClient, logGroup, logStreamName, token)
+
+	return nil
+}
+
+func GetLogs(clw cloudwatchlogsiface.CloudWatchLogsAPI, logGroup string, logStreamName string, token *string) {
 	for {
-		logEvents, err := o.Config.AWSClient.CloudWatchLogsClient.GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
+		logEvents, err := clw.GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
 			LogGroupName:  &logGroup,
 			LogStreamName: &logStreamName,
 			NextToken:     token,
