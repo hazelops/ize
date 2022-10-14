@@ -80,6 +80,7 @@ func newRootCmd(project *config.Project) *cobra.Command {
 		NewCmdInit(),
 		NewCmdTunnel(project),
 		NewCmdExec(project),
+		NewCmdStart(project),
 		NewCmdConfig(),
 		NewCmdLogs(project),
 		NewDebugCmd(project),
