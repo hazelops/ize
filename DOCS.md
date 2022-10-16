@@ -92,6 +92,15 @@ go mod download
 make install
 ```
 
+### Installation using Go-Install:
+#### Prerequisites:
+- GO version should be 1.16+
+- `GOPATH` environment variable is set to `~/go`
+To install Ize using Go-Install you should run:
+- 
+```shell
+go install github.com/hazelops/ize
+```
 
 ### Autocomplete:
 You could use integrated option to add autocompletion to Ize commands (bash, fish, zsh, powershell). In this manual we will describe it only for zsh and bash.
