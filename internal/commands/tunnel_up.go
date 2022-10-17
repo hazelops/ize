@@ -46,6 +46,7 @@ type TunnelUpOptions struct {
 	BastionHostID         string
 	ForwardHost           []string
 	StrictHostKeyChecking bool
+	Metadata              bool
 }
 
 func NewTunnelUpFlags(project *config.Project) *TunnelUpOptions {
@@ -87,6 +88,7 @@ func NewCmdTunnelUp(project *config.Project) *cobra.Command {
 	cmd.Flags().StringVar(&o.PublicKeyFile, "ssh-public-key", "", "set ssh key public path")
 	cmd.Flags().StringVar(&o.PrivateKeyFile, "ssh-private-key", "", "set ssh key private path")
 	cmd.PersistentFlags().BoolVar(&o.StrictHostKeyChecking, "strict-host-key-checking", true, "set strict host key checking")
+	cmd.PersistentFlags().BoolVar(&o.Metadata, "use-ec2-metadata", false, "send ssh key to EC2 metadata (work only for Ubuntu versions > 20.0)")
 
 	return cmd
 }
@@ -174,9 +176,16 @@ func (o *TunnelUpOptions) Run() error {
 		return fmt.Errorf("can't get public key: %s", err)
 	}
 
-	err = sendSSHPublicKey(o.BastionHostID, pk, o.Config.Session)
-	if err != nil {
-		return fmt.Errorf("can't run tunnel: %s", err)
+	if o.Metadata {
+		err = sendSSHPublicKey(o.BastionHostID, pk, o.Config.Session)
+		if err != nil {
+			return fmt.Errorf("can't run tunnel: %s", err)
+		}
+	} else {
+		err = sendSSHPublicKeyLegacy(o.BastionHostID, pk, o.Config.Session)
+		if err != nil {
+			return fmt.Errorf("can't run tunnel: %s", err)
+		}
 	}
 
 	forwardConfig, err := o.upTunnel()
@@ -292,6 +301,28 @@ func sendSSHPublicKey(bastionID string, key string, sess *session.Session) error
 	})
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func sendSSHPublicKeyLegacy(bastionID string, key string, sess *session.Session) error {
+	// This command is executed in the bastion host and it checks if our public key is present. If it's not it uploads it to _authorized_keys file.
+	command := fmt.Sprintf(
+		`grep -qR "%s" /home/ubuntu/.ssh/authorized_keys || echo "%s" >> /home/ubuntu/.ssh/authorized_keys`,
+		key, key,
+	)
+
+	_, err := ssm.New(sess).SendCommand(&ssm.SendCommandInput{
+		InstanceIds:  []*string{&bastionID},
+		DocumentName: aws.String("AWS-RunShellScript"),
+		Comment:      aws.String("Add an SSH public key to authorized_keys"),
+		Parameters: map[string][]*string{
+			"commands": {&command},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("can't send SSH public key: %w", err)
 	}
 
 	return nil
