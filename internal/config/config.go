@@ -36,7 +36,7 @@ type Config struct {
 }
 
 func (p *Project) GetConfig() error {
-	switch viper.GetString("log-level") {
+	switch viper.GetString("log_level") {
 	case "info":
 		logrus.SetLevel(logrus.InfoLevel)
 	case "debug":
@@ -129,7 +129,7 @@ func (p *Project) GetConfig() error {
 }
 
 func (p *Project) GetTestConfig() error {
-	switch viper.GetString("log-level") {
+	switch viper.GetString("log_level") {
 	case "info":
 		logrus.SetLevel(logrus.InfoLevel)
 	case "debug":
