@@ -51,7 +51,7 @@ jobs:
       env:
         API_TOKEN_GITHUB: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
       with:
-        source_file: 'commands'
+        source_file: 'website/commands'
         destination_repo: 'hazelops/ize.sh'
         destination_folder: 'public'
         user_email: 'ize@hazelops.com'
