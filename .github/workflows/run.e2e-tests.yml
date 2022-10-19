@@ -157,7 +157,9 @@ jobs:
         run: ize gen aws-profile
 
       - name: Generate Test SSH Key
-        run: ssh-keygen -q -f ~/.ssh/id_rsa
+        run: |
+          ssh-keygen -q -f ~/.ssh/id_rsa
+          ssh-keygen -q -f ~/.ssh/id_rsa_tunnel_test
 
       - name: Run Tests
         run: |
