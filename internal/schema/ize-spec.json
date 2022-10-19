@@ -463,6 +463,11 @@
                     "type": "string",
                     "description": "(optional) Root domain name can be set here. This is the main domain that will be passed to the terraform. Generally if your app lives at 'api.dev.nutcorp.net' the root domain is `nutcorp.net`"
                 },
+                "terraform_config_file"   : {
+                    "type": "string",
+                    "description": "(optional) Terraform config file name.",
+                    "default": "backend.tf"
+                },
                 "aws_region"   : {
                     "type": "string",
                     "description": "(optional) Terraform-specific AWS Region of this environment should be specified here. Normally global AWS_REGION is used."

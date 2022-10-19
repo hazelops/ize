@@ -2,6 +2,10 @@ package commands
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -12,9 +16,6 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 )
 
 type TfenvOptions struct {
@@ -139,12 +140,17 @@ func GenerateTerraformFiles(name string, terraformStateBucketName string, projec
 		stackPath = project.EnvDir
 	}
 
+	if len(tf.TerraformConfigFile) == 0 {
+		tf.TerraformConfigFile = "backend.tf"
+	}
+
 	logrus.Debugf("backend opts: %s", backendOpts)
 	logrus.Debugf("state dir path: %s", stackPath)
+	logrus.Debugf("config file name: %s", tf.TerraformConfigFile)
 
 	err := template.GenerateBackendTf(
 		backendOpts,
-		stackPath,
+		filepath.Join(stackPath, tf.TerraformConfigFile),
 	)
 	if err != nil {
 		pterm.Error.Printfln("Generate terraform file for \"%s\" not completed", name)
