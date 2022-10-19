@@ -125,4 +125,7 @@ require (
 
 replace github.com/spf13/pflag => github.com/cornfeedhobo/pflag v1.1.0
 
-replace github.com/spf13/viper => github.com/hazelops/viper v1.13.1
+// spf13/viper ignores an empty map
+// https://github.com/spf13/viper/issues/1131
+// https://github.com/spf13/viper/issues/819
+replace github.com/spf13/viper => github.com/hazelops/viper v1.13.1 
