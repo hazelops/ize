@@ -226,6 +226,7 @@ func SetTag() {
 
 func InitConfig() {
 	viper.SetEnvPrefix("IZE")
+	viper.AllowEmptyMap(true)
 
 	replacer := strings.NewReplacer(".", "__")
 	viper.SetEnvKeyReplacer(replacer)
