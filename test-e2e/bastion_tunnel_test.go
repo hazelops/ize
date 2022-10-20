@@ -68,7 +68,7 @@ func TestIzeTunnelUp(t *testing.T) {
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
-	stdout, stderr, err := ize.RunRaw("tunnel", "up", "--ssh-public-key", "~/.ssh/id_rsa_tunnel_test.pub")
+	stdout, stderr, err := ize.RunRaw("tunnel", "up", "--ssh-public-key", "~/.ssh/id_rsa_tunnel_test.pub", "--ssh-private-key", "~/.ssh/id_rsa_tunnel_test")
 
 	if err != nil {
 		t.Errorf("error: %s", err)
