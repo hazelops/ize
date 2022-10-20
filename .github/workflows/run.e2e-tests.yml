@@ -158,8 +158,12 @@ jobs:
 
       - name: Generate Test SSH Key
         run: |
-          ssh-keygen -q -f ~/.ssh/id_rsa
-          ssh-keygen -q -f ~/.ssh/id_rsa_tunnel_test
+          ssh-keygen -q -f ~/.ssh/id_rsa -t rsa -N ''
+          ssh-keygen -q -f ~/.ssh/id_rsa_tunnel_test -t rsa -N ''
+          chmod 600 /home/runner/.ssh/id_rsa_tunnel_test
+          chmod 600 /home/runner/.ssh/id_rsa_tunnel_test.pub
+          cat /home/runner/.ssh/id_rsa_tunnel_test.pub
+          ls -ld /home/runner/.ssh/*
 
       - name: Run Tests
         run: |
