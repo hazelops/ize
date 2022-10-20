@@ -1,16 +1,18 @@
 package commands
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+	"text/template"
+
+	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/schema"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-	"os"
-	"path/filepath"
-	"strings"
-	"text/template"
 )
 
 func NewCmdDoc() *cobra.Command {
@@ -26,7 +28,10 @@ func NewCmdDoc() *cobra.Command {
 				return err
 			}
 
-			err = doc.GenMarkdownTree(cmd.Root(), "./website/commands")
+			pterm.DisableStyling()
+			pterm.DisableColor()
+
+			err = doc.GenMarkdownTree(newRootCmd(new(config.Project)), "./website/commands")
 			if err != nil {
 				return err
 			}
@@ -50,6 +55,9 @@ func NewCmdDoc() *cobra.Command {
 					return err
 				}
 			}
+
+			pterm.EnableColor()
+			pterm.EnableStyling()
 
 			pterm.Success.Printfln("Docs generated")
 
