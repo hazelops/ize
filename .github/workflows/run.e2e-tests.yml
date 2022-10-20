@@ -46,6 +46,7 @@ jobs:
     name: ECS Apps Monorepo
     needs: build
     strategy:
+      fail-fast: false
       max-parallel: 1
       matrix:
         os:
@@ -98,7 +99,6 @@ jobs:
       - name: Run Tests
         run: |
           go test -v --timeout 0 --tags="e2e ecs_apps" ./test-e2e
-        continue-on-error: true
 
       - name: Cleanup Infra
         run: |
@@ -109,6 +109,7 @@ jobs:
     name: Bastion Tunnel Monorepo
     needs: build
     strategy:
+      fail-fast: false
       max-parallel: 1
       matrix:
         os:
@@ -162,7 +163,6 @@ jobs:
       - name: Run Tests
         run: |
           go test -v --timeout 0 --tags="e2e bastion_tunnel" ./test-e2e
-        continue-on-error: true
 
       - name: Cleanup Infra
         run: |
