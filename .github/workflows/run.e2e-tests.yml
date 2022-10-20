@@ -46,7 +46,6 @@ jobs:
     name: ECS Apps Monorepo
     needs: build
     strategy:
-      fail-fast: false
       max-parallel: 1
       matrix:
         os:
@@ -101,6 +100,7 @@ jobs:
           go test -v --timeout 0 --tags="e2e ecs_apps" ./test-e2e
 
       - name: Cleanup Infra
+        if: ${{ always() }}
         run: |
           cd "${{ env.IZE_EXAMPLES_PATH }}"
           ize down --auto-approve
@@ -109,7 +109,6 @@ jobs:
     name: Bastion Tunnel Monorepo
     needs: build
     strategy:
-      fail-fast: false
       max-parallel: 1
       matrix:
         os:
@@ -165,6 +164,7 @@ jobs:
           go test -v --timeout 0 --tags="e2e bastion_tunnel" ./test-e2e
 
       - name: Cleanup Infra
+        if: ${{ always() }}
         run: |
           cd "${{ env.IZE_EXAMPLES_PATH }}"
           ize down --auto-approve
