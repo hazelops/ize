@@ -27,7 +27,7 @@ type Project struct {
 	Namespace        string `mapstructure:",omitempty"`
 	Env              string `mapstructure:",omitempty"`
 	LogLevel         string `mapstructure:"log_level,omitempty"`
-	PlainText        bool   `mapstructure:"plain_text,omitempty"`
+	PlainText        bool   `mapstructure:"plain_text_output,omitempty"`
 	CustomPrompt     bool   `mapstructure:"custom_prompt,omitempty"`
 	PreferRuntime    string `mapstructure:"prefer_runtime,omitempty"`
 	Tag              string `mapstructure:",omitempty"`

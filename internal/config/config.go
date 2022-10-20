@@ -2,15 +2,16 @@ package config
 
 import (
 	"fmt"
-	"github.com/hazelops/ize/internal/schema"
-	"github.com/mitchellh/mapstructure"
-	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"text/template"
+
+	"github.com/hazelops/ize/internal/schema"
+	"github.com/mitchellh/mapstructure"
+	"github.com/spf13/cobra"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -240,7 +241,7 @@ func InitConfig() {
 	viper.SetDefault("TERRAFORM_VERSION", "1.1.3")
 	viper.SetDefault("PREFER_RUNTIME", "native")
 	viper.SetDefault("CUSTOM_PROMPT", false)
-	viper.SetDefault("PLAIN_TEXT", false)
+	viper.SetDefault("PLAIN_TEXT_OUTPUT", false)
 
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -541,7 +542,7 @@ func structToMap(item interface{}) map[string]interface{} {
 	return res
 }
 
-//GetApps returns a list of application names in the directory for shell completions
+// GetApps returns a list of application names in the directory for shell completions
 func GetApps(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 	var apps []string
 
