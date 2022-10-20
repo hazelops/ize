@@ -77,10 +77,12 @@ func (o *TfenvOptions) Run() error {
 }
 
 func GenerateTerraformFiles(name string, terraformStateBucketName string, project *config.Project) error {
-	var tf config.Terraform
+	var tf *config.Terraform
 
-	if project.Terraform != nil {
-		tf = *project.Terraform[name]
+	if b, ok := project.Terraform[name]; ok {
+		tf = b
+	} else {
+		return fmt.Errorf("stack '%s' not found in config", name)
 	}
 
 	if len(terraformStateBucketName) != 0 {
@@ -124,15 +126,15 @@ func GenerateTerraformFiles(name string, terraformStateBucketName string, projec
 	}
 
 	backendOpts := template.BackendOpts{
-		ENV:                            project.Env,
-		LOCALSTACK_ENDPOINT:            "",
-		TERRAFORM_STATE_BUCKET_NAME:    tf.StateBucketName,
-		TERRAFORM_STATE_KEY:            stateKey,
-		TERRAFORM_STATE_REGION:         tf.StateBucketRegion,
-		TERRAFORM_STATE_PROFILE:        project.AwsProfile,
-		TERRAFORM_STATE_DYNAMODB_TABLE: "tf-state-lock",
-		TERRAFORM_AWS_PROVIDER_VERSION: "",
-		NAMESPACE:                      project.Namespace,
+		Env:                         project.Env,
+		LocalstackEndpoint:          "",
+		TerraformStateBucketName:    tf.StateBucketName,
+		TerraformStateKey:           stateKey,
+		TerraformStateRegion:        tf.StateBucketRegion,
+		TerraformStateProfile:       project.AwsProfile,
+		TerraformStateDynamodbTable: "tf-state-lock",
+		TerraformAwsProviderVersion: "",
+		Namespace:                   project.Namespace,
 	}
 
 	stackPath := filepath.Join(project.EnvDir, name)
@@ -165,22 +167,24 @@ func GenerateTerraformFiles(name string, terraformStateBucketName string, projec
 
 	}
 
+	// rootDomain := tf.RootDomainName
+
 	varsOpts := template.VarsOpts{
-		ENV:               project.Env,
-		AWS_PROFILE:       project.AwsProfile,
-		AWS_REGION:        project.AwsRegion,
-		EC2_KEY_PAIR_NAME: fmt.Sprintf("%v-%v", project.Env, project.Namespace),
-		ROOT_DOMAIN_NAME:  tf.RootDomainName,
-		SSH_PUBLIC_KEY:    string(key)[:len(string(key))-1],
-		NAMESPACE:         project.Namespace,
+		Env:            project.Env,
+		AwsProfile:     project.AwsProfile,
+		AwsRegion:      project.AwsRegion,
+		EC2KeyPairName: fmt.Sprintf("%v-%v", project.Env, project.Namespace),
+		RootDomainName: tf.RootDomainName,
+		SSHPublicKey:   string(key)[:len(string(key))-1],
+		Namespace:      project.Namespace,
 	}
 
 	if len(project.Ecs) != 0 {
-		varsOpts.TAG = project.Tag
-		varsOpts.DOCKER_REGISTRY = project.DockerRegistry
+		varsOpts.Tag = project.Tag
+		varsOpts.DockerRegistry = project.DockerRegistry
 	}
 
-	logrus.Debugf("backend opts: %s", varsOpts)
+	logrus.Debugf("vars opts: %s", varsOpts)
 	logrus.Debugf("state dir path: %s", stackPath)
 
 	err = template.GenerateVarsTf(

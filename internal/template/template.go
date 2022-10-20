@@ -9,10 +9,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
-	"github.com/pterm/pterm"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -26,20 +24,20 @@ func GenerateVarsTf(opts VarsOpts, path string) error {
 
 	rootBody := f.Body()
 
-	rootBody.SetAttributeValue("env", cty.StringVal(opts.ENV))
-	rootBody.SetAttributeValue("aws_profile", cty.StringVal(opts.AWS_PROFILE))
-	rootBody.SetAttributeValue("aws_region", cty.StringVal(opts.AWS_REGION))
-	rootBody.SetAttributeValue("ec2_key_pair_name", cty.StringVal(opts.EC2_KEY_PAIR_NAME))
-	if len(opts.TAG) != 0 {
-		rootBody.SetAttributeValue("docker_image_tag", cty.StringVal(opts.TAG))
+	rootBody.SetAttributeValue("env", cty.StringVal(opts.Env))
+	rootBody.SetAttributeValue("aws_profile", cty.StringVal(opts.AwsProfile))
+	rootBody.SetAttributeValue("aws_region", cty.StringVal(opts.AwsRegion))
+	rootBody.SetAttributeValue("ec2_key_pair_name", cty.StringVal(opts.EC2KeyPairName))
+	if len(opts.Tag) != 0 {
+		rootBody.SetAttributeValue("docker_image_tag", cty.StringVal(opts.Tag))
 	}
-	rootBody.SetAttributeValue("ssh_public_key", cty.StringVal(opts.SSH_PUBLIC_KEY))
-	if len(opts.DOCKER_REGISTRY) != 0 {
-		rootBody.SetAttributeValue("docker_registry", cty.StringVal(opts.DOCKER_REGISTRY))
+	rootBody.SetAttributeValue("ssh_public_key", cty.StringVal(opts.SSHPublicKey))
+	if len(opts.DockerRegistry) != 0 {
+		rootBody.SetAttributeValue("docker_registry", cty.StringVal(opts.DockerRegistry))
 	}
-	rootBody.SetAttributeValue("namespace", cty.StringVal(opts.NAMESPACE))
-	if len(opts.ROOT_DOMAIN_NAME) > 0 {
-		rootBody.SetAttributeValue("root_domain_name", cty.StringVal(opts.ROOT_DOMAIN_NAME))
+	rootBody.SetAttributeValue("namespace", cty.StringVal(opts.Namespace))
+	if len(opts.RootDomainName) > 0 {
+		rootBody.SetAttributeValue("root_domain_name", cty.StringVal(opts.RootDomainName))
 	}
 
 	file, err := os.Create(fmt.Sprintf("%s/%s", path, vars))
@@ -57,83 +55,10 @@ func GenerateVarsTf(opts VarsOpts, path string) error {
 	return nil
 }
 
-func GenerateConfigFile(opts ConfigOpts, path string) error {
-	if !filepath.IsAbs(path) {
-		if path == "" {
-			path += ize
-		}
-
-		wd, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-
-		path = filepath.Join(wd, path)
-	}
-
-	f := hclwrite.NewEmptyFile()
-
-	rootBody := f.Body()
-
-	rootBody.SetAttributeValue("env", cty.StringVal(opts.ENV))
-	rootBody.SetAttributeValue("aws_profile", cty.StringVal(opts.AWS_PROFILE))
-	rootBody.SetAttributeValue("aws_region", cty.StringVal(opts.AWS_REGION))
-	rootBody.SetAttributeValue("terraform_version", cty.StringVal(opts.TERRAFORM_VERSION))
-	rootBody.SetAttributeValue("namespace", cty.StringVal(opts.NAMESPACE))
-
-	var owr bool = false
-
-	_, err := os.Stat(path)
-	if err == nil {
-		var qs = []*survey.Question{
-			{
-				Prompt: &survey.Confirm{
-					Message: " The file already exists. Overwrite?",
-				},
-				Validate: survey.Required,
-				Name:     "owr",
-			},
-		}
-
-		err = survey.Ask(qs, &owr, survey.WithIcons(func(is *survey.IconSet) {
-			is.Question.Text = " ??"
-			is.Question.Format = "black:green"
-			is.Error.Format = "black:red"
-		}))
-		if err != nil {
-			return err
-		}
-
-		if !owr {
-			return nil
-		}
-	}
-
-	file, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-
-	defer file.Close()
-
-	_, err = f.WriteTo(file)
-	if err != nil {
-		return err
-	}
-
-	if owr {
-		pterm.Success.Println("Config file overwritten successfully")
-	}
-
-	pterm.Success.Println("Config file created successfully")
-
-	return nil
-}
-
 func GenerateBackendTf(opts BackendOpts, path string) error {
 	f := hclwrite.NewEmptyFile()
 
-	if strings.Contains(opts.ENV, "localstack") || strings.Contains(opts.ENV, "local") {
+	if strings.Contains(opts.Env, "localstack") || strings.Contains(opts.Env, "local") {
 		rootBody := f.Body()
 		// AWS Provider block
 		providerBlock := rootBody.AppendNewBlock("provider", []string{"aws"})
@@ -154,29 +79,29 @@ func GenerateBackendTf(opts BackendOpts, path string) error {
 
 		// Endpoints
 		endpointBlock := rootBody.AppendNewBlock("endpoints", []string{})
-		endpointBlock.Body().SetAttributeValue("apigateway", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("acm", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("cloudformation", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("cloudwatch", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("ec2", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("dynamodb", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("es", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("firehose", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("iam", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("kinesis", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("lambda", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("route53", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("redshift", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("s3", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("secretsmanager", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("ses", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("sns", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("sqs", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("ssm", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("stepfunctions", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("sts", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("ecs", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("ecr", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		endpointBlock.Body().SetAttributeValue("apigateway", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("acm", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("cloudformation", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("cloudwatch", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("ec2", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("dynamodb", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("es", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("firehose", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("iam", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("kinesis", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("lambda", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("route53", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("redshift", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("s3", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("secretsmanager", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("ses", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("sns", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("sqs", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("ssm", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("stepfunctions", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("sts", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("ecs", cty.StringVal(opts.LocalstackEndpoint))
+		endpointBlock.Body().SetAttributeValue("ecr", cty.StringVal(opts.LocalstackEndpoint))
 	} else {
 		rootBody := f.Body()
 		// AWS Provider block
@@ -192,8 +117,8 @@ func GenerateBackendTf(opts BackendOpts, path string) error {
 		defaultTagsBlock := providerBlock.Body().AppendNewBlock("default_tags", nil)
 		defaultTagsBlock.Body().SetAttributeValue("tags", cty.ObjectVal(map[string]cty.Value{
 			"terraform": cty.StringVal("true"),
-			"env":       cty.StringVal(opts.ENV),
-			"namespace": cty.StringVal(opts.NAMESPACE),
+			"env":       cty.StringVal(opts.Env),
+			"namespace": cty.StringVal(opts.Namespace),
 		}))
 
 		rootBody.AppendNewline()
@@ -202,11 +127,11 @@ func GenerateBackendTf(opts BackendOpts, path string) error {
 		terraformBlock := f.Body().AppendNewBlock("terraform", []string{})
 		// backend s3 block
 		backendBlock := terraformBlock.Body().AppendNewBlock("backend", []string{"s3"})
-		backendBlock.Body().SetAttributeValue("bucket", cty.StringVal(opts.TERRAFORM_STATE_BUCKET_NAME))
-		backendBlock.Body().SetAttributeValue("key", cty.StringVal(opts.TERRAFORM_STATE_KEY))
-		backendBlock.Body().SetAttributeValue("region", cty.StringVal(opts.TERRAFORM_STATE_REGION))
-		backendBlock.Body().SetAttributeValue("profile", cty.StringVal(opts.TERRAFORM_STATE_PROFILE))
-		backendBlock.Body().SetAttributeValue("dynamodb_table", cty.StringVal(opts.TERRAFORM_STATE_DYNAMODB_TABLE))
+		backendBlock.Body().SetAttributeValue("bucket", cty.StringVal(opts.TerraformStateBucketName))
+		backendBlock.Body().SetAttributeValue("key", cty.StringVal(opts.TerraformStateKey))
+		backendBlock.Body().SetAttributeValue("region", cty.StringVal(opts.TerraformStateRegion))
+		backendBlock.Body().SetAttributeValue("profile", cty.StringVal(opts.TerraformStateProfile))
+		backendBlock.Body().SetAttributeValue("dynamodb_table", cty.StringVal(opts.TerraformStateDynamodbTable))
 	}
 
 	_, err := os.Stat(path)
@@ -252,33 +177,25 @@ func GenerateBackendTf(opts BackendOpts, path string) error {
 }
 
 type VarsOpts struct {
-	ENV               string
-	AWS_PROFILE       string
-	AWS_REGION        string
-	EC2_KEY_PAIR_NAME string
-	ROOT_DOMAIN_NAME  string
-	TAG               string
-	SSH_PUBLIC_KEY    string
-	DOCKER_REGISTRY   string
-	NAMESPACE         string
+	Env            string
+	AwsProfile     string
+	AwsRegion      string
+	EC2KeyPairName string
+	RootDomainName string
+	Tag            string
+	SSHPublicKey   string
+	DockerRegistry string
+	Namespace      string
 }
 
 type BackendOpts struct {
-	NAMESPACE                      string
-	ENV                            string
-	LOCALSTACK_ENDPOINT            string
-	TERRAFORM_STATE_BUCKET_NAME    string
-	TERRAFORM_STATE_KEY            string
-	TERRAFORM_STATE_REGION         string
-	TERRAFORM_STATE_PROFILE        string
-	TERRAFORM_STATE_DYNAMODB_TABLE string
-	TERRAFORM_AWS_PROVIDER_VERSION string
-}
-
-type ConfigOpts struct {
-	ENV               string
-	AWS_PROFILE       string
-	AWS_REGION        string
-	TERRAFORM_VERSION string
-	NAMESPACE         string
+	Namespace                   string
+	Env                         string
+	LocalstackEndpoint          string
+	TerraformStateBucketName    string
+	TerraformStateKey           string
+	TerraformStateRegion        string
+	TerraformStateProfile       string
+	TerraformStateDynamodbTable string
+	TerraformAwsProviderVersion string
 }
