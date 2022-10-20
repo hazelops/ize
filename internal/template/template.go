@@ -17,9 +17,8 @@ import (
 )
 
 const (
-	backend = "backend.tf"
-	vars    = "terraform.tfvars"
-	ize     = "ize.hcl"
+	vars = "terraform.tfvars"
+	ize  = "ize.hcl"
 )
 
 func GenerateVarsTf(opts VarsOpts, path string) error {
@@ -210,11 +209,9 @@ func GenerateBackendTf(opts BackendOpts, path string) error {
 		backendBlock.Body().SetAttributeValue("dynamodb_table", cty.StringVal(opts.TERRAFORM_STATE_DYNAMODB_TABLE))
 	}
 
-	backendPath := filepath.Join(path, backend)
-
-	_, err := os.Stat(backendPath)
+	_, err := os.Stat(path)
 	if errors.Is(err, os.ErrNotExist) {
-		file, err := os.Create(backendPath)
+		file, err := os.Create(path)
 		if err != nil {
 			return err
 		}
@@ -230,7 +227,7 @@ func GenerateBackendTf(opts BackendOpts, path string) error {
 	}
 
 	newHash := md5.Sum(f.Bytes())
-	oldFile, err := os.ReadFile(backendPath)
+	oldFile, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
@@ -238,7 +235,7 @@ func GenerateBackendTf(opts BackendOpts, path string) error {
 	oldHash := md5.Sum(oldFile)
 
 	if !reflect.DeepEqual(newHash, oldHash) {
-		file, err := os.Create(backendPath)
+		file, err := os.Create(path)
 		if err != nil {
 			return err
 		}

@@ -6,14 +6,15 @@ type Infra struct {
 }
 
 type Terraform struct {
-	Version           string   `mapstructure:",omitempty"`
-	StateBucketRegion string   `mapstructure:"state_bucket_region,omitempty"`
-	StateBucketName   string   `mapstructure:"state_bucket_name,omitempty"`
-	StateName         string   `mapstructure:"state_name,omitempty"`
-	RootDomainName    string   `mapstructure:"root_domain_name,omitempty"`
-	AwsRegion         string   `mapstructure:"aws_region,omitempty"`
-	AwsProfile        string   `mapstructure:"aws_profile,omitempty"`
-	DependsOn         []string `mapstructure:"depends_on,omitempty"`
+	Version             string   `mapstructure:",omitempty"`
+	StateBucketRegion   string   `mapstructure:"state_bucket_region,omitempty"`
+	StateBucketName     string   `mapstructure:"state_bucket_name,omitempty"`
+	StateName           string   `mapstructure:"state_name,omitempty"`
+	RootDomainName      string   `mapstructure:"root_domain_name,omitempty"`
+	TerraformConfigFile string   `mapstructure:"terraform_config_file,omitempty"`
+	AwsRegion           string   `mapstructure:"aws_region,omitempty"`
+	AwsProfile          string   `mapstructure:"aws_profile,omitempty"`
+	DependsOn           []string `mapstructure:"depends_on,omitempty"`
 }
 
 type Tunnel struct {
