@@ -3,6 +3,11 @@ package commands
 import (
 	_ "embed"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ecs"
@@ -12,10 +17,6 @@ import (
 	"github.com/hazelops/ize/pkg/mocks"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"os"
-	"path/filepath"
-	"strings"
-	"testing"
 )
 
 //go:generate mockgen -package=mocks -destination ../../pkg/mocks/mock_ecs.go github.com/aws/aws-sdk-go/service/ecs/ecsiface ECSAPI
@@ -91,7 +92,7 @@ func TestConsole(t *testing.T) {
 		},
 		{
 			name:    "failed (list tasks cluster not found)",
-			args:    []string{"console", "goblin", "--plain-text"},
+			args:    []string{"console", "goblin", "--plain-text-output"},
 			env:     map[string]string{"ENV": "test", "AWS_PROFILE": "test", "NAMESPACE": "dev-testnut", "AWS_REGION": "us-west-2"},
 			wantErr: true,
 			mockECSClient: func(m *mocks.MockECSAPI) {
@@ -100,7 +101,7 @@ func TestConsole(t *testing.T) {
 		},
 		{
 			name:    "failed (list tasks any err)",
-			args:    []string{"console", "goblin", "--plain-text"},
+			args:    []string{"console", "goblin", "--plain-text-output"},
 			env:     map[string]string{"ENV": "test", "AWS_PROFILE": "test", "NAMESPACE": "dev-testnut", "AWS_REGION": "us-west-2"},
 			wantErr: true,
 			mockECSClient: func(m *mocks.MockECSAPI) {
@@ -109,7 +110,7 @@ func TestConsole(t *testing.T) {
 		},
 		{
 			name:    "failed (execute command cluster not found)",
-			args:    []string{"console", "goblin", "--plain-text"},
+			args:    []string{"console", "goblin", "--plain-text-output"},
 			env:     map[string]string{"ENV": "test", "AWS_PROFILE": "test", "NAMESPACE": "dev-testnut", "AWS_REGION": "us-west-2"},
 			wantErr: true,
 			mockECSClient: func(m *mocks.MockECSAPI) {
@@ -122,7 +123,7 @@ func TestConsole(t *testing.T) {
 		},
 		{
 			name:    "failed (execute command any err)",
-			args:    []string{"console", "goblin", "--plain-text"},
+			args:    []string{"console", "goblin", "--plain-text-output"},
 			env:     map[string]string{"ENV": "test", "AWS_PROFILE": "test", "NAMESPACE": "dev-testnut", "AWS_REGION": "us-west-2"},
 			wantErr: true,
 			mockECSClient: func(m *mocks.MockECSAPI) {

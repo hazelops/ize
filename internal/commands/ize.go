@@ -3,6 +3,12 @@ package commands
 import (
 	"bytes"
 	"fmt"
+	"os"
+	"path"
+	"runtime"
+	"strings"
+	"text/template"
+
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/version"
 	"github.com/hazelops/ize/pkg/templates"
@@ -12,11 +18,6 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/slices"
-	"os"
-	"path"
-	"runtime"
-	"strings"
-	"text/template"
 )
 
 var izeDescTpl = templates.LongDesc(`
@@ -60,7 +61,7 @@ func newRootCmd(project *config.Project) *cobra.Command {
 
 	cmd.CompletionOptions.DisableDefaultCmd = true
 	cmd.PersistentFlags().StringP("log-level", "l", "", "set log level. Possible levels: info, debug, trace, panic, warn, error, fatal(default)")
-	cmd.PersistentFlags().Bool("plain-text", false, "enable plain text")
+	cmd.PersistentFlags().Bool("plain-text-output", false, "enable plain text output")
 	cmd.PersistentFlags().StringP("config-file", "c", "", "set config file name")
 	cmd.PersistentFlags().StringP("env", "e", "", "(required) set environment name (overrides value set in IZE_ENV / ENV if any of them are set)")
 	cmd.PersistentFlags().StringP("aws-profile", "p", "", "(required) set AWS profile (overrides value in ize.toml and IZE_AWS_PROFILE / AWS_PROFILE if any of them are set)")
