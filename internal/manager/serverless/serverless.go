@@ -2,10 +2,11 @@ package serverless
 
 import (
 	"fmt"
-	"github.com/hazelops/ize/internal/config"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/hazelops/ize/internal/config"
 
 	"github.com/hazelops/ize/pkg/terminal"
 )
@@ -113,7 +114,7 @@ func (sls *Manager) Deploy(ui terminal.UI) error {
 	return nil
 }
 
-func (sls *Manager) Destroy(ui terminal.UI) error {
+func (sls *Manager) Destroy(ui terminal.UI, autoApprove bool) error {
 	sls.prepare()
 
 	sg := ui.StepGroup()

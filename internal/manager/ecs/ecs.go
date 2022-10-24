@@ -314,7 +314,7 @@ func (e *Manager) Build(ui terminal.UI) error {
 	return nil
 }
 
-func (e *Manager) Destroy(ui terminal.UI) error {
+func (e *Manager) Destroy(ui terminal.UI, autoApprove bool) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 

@@ -1,9 +1,10 @@
 package alias
 
 import (
+	"testing"
+
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/terminal"
-	"testing"
 )
 
 func TestManager_Build(t *testing.T) {
@@ -107,7 +108,7 @@ func TestManager_Destroy(t *testing.T) {
 				Project: tt.fields.Project,
 				App:     tt.fields.App,
 			}
-			if err := a.Destroy(tt.args.ui); (err != nil) != tt.wantErr {
+			if err := a.Destroy(tt.args.ui, true); (err != nil) != tt.wantErr {
 				t.Errorf("Destroy() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

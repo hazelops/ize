@@ -2,6 +2,9 @@ package ecs
 
 import (
 	"context"
+	"os"
+	"testing"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
@@ -12,8 +15,6 @@ import (
 	"github.com/hazelops/ize/internal/generate"
 	"github.com/hazelops/ize/pkg/mocks"
 	"github.com/hazelops/ize/pkg/terminal"
-	"os"
-	"testing"
 )
 
 //go:generate mockgen -package=mocks -destination ../../../pkg/mocks/mock_ecs.go github.com/aws/aws-sdk-go/service/ecs/ecsiface ECSAPI
@@ -969,7 +970,7 @@ func TestManager_Destroy(t *testing.T) {
 				Project: tt.fields.Project,
 				App:     tt.fields.App,
 			}
-			if err := e.Destroy(tt.args.ui); (err != nil) != tt.wantErr {
+			if err := e.Destroy(tt.args.ui, true); (err != nil) != tt.wantErr {
 				t.Errorf("Destroy() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
