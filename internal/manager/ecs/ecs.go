@@ -5,16 +5,18 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/hazelops/ize/internal/aws/utils"
-	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/pkg/templates"
 	"os"
 	"path"
 	"path/filepath"
 	"time"
 
+	"github.com/hazelops/ize/internal/aws/utils"
+	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/pkg/templates"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/docker/docker/api/types"
 	"github.com/hazelops/ize/internal/docker"
 	"github.com/hazelops/ize/pkg/terminal"
@@ -314,15 +316,61 @@ func (e *Manager) Build(ui terminal.UI) error {
 	return nil
 }
 
+func definitionsToBulletItems(definitions *ecs.ListTaskDefinitionsOutput) []pterm.BulletListItem {
+	var items []pterm.BulletListItem
+	for _, arn := range definitions.TaskDefinitionArns {
+		items = append(items, pterm.BulletListItem{Level: 0, Text: *arn})
+	}
+
+	return items
+}
+
 func (e *Manager) Destroy(ui terminal.UI, autoApprove bool) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	ui.Output("Destroying ECS applications requires destroying the infrastructure.", terminal.WithWarningStyle())
-	time.Sleep(time.Millisecond * 100)
+	s := sg.Add("%s: destroying task defintions...", e.App.Name)
+	defer func() { s.Abort(); time.Sleep(time.Millisecond * 200) }()
 
-	s := sg.Add("%s: destroying completed!", e.App.Name)
-	defer func() { s.Abort() }()
+	name := fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name)
+
+	svc := e.Project.AWSClient.ECSClient
+
+	definitions, err := svc.ListTaskDefinitions(&ecs.ListTaskDefinitionsInput{
+		FamilyPrefix: &name,
+		Sort:         aws.String(ecs.SortOrderDesc),
+	})
+	if err != nil {
+		return fmt.Errorf("can't get list task definitions of '%s': %v", name, err)
+	}
+
+	if !autoApprove {
+		pterm.SetDefaultOutput(s.TermOutput())
+
+		pterm.Printfln("this will destroy the following:")
+		pterm.DefaultBulletList.WithItems(definitionsToBulletItems(definitions)).Render()
+
+		isContinue, err := pterm.DefaultInteractiveConfirm.WithDefaultText("Continue?").Show()
+		if err != nil {
+			return err
+		}
+
+		if !isContinue {
+			return fmt.Errorf("destroying was canceled")
+		}
+	}
+
+	for _, tda := range definitions.TaskDefinitionArns {
+		_, err := e.Project.AWSClient.ECSClient.DeregisterTaskDefinition(&ecs.DeregisterTaskDefinitionInput{
+			TaskDefinition: tda,
+		})
+		if err != nil {
+			return fmt.Errorf("can't deregister task definition '%s': %v", *tda, err)
+		}
+	}
+
+	s.Done()
+	s = sg.Add("%s: destroying completed!", e.App.Name)
 	s.Done()
 
 	return nil
