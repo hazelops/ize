@@ -5,6 +5,18 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
+	"net"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"text/template"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2instanceconnect"
@@ -17,17 +29,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
-	"io"
-	"io/ioutil"
-	"log"
-	"net"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"regexp"
-	"strconv"
-	"strings"
-	"text/template"
 )
 
 const sshConfig = `# SSH over Session Manager
@@ -170,11 +171,14 @@ func (o *TunnelUpOptions) Validate() error {
 
 func (o *TunnelUpOptions) Run() error {
 	logrus.Debugf("public key path: %s", o.PublicKeyFile)
+	logrus.Debugf("private key path: %s", o.PrivateKeyFile)
 
 	pk, err := getPublicKey(o.PublicKeyFile)
 	if err != nil {
 		return fmt.Errorf("can't get public key: %s", err)
 	}
+
+	logrus.Debugf("public key:\n", pk)
 
 	if o.Metadata {
 		err = sendSSHPublicKey(o.BastionHostID, pk, o.Config.Session)
@@ -201,6 +205,7 @@ func (o *TunnelUpOptions) Run() error {
 
 func (o *TunnelUpOptions) upTunnel() (string, error) {
 	sshConfigPath := fmt.Sprintf("%s/ssh.config", o.Config.EnvDir)
+	logrus.Debugf("ssh config path: %s", sshConfigPath)
 
 	if err := setAWSCredentials(o.Config.Session); err != nil {
 		return "", fmt.Errorf("can't run tunnel: %w", err)
@@ -249,6 +254,11 @@ func (o *TunnelUpOptions) getSSHCommandArgs(sshConfigPath string) []string {
 	if _, err := os.Stat(o.PrivateKeyFile); !os.IsNotExist(err) {
 		args = append(args, "-i", o.PrivateKeyFile)
 	}
+
+	if o.Config.LogLevel == "debug" {
+		args = append(args, "-vvv")
+	}
+
 	return args
 }
 
@@ -271,6 +281,8 @@ func getTerraformOutput(wr *SSMWrapper, env string) (terraformOutput, error) {
 	if err != nil {
 		return terraformOutput{}, fmt.Errorf("can't get terraform output: %w", err)
 	}
+
+	logrus.Debugf("decoded terrafrom output: \n%s", value)
 
 	var output terraformOutput
 
@@ -310,8 +322,10 @@ func sendSSHPublicKeyLegacy(bastionID string, key string, sess *session.Session)
 	// This command is executed in the bastion host and it checks if our public key is present. If it's not it uploads it to _authorized_keys file.
 	command := fmt.Sprintf(
 		`grep -qR "%s" /home/ubuntu/.ssh/authorized_keys || echo "%s" >> /home/ubuntu/.ssh/authorized_keys`,
-		key, key,
+		strings.TrimSpace(key), strings.TrimSpace(key),
 	)
+
+	logrus.Debugf("send command: \n%s", command)
 
 	_, err := ssm.New(sess).SendCommand(&ssm.SendCommandInput{
 		InstanceIds:  []*string{&bastionID},
