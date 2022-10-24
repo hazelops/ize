@@ -98,9 +98,9 @@ jobs:
       - name: Run Tests
         run: |
           go test -v --timeout 0 --tags="e2e ecs_apps" ./test-e2e
-        continue-on-error: true
 
       - name: Cleanup Infra
+        if: ${{ always() }}
         run: |
           cd "${{ env.IZE_EXAMPLES_PATH }}"
           ize down --auto-approve
@@ -157,14 +157,20 @@ jobs:
         run: ize gen aws-profile
 
       - name: Generate Test SSH Key
-        run: ssh-keygen -q -f ~/.ssh/id_rsa
+        run: |
+          ssh-keygen -q -f ~/.ssh/id_rsa -t rsa -N ''
+          ssh-keygen -q -f ~/.ssh/id_rsa_tunnel_test -t rsa -N ''
+          chmod 600 /home/runner/.ssh/id_rsa_tunnel_test
+          chmod 600 /home/runner/.ssh/id_rsa_tunnel_test.pub
+          cat /home/runner/.ssh/id_rsa_tunnel_test.pub
+          ls -ld /home/runner/.ssh/*
 
       - name: Run Tests
         run: |
           go test -v --timeout 0 --tags="e2e bastion_tunnel" ./test-e2e
-        continue-on-error: true
 
       - name: Cleanup Infra
+        if: ${{ always() }}
         run: |
           cd "${{ env.IZE_EXAMPLES_PATH }}"
           ize down --auto-approve

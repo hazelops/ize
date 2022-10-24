@@ -323,7 +323,7 @@ func TestIzeExecGoblin(t *testing.T) {
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
-	stdout, stderr, err := ize.RunPty("--plain-text", "exec", "goblin", "--", "sh -c \"echo $APP_NAME\"")
+	stdout, stderr, err := ize.RunPty("--plain-text-output", "exec", "goblin", "--", "sh -c \"echo $APP_NAME\"")
 
 	if err != nil {
 		t.Errorf("error: %s", err)
@@ -347,7 +347,7 @@ func TestIzeExecSquibby(t *testing.T) {
 
 	ize := NewBinary(t, izeBinary, examplesRootDir)
 
-	stdout, stderr, err := ize.RunPty("--plain-text", "exec", "squibby", "--", "sh -c \"echo $APP_NAME\"")
+	stdout, stderr, err := ize.RunPty("--plain-text-output", "exec", "squibby", "--", "sh -c \"echo $APP_NAME\"")
 
 	if err != nil {
 		t.Errorf("error: %s", err)

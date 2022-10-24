@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"regexp"
 	"strings"
 	"sync"
 	"text/tabwriter"
@@ -268,7 +267,5 @@ type stripAnsiWriter struct {
 }
 
 func (w *stripAnsiWriter) Write(p []byte) (n int, err error) {
-	return w.Next.Write(reAnsi.ReplaceAll(p, []byte{}))
+	return w.Next.Write(p)
 }
-
-var reAnsi = regexp.MustCompile("[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))")
