@@ -3,6 +3,8 @@ package commands
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager"
@@ -16,7 +18,6 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"time"
 )
 
 type DownOptions struct {
@@ -174,7 +175,7 @@ func (o *DownOptions) Run() error {
 			return err
 		}
 	} else {
-		err := destroyApp(o.AppName, o.Config, ui)
+		err := destroyApp(o.AppName, o.Config, o.AutoApprove, ui)
 		if err != nil {
 			return err
 		}
@@ -220,7 +221,7 @@ func destroyAll(ui terminal.UI, o *DownOptions) error {
 	err := manager.InReversDependencyOrder(aws.BackgroundContext(), o.Config.GetApps(), func(c context.Context, name string) error {
 		o.Config.AwsProfile = o.Config.Terraform["infra"].AwsProfile
 
-		return destroyApp(name, o.Config, ui)
+		return destroyApp(name, o.Config, o.AutoApprove, ui)
 	})
 	if err != nil {
 		return err
@@ -307,7 +308,7 @@ func destroyInfra(state string, config *config.Project, skipGen bool, ui termina
 	return nil
 }
 
-func destroyApp(name string, cfg *config.Project, ui terminal.UI) error {
+func destroyApp(name string, cfg *config.Project, autoApprove bool, ui terminal.UI) error {
 	var m manager.Manager
 	var icon string
 
@@ -347,7 +348,7 @@ func destroyApp(name string, cfg *config.Project, ui terminal.UI) error {
 
 	ui.Output("Destroying %s%s app...\n", icon, name, terminal.WithHeaderStyle())
 
-	err := m.Destroy(ui)
+	err := m.Destroy(ui, autoApprove)
 	if err != nil {
 		return fmt.Errorf("can't down: %w", err)
 	}

@@ -2,11 +2,12 @@ package ecs
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
 	"io"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
@@ -52,9 +53,7 @@ func (e *Manager) deployLocal(w io.Writer) error {
 	var oldTaskDef ecs.TaskDefinition
 	var newTaskDef ecs.TaskDefinition
 
-	if *dtdo.TaskDefinition.TaskDefinitionArn == *definitions.TaskDefinitionArns[0] {
-		oldTaskDef = *dtdo.TaskDefinition
-	} else {
+	if len(definitions.TaskDefinitionArns) != 0 && *dtdo.TaskDefinition.TaskDefinitionArn != *definitions.TaskDefinitionArns[0] {
 		definition, err := svc.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
 			TaskDefinition: definitions.TaskDefinitionArns[0],
 		})
@@ -63,6 +62,8 @@ func (e *Manager) deployLocal(w io.Writer) error {
 		}
 
 		oldTaskDef = *definition.TaskDefinition
+	} else {
+		oldTaskDef = *dtdo.TaskDefinition
 	}
 
 	pterm.Printfln("Deploying based on task definition: %s:%d", *oldTaskDef.Family, *oldTaskDef.Revision)

@@ -1,9 +1,10 @@
 package alias
 
 import (
+	"time"
+
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/pkg/terminal"
-	"time"
 )
 
 type Manager struct {
@@ -24,7 +25,7 @@ func (a *Manager) Deploy(ui terminal.UI) error {
 	return nil
 }
 
-func (a *Manager) Destroy(ui terminal.UI) error {
+func (a *Manager) Destroy(ui terminal.UI, autoApprove bool) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
