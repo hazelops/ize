@@ -2,10 +2,12 @@ package serverless
 
 import (
 	"fmt"
-	"github.com/hazelops/ize/internal/config"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
+
+	"github.com/hazelops/ize/internal/config"
 
 	"github.com/hazelops/ize/pkg/terminal"
 )
@@ -13,6 +15,27 @@ import (
 type Manager struct {
 	Project *config.Project
 	App     *config.Serverless
+}
+
+func (sls *Manager) Nvm(ui terminal.UI, command []string) error {
+	sls.prepare()
+
+	sg := ui.StepGroup()
+	defer sg.Wait()
+
+	s := sg.Add("%s: running '%s'...", sls.App.Name, strings.Join(command, " "))
+	defer func() { s.Abort(); time.Sleep(time.Millisecond * 200) }()
+
+	err := sls.nvm(s.TermOutput(), strings.Join(command, " "))
+	if err != nil {
+		return fmt.Errorf("can't run nvm: %w", err)
+	}
+
+	s.Done()
+	s = sg.Add("%s: running '%s' completed!", sls.App.Name, strings.Join(command, " "))
+	s.Done()
+
+	return nil
 }
 
 func (sls *Manager) prepare() {

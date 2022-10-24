@@ -3,6 +3,12 @@ package commands
 import (
 	"bytes"
 	"fmt"
+	"os"
+	"path"
+	"runtime"
+	"strings"
+	"text/template"
+
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/version"
 	"github.com/hazelops/ize/pkg/templates"
@@ -12,11 +18,6 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/slices"
-	"os"
-	"path"
-	"runtime"
-	"strings"
-	"text/template"
 )
 
 var izeDescTpl = templates.LongDesc(`
@@ -87,6 +88,7 @@ func newRootCmd(project *config.Project) *cobra.Command {
 		NewCmdGen(project),
 		NewCmdPush(project),
 		NewCmdUp(project),
+		NewCmdNvm(project),
 		NewValidateCmd(),
 		NewVersionCmd())
 
