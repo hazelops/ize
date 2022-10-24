@@ -2,8 +2,8 @@ module "squibby" {
   depends_on = [
     module.ecs
   ]
-  source  = "hazelops/ecs-app/aws"
-  version = "~>1.3"
+  source  = "registry.terraform.io/hazelops/ecs-app/aws"
+  version = "~>1.4"
 
   name             = "squibby"
   app_type         = "web"
@@ -22,16 +22,17 @@ module "squibby" {
   alb_security_groups   = local.alb_security_groups
 
   # Network
-  vpc_id                       = local.vpc_id
-  public_subnets               = local.public_subnets
-  private_subnets              = local.private_subnets
-  security_groups              = local.security_groups
-  root_domain_name             = var.root_domain_name
-  zone_id                      = local.zone_id
+  vpc_id           = local.vpc_id
+  public_subnets   = local.public_subnets
+  private_subnets  = local.private_subnets
+  security_groups  = local.security_groups
+  root_domain_name = var.root_domain_name
+  zone_id          = local.zone_id
   domain_names = [
     "squibby.${var.root_domain_name}"
   ]
-  https_enabled = false
+  https_enabled     = false
+  web_proxy_enabled = true
 
   # Environment variables
   app_secrets = [
