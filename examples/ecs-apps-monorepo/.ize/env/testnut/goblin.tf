@@ -2,8 +2,8 @@ module "goblin" {
   depends_on = [
     module.ecs
   ]
-  source  = "hazelops/ecs-app/aws"
-  version = "~>1.3"
+  source  = "registry.terraform.io/hazelops/ecs-app/aws"
+  version = "~>1.4"
 
   name             = "goblin"
   app_type         = "web"
