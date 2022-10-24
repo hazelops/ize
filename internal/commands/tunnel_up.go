@@ -5,6 +5,18 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
+	"net"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"text/template"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2instanceconnect"
@@ -17,17 +29,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
-	"io"
-	"io/ioutil"
-	"log"
-	"net"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"regexp"
-	"strconv"
-	"strings"
-	"text/template"
 )
 
 const sshConfig = `# SSH over Session Manager
@@ -410,8 +411,13 @@ func checkPort(port int) error {
 
 	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		logrus.Error(err)
-		return fmt.Errorf("port %d is not available. Please make sure there is no other process that is using the port %d", port, port)
+		command := fmt.Sprintf("lsof -i tcp:%d | grep LISTEN | awk '{print $1, \"(pid\", $2\")\"}'", port)
+		stdout, stderr, code, err := term.New(term.WithStdout(io.Discard), term.WithStderr(io.Discard)).Run(exec.Command("bash", "-c", command))
+		if code == 0 {
+			logrus.Error(err)
+			return fmt.Errorf("port %d is in use by %s. Please stop the process or remove the port assigment so it will be auto-assigned", port, strings.TrimSpace(stdout))
+		}
+		return fmt.Errorf("error during run command: %s (exit code: %d, stderr: %s)", command, code, stderr)
 	}
 
 	err = l.Close()
