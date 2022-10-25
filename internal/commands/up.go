@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager"
@@ -18,6 +19,7 @@ type UpOptions struct {
 	AppName          string
 	SkipBuildAndPush bool
 	SkipGen          bool
+	UseYarn          bool
 	AutoApprove      bool
 	UI               terminal.UI
 }
@@ -89,6 +91,7 @@ func NewCmdUp(project *config.Project) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "approve deploy all")
+	cmd.Flags().BoolVar(&o.UseYarn, "use-yarn", false, "execute sls commands using yarn")
 	cmd.Flags().BoolVar(&o.SkipGen, "skip-gen", false, "skip generating terraform files")
 
 	cmd.AddCommand(
@@ -103,12 +106,6 @@ func (o *UpOptions) Complete(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
 		if err := requirements.CheckRequirements(requirements.WithIzeStructure(), requirements.WithConfigFile()); err != nil {
 			return err
-		}
-
-		if len(o.Config.Serverless) != 0 {
-			if err := requirements.CheckRequirements(requirements.WithNVM()); err != nil {
-				return err
-			}
 		}
 
 		if o.Config.Terraform == nil {
@@ -133,13 +130,19 @@ func (o *UpOptions) Complete(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		if len(o.Config.Serverless) != 0 {
-			if err := requirements.CheckRequirements(requirements.WithNVM()); err != nil {
-				return err
-			}
+		o.AppName = cmd.Flags().Args()[0]
+	}
+
+	if len(o.Config.Serverless) != 0 {
+		if err := requirements.CheckRequirements(requirements.WithNVM()); err != nil {
+			return err
 		}
 
-		o.AppName = cmd.Flags().Args()[0]
+		if o.UseYarn {
+			for _, a := range o.Config.Serverless {
+				a.UseYarn = true
+			}
+		}
 	}
 
 	o.UI = terminal.ConsoleUI(context.Background(), o.Config.PlainText)

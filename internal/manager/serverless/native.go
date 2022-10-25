@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/hazelops/ize/pkg/term"
+	"github.com/sirupsen/logrus"
 )
 
 func (sls *Manager) runNpmInstall(w io.Writer) error {
@@ -18,6 +19,13 @@ func (sls *Manager) runNpmInstall(w io.Writer) error {
 	}
 
 	command := fmt.Sprintf("source %s/nvm.sh && nvm use %s && npm install --save-dev", nvmDir, sls.App.NodeVersion)
+
+	if sls.App.UseYarn {
+		command = npmToYarn(command)
+	}
+
+	logrus.SetOutput(w)
+	logrus.Debugf("command: %s", command)
 
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Stdout = w
@@ -78,6 +86,9 @@ func (sls *Manager) runNvm(w io.Writer) error {
 
 	command := fmt.Sprintf("source %s/nvm.sh && nvm install %s", nvmDir, sls.App.NodeVersion)
 
+	logrus.SetOutput(w)
+	logrus.Debugf("command: %s", command)
+
 	cmd := exec.Command("bash", "-c", command)
 
 	return term.New(
@@ -125,6 +136,13 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 			sls.App.Name, sls.App.AwsRegion,
 			sls.App.AwsProfile, sls.Project.Env)
 	}
+
+	if sls.App.UseYarn {
+		command = npmToYarn(command)
+	}
+
+	logrus.SetOutput(w)
+	logrus.Debugf("command: %s", command)
 
 	cmd := exec.Command("bash", "-c", command)
 
@@ -175,6 +193,13 @@ func (sls *Manager) runRemove(w io.Writer) error {
 			sls.App.AwsProfile, sls.Project.Env)
 	}
 
+	if sls.App.UseYarn {
+		command = npmToYarn(command)
+	}
+
+	logrus.SetOutput(w)
+	logrus.Debugf("command: %s", command)
+
 	cmd := exec.Command("bash", "-c", command)
 
 	return term.New(
@@ -200,6 +225,13 @@ func (sls *Manager) runCreateDomain(w io.Writer) error {
 				--stage %s`,
 		nvmDir, sls.App.NodeVersion, sls.App.AwsRegion,
 		sls.App.AwsProfile, sls.Project.Env)
+
+	if sls.App.UseYarn {
+		command = npmToYarn(command)
+	}
+
+	logrus.SetOutput(w)
+	logrus.Debugf("command: %s", command)
 
 	cmd := exec.Command("bash", "-c", command)
 
@@ -228,6 +260,13 @@ func (sls *Manager) runRemoveDomain(w io.Writer) error {
 		sls.App.AwsProfile, sls.Project.Env)
 		
 
+	if sls.App.UseYarn {
+		command = npmToYarn(command)
+	}
+
+	logrus.SetOutput(w)
+	logrus.Debugf("command: %s", command)
+
 	cmd := exec.Command("bash", "-c", command)
 
 	return term.New(
@@ -235,4 +274,9 @@ func (sls *Manager) runRemoveDomain(w io.Writer) error {
 		term.WithStdout(w),
 		term.WithStderr(w),
 	).InteractiveRun(cmd)
+}
+
+func npmToYarn(cmd string) string {
+	cmd = strings.ReplaceAll(cmd, "npm", "yarn")
+	return strings.ReplaceAll(cmd, "npx", "yarn")
 }

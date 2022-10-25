@@ -26,6 +26,7 @@ type Serverless struct {
 	CreateDomain            bool     `mapstructure:"create_domain"`
 	Env                     []string `mapstructure:",omitempty"`
 	Icon                    string   `mapstructure:"icon,omitempty"`
+	UseYarn                 bool     `mapstructure:"use_yarn,omitempty"`
 	AwsProfile              string   `mapstructure:"aws_profile,omitempty"`
 	AwsRegion               string   `mapstructure:"aws_region,omitempty"`
 	DependsOn               []string `mapstructure:"depends_on,omitempty"`

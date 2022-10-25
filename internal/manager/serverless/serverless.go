@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hazelops/ize/internal/config"
+	"github.com/sirupsen/logrus"
 
 	"github.com/hazelops/ize/pkg/terminal"
 )
@@ -101,10 +102,10 @@ func (sls *Manager) Deploy(ui terminal.UI) error {
 		}
 
 		s.Done()
-		s = sg.Add("%s: deploying app [run npm install]...", sls.App.Name)
+		s = sg.Add("%s: deploying app [run dependency install]...", sls.App.Name)
 		err = sls.runNpmInstall(s.TermOutput())
 		if err != nil {
-			return fmt.Errorf("can't run npm install: %w", err)
+			return fmt.Errorf("can't run dependency install: %w", err)
 		}
 
 		if sls.App.CreateDomain {
@@ -133,6 +134,8 @@ func (sls *Manager) Deploy(ui terminal.UI) error {
 	s = sg.Add("%s: deployment completed!", sls.App.Name)
 	s.Done()
 
+	logrus.SetOutput(os.Stderr)
+
 	return nil
 }
 
@@ -155,10 +158,10 @@ func (sls *Manager) Destroy(ui terminal.UI, autoApprove bool) error {
 		}
 
 		s.Done()
-		s = sg.Add("%s: destroying app [run npm install]...", sls.App.Name)
+		s = sg.Add("%s: destroying app [run dependency install]...", sls.App.Name)
 		err = sls.runNpmInstall(s.TermOutput())
 		if err != nil {
-			return fmt.Errorf("can't run npm install: %w", err)
+			return fmt.Errorf("can't run dependency install: %w", err)
 		}
 
 		if sls.App.CreateDomain {

@@ -407,6 +407,10 @@
                     "type": "string",
                     "description": "(optional) set icon"
                 },
+                "use_yarn": {
+                    "type": "boolean",
+                    "description": "(optional) execute commands using yarn"
+                },
                 "aws_region"   : {
                     "type": "string",
                     "description": "(optional) Serverless-specific AWS Region of this environment should be specified here. Normally global AWS_REGION is used."
