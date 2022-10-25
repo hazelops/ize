@@ -134,89 +134,48 @@ func (p *Project) SettingAWSClient(sess *session.Session) {
 	)
 }
 
-func (p *Project) GetApps(names ...string) map[string]*interface{} {
+func (p *Project) GetApps() map[string]*interface{} {
 	apps := map[string]*interface{}{}
 
-	if len(names) > 0 {
-		for _, name := range names {
-			if s, ok := p.Ecs[name]; ok {
-				var v interface{}
-				v = map[string]interface{}{
-					"depends_on": s.DependsOn,
-				}
-				apps[name] = &v
-			}
-			if s, ok := p.Serverless[name]; ok {
-				var v interface{}
-				v = map[string]interface{}{
-					"depends_on": s.DependsOn,
-				}
-				apps[name] = &v
-			}
-			if s, ok := p.Alias[name]; ok {
-				var v interface{}
-				v = map[string]interface{}{
-					"depends_on": s.DependsOn,
-				}
-				apps[name] = &v
-			}
+	for name, body := range p.Ecs {
+		var v interface{}
+		v = map[string]interface{}{
+			"depends_on": body.DependsOn,
 		}
-	} else {
-		for name, body := range p.Ecs {
-			var v interface{}
-			v = map[string]interface{}{
-				"depends_on": body.DependsOn,
-			}
-			apps[name] = &v
-		}
+		apps[name] = &v
+	}
 
-		for name, body := range p.Serverless {
-			var v interface{}
-			v = map[string]interface{}{
-				"depends_on": body.DependsOn,
-			}
-			apps[name] = &v
+	for name, body := range p.Serverless {
+		var v interface{}
+		v = map[string]interface{}{
+			"depends_on": body.DependsOn,
 		}
+		apps[name] = &v
+	}
 
-		for name, body := range p.Alias {
-			var v interface{}
-			v = map[string]interface{}{
-				"depends_on": body.DependsOn,
-			}
-			apps[name] = &v
+	for name, body := range p.Alias {
+		var v interface{}
+		v = map[string]interface{}{
+			"depends_on": body.DependsOn,
 		}
+		apps[name] = &v
 	}
 
 	return apps
 }
 
-func (p *Project) GetStates(stacks ...string) map[string]*interface{} {
+func (p *Project) GetStates() map[string]*interface{} {
 	states := map[string]*interface{}{}
 
-	if len(stacks) > 0 {
-		for _, stack := range stacks {
-			if stack == "infra" {
-				continue
-			}
-			if s, ok := p.Terraform[stack]; ok {
-				var v interface{}
-				v = map[string]interface{}{
-					"depends_on": s.DependsOn,
-				}
-				states[stack] = &v
-			}
+	for name, body := range p.Terraform {
+		if name == "infra" {
+			continue
 		}
-	} else {
-		for name, body := range p.Terraform {
-			if name == "infra" {
-				continue
-			}
-			var v interface{}
-			v = map[string]interface{}{
-				"depends_on": body.DependsOn,
-			}
-			states[name] = &v
+		var v interface{}
+		v = map[string]interface{}{
+			"depends_on": body.DependsOn,
 		}
+		states[name] = &v
 	}
 
 	return states

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hazelops/ize/pkg/term"
 	"github.com/sirupsen/logrus"
 )
 
@@ -38,38 +39,63 @@ func (sls *Manager) runNpmInstall(w io.Writer) error {
 	return nil
 }
 
-func (sls *Manager) runNvm(w io.Writer) error {
+func (sls *Manager) nvm(w io.Writer, command string) error {
 	nvmDir := os.Getenv("NVM_DIR")
 	if len(nvmDir) == 0 {
 		nvmDir = "$HOME/.nvm"
 	}
-	var command string
+	err := sls.readNvmrc()
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command("bash", "-c",
+		fmt.Sprintf("source %s/nvm.sh && nvm install %s && %s", nvmDir, sls.App.NodeVersion, command),
+	)
+
+	return term.New(
+		term.WithDir(sls.App.Path),
+		term.WithStdout(w),
+		term.WithStderr(w),
+	).InteractiveRun(cmd)
+}
+
+func (sls *Manager) readNvmrc() error {
 	_, err := os.Stat(filepath.Join(sls.App.Path, ".nvmrc"))
 	if os.IsNotExist(err) {
-		command = fmt.Sprintf("source %s/nvm.sh && nvm install %s", nvmDir, sls.App.NodeVersion)
-
 	} else {
 		file, err := os.ReadFile(filepath.Join(sls.App.Path, ".nvmrc"))
 		if err != nil {
 			return fmt.Errorf("can't read .nvmrc: %w", err)
 		}
 		sls.App.NodeVersion = strings.TrimSpace(string(file))
-		command = fmt.Sprintf("source %s/nvm.sh && nvm install %s", nvmDir, sls.App.NodeVersion)
 	}
+	return nil
+}
+
+func (sls *Manager) runNvm(w io.Writer) error {
+	nvmDir := os.Getenv("NVM_DIR")
+	if len(nvmDir) == 0 {
+		nvmDir = "$HOME/.nvm"
+	}
+
+	err := sls.readNvmrc()
+	if err != nil {
+		return err
+	}
+
+	command := fmt.Sprintf("source %s/nvm.sh && nvm install %s", nvmDir, sls.App.NodeVersion)
 
 	logrus.SetOutput(w)
 	logrus.Debugf("command: %s", command)
 
 	cmd := exec.Command("bash", "-c", command)
-	cmd.Stdout = w
-	cmd.Stderr = w
-	cmd.Dir = filepath.Join(sls.App.Path)
-	err = cmd.Run()
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return term.New(
+		term.WithDir(sls.App.Path),
+		term.WithStdout(w),
+		term.WithStderr(w),
+	).InteractiveRun(cmd)
 }
 
 func (sls *Manager) runDeploy(w io.Writer) error {
@@ -119,15 +145,12 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 	logrus.Debugf("command: %s", command)
 
 	cmd := exec.Command("bash", "-c", command)
-	cmd.Stdout = w
-	cmd.Stderr = w
-	cmd.Dir = filepath.Join(sls.App.Path)
-	err := cmd.Run()
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return term.New(
+		term.WithDir(sls.App.Path),
+		term.WithStdout(w),
+		term.WithStderr(w),
+	).InteractiveRun(cmd)
 }
 
 func (sls *Manager) runRemove(w io.Writer) error {
@@ -178,15 +201,12 @@ func (sls *Manager) runRemove(w io.Writer) error {
 	logrus.Debugf("command: %s", command)
 
 	cmd := exec.Command("bash", "-c", command)
-	cmd.Stdout = w
-	cmd.Stderr = w
-	cmd.Dir = filepath.Join(sls.App.Path)
-	err := cmd.Run()
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return term.New(
+		term.WithDir(sls.App.Path),
+		term.WithStdout(w),
+		term.WithStderr(w),
+	).InteractiveRun(cmd)
 }
 
 func (sls *Manager) runCreateDomain(w io.Writer) error {
@@ -214,15 +234,12 @@ func (sls *Manager) runCreateDomain(w io.Writer) error {
 	logrus.Debugf("command: %s", command)
 
 	cmd := exec.Command("bash", "-c", command)
-	cmd.Stdout = w
-	cmd.Stderr = w
-	cmd.Dir = filepath.Join(sls.App.Path)
-	err := cmd.Run()
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return term.New(
+		term.WithDir(sls.App.Path),
+		term.WithStdout(w),
+		term.WithStderr(w),
+	).InteractiveRun(cmd)
 }
 
 func (sls *Manager) runRemoveDomain(w io.Writer) error {
@@ -241,6 +258,7 @@ func (sls *Manager) runRemoveDomain(w io.Writer) error {
 				--stage %s`,
 		nvmDir, sls.App.NodeVersion, sls.App.AwsRegion,
 		sls.App.AwsProfile, sls.Project.Env)
+		
 
 	if sls.App.UseYarn {
 		command = npmToYarn(command)
@@ -251,15 +269,11 @@ func (sls *Manager) runRemoveDomain(w io.Writer) error {
 
 	cmd := exec.Command("bash", "-c", command)
 
-	cmd.Stdout = w
-	cmd.Stderr = w
-	cmd.Dir = filepath.Join(sls.App.Path)
-	err := cmd.Run()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return term.New(
+		term.WithDir(sls.App.Path),
+		term.WithStdout(w),
+		term.WithStderr(w),
+	).InteractiveRun(cmd)
 }
 
 func npmToYarn(cmd string) string {

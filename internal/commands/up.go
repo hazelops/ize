@@ -16,12 +16,12 @@ import (
 
 type UpOptions struct {
 	Config           *config.Project
+	AppName          string
 	SkipBuildAndPush bool
 	SkipGen          bool
 	UseYarn          bool
 	AutoApprove      bool
 	UI               terminal.UI
-	Apps             []string
 }
 
 type Apps map[string]*interface{}
@@ -62,6 +62,7 @@ func NewCmdUp(project *config.Project) *cobra.Command {
 		Example:           upExample,
 		Short:             "Bring full application up from the bottom to the top.",
 		Long:              upLongDesc,
+		Args:              cobra.MaximumNArgs(1),
 		ValidArgsFunction: config.GetApps,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
@@ -129,7 +130,7 @@ func (o *UpOptions) Complete(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		o.Apps = cmd.Flags().Args()
+		o.AppName = cmd.Flags().Args()[0]
 	}
 
 	if len(o.Config.Serverless) != 0 {
@@ -150,13 +151,13 @@ func (o *UpOptions) Complete(cmd *cobra.Command, args []string) error {
 }
 
 func (o *UpOptions) Validate() error {
-	if len(o.Apps) > 0 {
-		err := o.validate()
+	if o.AppName == "" {
+		err := o.validateAll()
 		if err != nil {
 			return err
 		}
 	} else {
-		err := o.validateAll()
+		err := o.validate()
 		if err != nil {
 			return err
 		}
@@ -167,22 +168,20 @@ func (o *UpOptions) Validate() error {
 
 func (o *UpOptions) Run() error {
 	ui := o.UI
-	if len(o.Apps) > 0 {
-		err := manager.InDependencyOrder(aws.BackgroundContext(), o.Config.GetStates(o.Apps...), func(c context.Context, name string) error {
-			return deployInfra(name, ui, o.Config, o.SkipGen)
-		})
+	if o.AppName == "" {
+		err := deployAll(ui, o)
 		if err != nil {
 			return err
 		}
-		err = manager.InDependencyOrder(aws.BackgroundContext(), o.Config.GetApps(o.Apps...), func(c context.Context, name string) error {
-			return deployApp(name, ui, o.Config)
-		})
-		if err != nil {
-			return err
+	} else {
+		if _, ok := o.Config.Terraform[o.AppName]; ok {
+			err := deployInfra(o.AppName, ui, o.Config, o.SkipGen)
+			if err != nil {
+				return err
+			}
 		}
 
-	} else {
-		err := deployAll(ui, o)
+		err := deployApp(o.AppName, ui, o.Config)
 		if err != nil {
 			return err
 		}
@@ -198,6 +197,10 @@ func (o *UpOptions) validate() error {
 
 	if len(o.Config.Namespace) == 0 {
 		return fmt.Errorf("can't validate options: namespace must be specified")
+	}
+
+	if len(o.AppName) == 0 {
+		return fmt.Errorf("can't validate options: app name must be specified")
 	}
 
 	return nil
