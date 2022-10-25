@@ -88,6 +88,7 @@ func newRootCmd(project *config.Project) *cobra.Command {
 		NewCmdGen(project),
 		NewCmdPush(project),
 		NewCmdUp(project),
+		NewCmdNvm(project),
 		NewValidateCmd(),
 		NewVersionCmd())
 
