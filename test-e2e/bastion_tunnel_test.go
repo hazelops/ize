@@ -74,8 +74,6 @@ func TestIzeTunnelUp(t *testing.T) {
 		t.Errorf("error: %s", err)
 	}
 
-	time.Sleep(time.Minute)
-
 	stdout, stderr, err := ize.RunRaw("tunnel", "up", "--ssh-public-key", filepath.Join(home, ".ssh", "id_rsa_tunnel_test.pub"), "--ssh-private-key", filepath.Join(home, ".ssh", "id_rsa_tunnel_test"))
 
 	if err != nil {
