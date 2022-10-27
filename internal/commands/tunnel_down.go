@@ -71,6 +71,11 @@ func (o *TunnelDownOptions) Run() error {
 	c := exec.Command(
 		"ssh", "-S", "bastion.sock", "-O", "exit", "",
 	)
+
+	if o.Config.LogLevel == "debug" {
+		c.Args = append(c.Args, "-vvv")
+	}
+
 	out := &bytes.Buffer{}
 	c.Stdout = out
 	c.Stderr = out
