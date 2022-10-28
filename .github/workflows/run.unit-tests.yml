@@ -75,8 +75,13 @@ jobs:
 
       - name: Coverage Test
         run: |
-          go test -v ./... -coverprofile=coverage.out -covermode=atomic 2>&1 ./... | tee report.txt 
-          cat report.txt | go-junit-report -set-exit-code > report.xml
+          # If we rerun with DEBUG then we'll see the actual log. Otherwise just JUnit report
+          if [ ! -z $RUNNER_DEBUG ]; then
+            go test -v ./... -coverprofile=coverage.out -covermode=atomic 2>&1 ./... | tee report.txt
+            cat report.txt | go-junit-report -set-exit-code > report.xml
+          else
+            go test -v ./... -coverprofile=coverage.out -covermode=atomic 2>&1 ./... > report.txt
+          fi
 
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v3
