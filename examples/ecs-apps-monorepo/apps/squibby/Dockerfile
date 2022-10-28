@@ -25,7 +25,7 @@ COPY ${PROJECT_PATH}/Pipfile* ./
 RUN apk add gcc musl-dev linux-headers
 RUN python3 -m pip install pipenv ddtrace
 
-RUN  pipenv install --deploy --system
+RUN  pipenv install --system
 
 CMD ["ddtrace-run", "python", "app.py"]
 
