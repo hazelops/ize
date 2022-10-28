@@ -68,9 +68,13 @@ jobs:
       - name: Generate Test SSH Key
         run: ssh-keygen -q -f ~/.ssh/id_rsa
 
-      - name: Test
+      - name: Install Junit Reporter
         run: |
           go install github.com/jstemmer/go-junit-report/v2@latest
+          go test -v ./... -coverprofile=coverage.out -covermode=atomic 2>&1 ./... | go-junit-report -set-exit-code > report.xml
+
+      - name: Coverage Test
+        run: |
           go test -v ./... -coverprofile=coverage.out -covermode=atomic 2>&1 ./... | go-junit-report -set-exit-code > report.xml
 
       - name: Publish Test Report

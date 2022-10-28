@@ -12,6 +12,37 @@ It combines infra, build and deploy workflows in one and is too simple to be con
 
 
 ## Quickstart
+## Installation
+### MacOS:
+_[Homebrew](https://brew.sh/) is used on MacOS. Add a tap and install the latest stable version:_
+```shell
+brew tap hazelops/ize
+brew install ize
+```
+
+### Ubuntu:
+_Add public apt repository, update the apt cache and install the latest stable version:_
+ ```shell
+echo "deb [trusted=yes] https://apt.fury.io/hazelops/ /" | sudo tee /etc/apt/sources.list.d/fury.list
+sudo apt-get update
+sudo apt-get install ize
+```
+More information on [other platforms](DOCS.md#installation)
+
+## Autocomplete:
+### MacOS & zsh:
+Enable autocompletion
+```shell
+echo "autoload -U compinit; compinit" >>  ~/.zshrc
+```
+Load autocompletion on every session
+```shell
+ize gen completion zsh > /usr/local/share/zsh/site-functions/_ize
+```
+
+More information on [other platforms & shells](DOCS.md#autocomplete)
+
+
 ### Init the project from a template
 If starting from scratch, create a git repo and init a new project. Follow the setup
 ```shell
@@ -38,36 +69,6 @@ ize up infra
 ize up squibby
 ize up goblin
 ```
-
-## Installation
-### MacOS:
-_[Homebrew](https://brew.sh/) is used on MacOS. Add a tap and install the latest stable version:_
-```shell
-brew tap hazelops/ize
-brew install ize
-```
-
-### Ubuntu:
-_Add public apt repository, update the apt cache and install the latest stable version:_
- ```shell
-echo "deb [trusted=yes] https://apt.fury.io/hazelops/ /" | sudo tee /etc/apt/sources.list.d/fury.list
-sudo apt-get update
-sudo apt-get install ize
-```
-More information on [other platforms](DOCS.md#installation)
-
-## Autocomplete:
-### MacOS & zsh:
-Enable autocompletion 
-```shell
-echo "autoload -U compinit; compinit" >>  ~/.zshrc
-```
-Load autocompletion on every session
-```shell
-ize gen completion zsh > /usr/local/share/zsh/site-functions/_ize
-```
-
-More information on [other platforms & shells](DOCS.md#autocomplete)
 
 ## Workflow Example
 Let's imagine we're deploying a terraform-based infra and a Go-based app named `goblin`.
