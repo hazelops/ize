@@ -3,17 +3,18 @@ package commands
 import (
 	"bytes"
 	"fmt"
-	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/internal/generate"
-	"github.com/hazelops/ize/pkg/templates"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"text/template"
+
+	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/internal/generate"
+	"github.com/hazelops/ize/pkg/templates"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 type CIOptions struct {
@@ -114,16 +115,12 @@ func (o *CIOptions) Run(cmd *cobra.Command) error {
 	}
 
 	err = t.Execute(os.Stdout, struct {
-		Env       string
-		AwsRegion string
+		config.Project
 		PublicKey string
-		Namespace string
 		Apps      map[string]*interface{}
 	}{
-		Env:       o.Config.Env,
-		AwsRegion: o.Config.AwsRegion,
+		Project:   *o.Config,
 		Apps:      o.Config.GetApps(),
-		Namespace: o.Config.Namespace,
 		PublicKey: key,
 	})
 	if err != nil {
