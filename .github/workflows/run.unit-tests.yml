@@ -75,7 +75,8 @@ jobs:
 
       - name: Coverage Test
         run: |
-          go test -v ./... -coverprofile=coverage.out -covermode=atomic 2>&1 ./... | go-junit-report -set-exit-code | tee report.xml
+          go test -v ./... -coverprofile=coverage.out -covermode=atomic 2>&1 ./... | tee report.txt 
+          cat report.txt | go-junit-report -set-exit-code | tee report.xml
 
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v3
