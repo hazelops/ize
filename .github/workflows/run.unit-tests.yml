@@ -46,7 +46,8 @@ jobs:
           path: ${{ github.workspace }}/ize
 
   # TODO: this should be executed before the release and fail in proper cases
-  coverage:
+  unit-tests:
+    name: Unit Tests
     needs: build
     runs-on: ubuntu-latest
     steps:
