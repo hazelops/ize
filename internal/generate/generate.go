@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
-	"github.com/hazelops/ize/examples"
-	pp "github.com/psihachina/path-parser"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -15,7 +14,11 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hazelops/ize/examples"
+	pp "github.com/psihachina/path-parser"
+
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/pterm/pterm"
 )
 
@@ -50,15 +53,36 @@ func GetDataFromFile(source, template string) ([]byte, error) {
 
 		defer os.RemoveAll(dir) // clean up
 
-		_, err = git.PlainClone(dir, false,
-			&git.CloneOptions{
-				URL:      source,
-				Depth:    1,
-				Progress: os.Stdout,
-			},
-		)
-		if err != nil {
-			return nil, err
+		if o.Protocol == "ssh" {
+			privateKeyFile := filepath.Join(os.Getenv("HOME"), ".ssh", "id_rsa")
+
+			publicKeys, err := ssh.NewPublicKeysFromFile("git", privateKeyFile, "")
+			if err != nil {
+				log.Fatalf("generate publickeys failed: %s\n", err.Error())
+			}
+
+			_, err = git.PlainClone(dir, false,
+				&git.CloneOptions{
+					Auth:     publicKeys,
+					URL:      source,
+					Depth:    1,
+					Progress: os.Stdout,
+				},
+			)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			_, err = git.PlainClone(dir, false,
+				&git.CloneOptions{
+					URL:      source,
+					Depth:    1,
+					Progress: os.Stdout,
+				},
+			)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		file, err := os.Open(filepath.Join(dir, template))
