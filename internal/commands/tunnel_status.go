@@ -9,9 +9,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var explainTunnelStatusTmpl = `
+# Change to the dir and get status
+(cd {{.EnvDir}} && $(aws ssm get-parameter --name "/{{.Env}}/terraform-output" --with-decryption | jq -r '.Parameter.Value' | base64 -d | jq -r '.cmd.value.tunnel.status'))
+`
+
 type TunnelStatusOptions struct {
-	Config *config.Project
-	UI     terminal.UI
+	Config  *config.Project
+	UI      terminal.UI
+	Explain bool
 }
 
 func NewTunnelStatusOptions(project *config.Project) *TunnelStatusOptions {
@@ -29,6 +35,16 @@ func NewCmdTunnelStatus(project *config.Project) *cobra.Command {
 		Long:  "Tunnel running status",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
+
+			if o.Explain {
+				err := o.Config.Generate(explainTunnelStatusTmpl, nil)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			}
+
 			err := o.Complete()
 			if err != nil {
 				return err
@@ -47,6 +63,8 @@ func NewCmdTunnelStatus(project *config.Project) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&o.Explain, "explain", false, "bash alternative shown")
 
 	return cmd
 }
