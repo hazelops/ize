@@ -3,7 +3,6 @@ package terraform
 import (
 	"bufio"
 	"fmt"
-	"github.com/hazelops/ize/internal/config"
 	"io"
 	"log"
 	"os"
@@ -14,6 +13,9 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+
+	"github.com/hazelops/ize/internal/config"
+	"github.com/sirupsen/logrus"
 
 	"time"
 
@@ -255,6 +257,8 @@ func Install(tfversion string, mirrorURL string) error {
 	if !hasSlash {
 		mirrorURL = fmt.Sprintf("%s/", mirrorURL)
 	}
+
+	logrus.Debugf("downloading terraform version %s to: %s", tfversion, installLocation)
 
 	/* if selected version already exist, */
 	/* proceed to download it from the hashicorp release page */
