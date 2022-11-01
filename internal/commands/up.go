@@ -21,6 +21,7 @@ type UpOptions struct {
 	SkipGen          bool
 	UseYarn          bool
 	AutoApprove      bool
+	Explain          bool
 	UI               terminal.UI
 }
 
@@ -93,7 +94,8 @@ func NewCmdUp(project *config.Project) *cobra.Command {
 	cmd.Flags().BoolVar(&o.AutoApprove, "auto-approve", false, "approve deploy all")
 	cmd.Flags().BoolVar(&o.UseYarn, "use-yarn", false, "execute sls commands using yarn")
 	cmd.Flags().BoolVar(&o.SkipGen, "skip-gen", false, "skip generating terraform files")
-
+	cmd.Flags().BoolVar(&o.Explain, "explain", false, "bash alternative shown")
+ 
 	cmd.AddCommand(
 		NewCmdUpInfra(project),
 		NewCmdUpApps(project),
@@ -181,7 +183,7 @@ func (o *UpOptions) Run() error {
 			}
 		}
 
-		err := deployApp(o.AppName, ui, o.Config)
+		err := deployApp(o.AppName, ui, o.Config, o.Explain)
 		if err != nil {
 			return err
 		}
@@ -238,7 +240,7 @@ func deployAll(ui terminal.UI, o *UpOptions) error {
 	err = manager.InDependencyOrder(aws.BackgroundContext(), o.Config.GetApps(), func(c context.Context, name string) error {
 		o.Config.AwsProfile = o.Config.Terraform["infra"].AwsProfile
 
-		err := deployApp(name, ui, o.Config)
+		err := deployApp(name, ui, o.Config, false)
 		if err != nil {
 			return err
 		}

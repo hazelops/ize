@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager"
@@ -16,8 +17,9 @@ import (
 )
 
 type UpAppsOptions struct {
-	Config *config.Project
-	UI     terminal.UI
+	Config  *config.Project
+	UI      terminal.UI
+	Explain bool
 }
 
 var upAppsLongDesc = templates.LongDesc(`
@@ -71,6 +73,8 @@ func NewCmdUpApps(project *config.Project) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&o.Explain, "explain", false, "bash alternative shown")
+
 	return cmd
 }
 
@@ -101,7 +105,7 @@ func (o *UpAppsOptions) Run() error {
 	err := manager.InDependencyOrder(aws.BackgroundContext(), o.Config.GetApps(), func(c context.Context, name string) error {
 		o.Config.AwsProfile = o.Config.Terraform["infra"].AwsProfile
 
-		err := deployApp(name, ui, o.Config)
+		err := deployApp(name, ui, o.Config, false)
 		if err != nil {
 			return err
 		}
@@ -117,7 +121,7 @@ func (o *UpAppsOptions) Run() error {
 	return nil
 }
 
-func deployApp(name string, ui terminal.UI, cfg *config.Project) error {
+func deployApp(name string, ui terminal.UI, cfg *config.Project, isExplain bool) error {
 	var m manager.Manager
 	var icon string
 
@@ -148,6 +152,10 @@ func deployApp(name string, ui terminal.UI, cfg *config.Project) error {
 		}
 	}
 
+	if isExplain {
+		return m.Explain()
+	}
+
 	if len(icon) != 0 {
 		icon += " "
 	}
@@ -176,3 +184,4 @@ func deployApp(name string, ui terminal.UI, cfg *config.Project) error {
 
 	return nil
 }
+
