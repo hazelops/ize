@@ -73,6 +73,10 @@ func TestIzeSecretsPushGoblin(t *testing.T) {
 	if !strings.Contains(stdout, "Pushing secrets complete!") {
 		t.Errorf("No success message detected after ize secret push:\n%s", stdout)
 	}
+
+	if os.Getenv("RUNNER_DEBUG") == "1" {
+		t.Log(stdout)
+	}
 }
 
 func TestIzeSecretsPushSquibby(t *testing.T) {
@@ -122,6 +126,10 @@ func TestIzeSecretsPushSquibby(t *testing.T) {
 	if !strings.Contains(stdout, "Pushing secrets complete!") {
 		t.Errorf("No success message detected after ize secret push:\n%s", stdout)
 	}
+
+	if os.Getenv("RUNNER_DEBUG") == "1" {
+		t.Log(stdout)
+	}
 }
 
 func TestIzeUpInfra(t *testing.T) {
@@ -157,7 +165,6 @@ func TestIzeUpInfra(t *testing.T) {
 
 	if err != nil {
 		t.Errorf("error: %s", err)
-		t.Log(stdout)
 	}
 
 	if stderr != "" {
@@ -166,6 +173,10 @@ func TestIzeUpInfra(t *testing.T) {
 
 	if !strings.Contains(stdout, "Deploy infra completed!") {
 		t.Errorf("No success message detected after ize up infra:\n%s", stdout)
+	}
+
+	if os.Getenv("RUNNER_DEBUG") == "1" {
+		t.Log(stdout)
 	}
 
 	time.Sleep(time.Minute)
@@ -213,6 +224,10 @@ func TestIzeUpGoblin(t *testing.T) {
 	if !strings.Contains(stdout, "Deploy app goblin completed") {
 		t.Errorf("No success message detected after ize up squibby:\n%s", stdout)
 	}
+
+	if os.Getenv("RUNNER_DEBUG") == "1" {
+		t.Log(stdout)
+	}
 }
 
 func TestIzeUpSquibby(t *testing.T) {
@@ -258,6 +273,9 @@ func TestIzeUpSquibby(t *testing.T) {
 		t.Errorf("No success message detected after ize up squibby:\n%s", stdout)
 	}
 
+	if os.Getenv("RUNNER_DEBUG") == "1" {
+		t.Log(stdout)
+	}
 }
 
 func TestCheckSecretsSquibby(t *testing.T) {
@@ -276,6 +294,11 @@ func TestCheckSecretsSquibby(t *testing.T) {
 			t.Error(err)
 			t.Log(string(body))
 
+		}
+
+		if os.Getenv("RUNNER_DEBUG") == "1" {
+			t.Logf("body: \n%s", string(body))
+			t.Logf("status: \n%s", string(resp.Status))
 		}
 
 		if strings.Contains(string(body), exampleSquibbySecret) {
@@ -302,6 +325,11 @@ func TestCheckSecretsGoblin(t *testing.T) {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			t.Error(err)
+		}
+
+		if os.Getenv("RUNNER_DEBUG") == "1" {
+			t.Logf("body: \n%s", string(body))
+			t.Logf("status: \n%s", string(resp.Status))
 		}
 
 		if strings.Contains(string(body), exampleGoblinSecret) {
@@ -336,6 +364,10 @@ func TestIzeExecGoblin(t *testing.T) {
 	if !strings.Contains(stdout, "goblin") || strings.Contains(stdout, "EOF") {
 		t.Errorf("No success message detected after exec goblin:\n%s", stdout)
 	}
+
+	if os.Getenv("RUNNER_DEBUG") == "1" {
+		t.Log(stdout)
+	}
 }
 
 func TestIzeExecSquibby(t *testing.T) {
@@ -359,6 +391,10 @@ func TestIzeExecSquibby(t *testing.T) {
 
 	if !strings.Contains(stdout, "squibby") || strings.Contains(stdout, "EOF") {
 		t.Errorf("No success message detected after exec squibby:\n%s", stdout)
+	}
+
+	if os.Getenv("RUNNER_DEBUG") == "1" {
+		t.Log(stdout)
 	}
 }
 
@@ -412,6 +448,10 @@ func TestIzeSecretsRmGoblin(t *testing.T) {
 	if !strings.Contains(stdout, "Removing secrets complete!") {
 		t.Errorf("No success message detected after ize secret push:\n%s", stdout)
 	}
+
+	if os.Getenv("RUNNER_DEBUG") == "1" {
+		t.Log(stdout)
+	}
 }
 
 func TestIzeSecretsRmSquibby(t *testing.T) {
@@ -463,6 +503,10 @@ func TestIzeSecretsRmSquibby(t *testing.T) {
 	if !strings.Contains(stdout, "Removing secrets complete!") {
 		t.Errorf("No success message detected after ize secret push:\n%s", stdout)
 	}
+
+	if os.Getenv("RUNNER_DEBUG") == "1" {
+		t.Log(stdout)
+	}
 }
 
 func randInt(min int, max int) int {
@@ -490,5 +534,9 @@ func TestIzeDown(t *testing.T) {
 
 	if !strings.Contains(stdout, "Destroy all completed!") {
 		t.Errorf("No success message detected after down:\n%s", stdout)
+	}
+
+	if os.Getenv("RUNNER_DEBUG") == "1" {
+		t.Log(stdout)
 	}
 }
