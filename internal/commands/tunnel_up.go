@@ -40,6 +40,24 @@ ProxyCommand sh -c "aws ssm start-session --target %h --document-name AWS-StartS
 {{end}}
 `
 
+var explainTunnelUpTmpl = `
+# Set variables
+SSH_CONFIG={{.EnvDir}}/ssh.config
+SSH_PUBLIC_KEY=$(cat ~/.ssh/id_rsa.pub)
+
+# Get bastion instance id
+BASTION_INSTANCE_ID=$(aws ssm get-parameter --name "/{{.Env}}/terraform-output" --with-decryption | jq -r '.Parameter.Value' | base64 -d | jq -r '.bastion_instance_id.value'
+
+# Get ssh config
+aws ssm get-parameter --name "/{{.Env}}/terraform-output" --with-decryption | jq -r '.Parameter.Value' | base64 -d | jq -r '.ssh_forward_config.value[]' > $SSH_CONFIG
+
+# Send ssh public key to instance
+aws ssm send-command --instance-ids $BASTION_INSTANCE_ID --document-name AWS-RunShellScript --comment 'Add an SSH public key to authorized_keys' --parameters '{"commands": ["grep -qR \"$(SSH_PUBLIC_KEY)\" /home/ubuntu/.ssh/authorized_keys || echo \"$(SSH_PUBLIC_KEY)\" >> /home/ubuntu/.ssh/authorized_keys"]}' 1> /dev/null)
+
+# Change to the dir and up tunnel
+(cd {{.EnvDir}} && $(aws ssm get-parameter --name "/{{.Env}}/terraform-output" --with-decryption | jq -r '.Parameter.Value' | base64 -d | jq -r '.cmd.value.tunnel.up') -F $SSH_CONFIG)
+`
+
 type TunnelUpOptions struct {
 	Config                *config.Project
 	PrivateKeyFile        string
@@ -48,6 +66,7 @@ type TunnelUpOptions struct {
 	ForwardHost           []string
 	StrictHostKeyChecking bool
 	Metadata              bool
+	Explain               bool
 }
 
 func NewTunnelUpFlags(project *config.Project) *TunnelUpOptions {
@@ -65,6 +84,16 @@ func NewCmdTunnelUp(project *config.Project) *cobra.Command {
 		Long:  "Open tunnel with sending ssh key to remote server",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
+
+			if o.Explain {
+				err := o.Config.Generate(explainTunnelUpTmpl, nil)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			}
+
 			err := o.Complete()
 			if err != nil {
 				return err
@@ -90,6 +119,7 @@ func NewCmdTunnelUp(project *config.Project) *cobra.Command {
 	cmd.Flags().StringVar(&o.PrivateKeyFile, "ssh-private-key", "", "set ssh key private path")
 	cmd.PersistentFlags().BoolVar(&o.StrictHostKeyChecking, "strict-host-key-checking", true, "set strict host key checking")
 	cmd.PersistentFlags().BoolVar(&o.Metadata, "use-ec2-metadata", false, "send ssh key to EC2 metadata (work only for Ubuntu versions > 20.0)")
+	cmd.Flags().BoolVar(&o.Explain, "explain", false, "bash alternative shown")
 
 	return cmd
 }

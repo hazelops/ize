@@ -13,8 +13,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var explainTunnelDownTmpl = `
+# Change to the dir and send an exit request
+(cd {{.EnvDir}} && $(aws ssm get-parameter --name "/{{.Env}}/terraform-output" --with-decryption | jq -r '.Parameter.Value' | base64 -d | jq -r '.cmd.value.tunnel.down'))
+`
+
 type TunnelDownOptions struct {
-	Config *config.Project
+	Config  *config.Project
+	Explain bool
 }
 
 func NewTunnelDownOptions(project *config.Project) *TunnelDownOptions {
@@ -32,6 +38,15 @@ func NewCmdTunnelDown(project *config.Project) *cobra.Command {
 		Long:  "Close tunnel",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
+
+			if o.Explain {
+				err := o.Config.Generate(explainTunnelDownTmpl, nil)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			}
 
 			err := o.Complete()
 			if err != nil {
@@ -51,6 +66,8 @@ func NewCmdTunnelDown(project *config.Project) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&o.Explain, "explain", false, "bash alternative shown")
 
 	return cmd
 }
