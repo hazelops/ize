@@ -5,12 +5,14 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 )
 
 // We're testing that we can download and run typical Terraform versions via ize
 func TestIzeTerraformVersion_1_0_10(t *testing.T) {
+	fmt.Println(os.Getenv("RUNNER_DEBUG"))
 
 	terraformVersion := "1.0.10"
 	if examplesRootDir == "" {
