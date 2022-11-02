@@ -565,14 +565,23 @@ func GetApps(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirecti
 	return apps, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (p *Project) Generate(tmpl string) error {
+func (p *Project) Generate(tmpl string, funcs template.FuncMap) error {
 	t := template.New("template")
+	t.Funcs(funcs)
 	t, err := t.Parse(tmpl)
 	if err != nil {
 		return err
 	}
 
-	err = t.Execute(os.Stdout, p)
+	data := struct {
+		Project
+		Data interface{}
+	}{
+		*p,
+		tmpl,
+	}
+
+	err = t.Execute(os.Stdout, data)
 	if err != nil {
 		return err
 	}

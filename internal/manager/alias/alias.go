@@ -46,3 +46,7 @@ func (a *Manager) Build(ui terminal.UI) error {
 func (a *Manager) Redeploy(ui terminal.UI) error {
 	return nil
 }
+
+func (e *Manager) Explain() error {
+	return nil
+}

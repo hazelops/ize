@@ -5,6 +5,9 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/hazelops/ize/internal/config"
@@ -15,8 +18,6 @@ import (
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"io/ioutil"
-	"path/filepath"
 )
 
 type UpInfraOptions struct {
@@ -115,15 +116,13 @@ func (o *UpInfraOptions) Complete() error {
 			o.Config.Terraform["infra"].AwsRegion = o.Config.AwsRegion
 		}
 
-
-	  if len(o.Config.Terraform["infra"].StateBucketRegion) == 0 {
-		  o.Config.Terraform["infra"].StateBucketRegion = o.Config.Terraform["infra"].AwsRegion
-	  }
+		if len(o.Config.Terraform["infra"].StateBucketRegion) == 0 {
+			o.Config.Terraform["infra"].StateBucketRegion = o.Config.Terraform["infra"].AwsRegion
+		}
 
 		if len(o.Version) != 0 {
 			o.Config.Terraform["infra"].Version = o.Version
 		}
-
 
 		if len(o.Config.Terraform["infra"].Version) == 0 {
 			o.Config.Terraform["infra"].Version = o.Config.TerraformVersion
@@ -201,7 +200,7 @@ terraform plan
 # Terraform Apply
 terraform apply
 `
-		err := o.Config.Generate(tmpl)
+		err := o.Config.Generate(tmpl, nil)
 		if err != nil {
 			return err
 		}
