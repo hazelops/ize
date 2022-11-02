@@ -55,9 +55,11 @@ func TestIzeUpInfra(t *testing.T) {
 		t.Errorf("No success message detected after all up:\n%s", stdout)
 	}
 
-	time.Sleep(time.Minute)
+	if os.Getenv("RUNNER_DEBUG") == "1" {
+		t.Log(stdout)
+	}
 
-	t.Log(stdout)
+	time.Sleep(time.Minute)
 }
 
 func TestIzeTunnelUp(t *testing.T) {
@@ -89,6 +91,10 @@ func TestIzeTunnelUp(t *testing.T) {
 	if !strings.Contains(stdout, "Tunnel is up! Forwarded ports:") {
 		t.Errorf("No success message detected after tunnel:\n%s", stdout)
 	}
+
+	if os.Getenv("RUNNER_DEBUG") == "1" {
+		t.Log(stdout)
+	}
 }
 
 func TestIzeTunnelStatus(t *testing.T) {
@@ -112,6 +118,10 @@ func TestIzeTunnelStatus(t *testing.T) {
 
 	if !strings.Contains(stdout, "Tunnel is up. Forwarding config:") {
 		t.Errorf("No success message detected after tunnel status:\n%s", stdout)
+	}
+
+	if os.Getenv("RUNNER_DEBUG") == "1" {
+		t.Log(stdout)
 	}
 }
 
@@ -137,6 +147,10 @@ func TestIzeTunnelDown(t *testing.T) {
 	if !strings.Contains(stdout, "Tunnel is down!") {
 		t.Errorf("No success message detected after tunnel down:\n%s", stdout)
 	}
+
+	if os.Getenv("RUNNER_DEBUG") == "1" {
+		t.Log(stdout)
+	}
 }
 
 func TestIzeDown(t *testing.T) {
@@ -160,5 +174,9 @@ func TestIzeDown(t *testing.T) {
 
 	if !strings.Contains(stdout, "Destroy all completed!") {
 		t.Errorf("No success message detected after all down:\n%s", stdout)
+	}
+
+	if os.Getenv("RUNNER_DEBUG") == "1" {
+		t.Log(stdout)
 	}
 }
