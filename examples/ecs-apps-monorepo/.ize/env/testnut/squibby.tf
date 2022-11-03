@@ -3,7 +3,7 @@ module "squibby" {
     module.ecs
   ]
   source  = "registry.terraform.io/hazelops/ecs-app/aws"
-  version = "~>1.4"
+  version = "~>1.4.0"
 
   name             = "squibby"
   app_type         = "web"
