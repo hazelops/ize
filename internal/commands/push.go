@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager"
 	"github.com/hazelops/ize/internal/manager/alias"
@@ -16,6 +17,7 @@ type PushOptions struct {
 	Config  *config.Project
 	AppName string
 	App     interface{}
+	Explain bool
 }
 
 var pushLongDesc = templates.LongDesc(`
@@ -73,6 +75,8 @@ func NewCmdPush(project *config.Project) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&o.Explain, "explain", false, "bash alternative shown")
+
 	return cmd
 }
 
@@ -117,6 +121,10 @@ func (o *PushOptions) Run() error {
 			Project: o.Config,
 			App:     &config.Ecs{Name: o.AppName},
 		}
+	}
+
+	if o.Explain {
+		return m.Explain()
 	}
 
 	return m.Push(ui)
