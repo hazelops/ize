@@ -2,17 +2,18 @@ package commands
 
 import (
 	_ "embed"
-	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/internal/generate"
 	"os"
 	"path/filepath"
 	"testing"
 	"text/template"
+
+	"github.com/hazelops/ize/internal/config"
+	"github.com/hazelops/ize/tests/data"
 )
 
 func TestTemplate_Execute(t *testing.T) {
 	tempDir, _ := os.MkdirTemp("", "test")
-	_, err := generate.GenerateFiles("boilerplate-template", filepath.Join(tempDir, "template"))
+	err := copyEmbedData(data.TestData, "boilerplate-template", filepath.Join(tempDir, "template"))
 	if err != nil {
 		t.Error(err)
 		return

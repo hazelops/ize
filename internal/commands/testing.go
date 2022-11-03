@@ -4,13 +4,16 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"embed"
 	"encoding/pem"
-	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"golang.org/x/crypto/ssh"
 )
 
 func setConfigFile(path, data string, t *testing.T) {
@@ -65,4 +68,36 @@ func resetEnv(environ []string) {
 		kv := strings.Split(s, "=")
 		os.Setenv(kv[0], kv[1])
 	}
+}
+
+func copyEmbedData(fsys embed.FS, sourceDir string, targetDir string) error {
+	subdirs, err := fsys.ReadDir(sourceDir)
+	if err != nil {
+		return err
+	}
+	for _, d := range subdirs {
+		sourcePath := path.Join(sourceDir, d.Name())
+		if d.IsDir() {
+			err = copyEmbedData(fsys, path.Join(sourceDir, d.Name()), path.Join(targetDir, d.Name()))
+			if err != nil {
+				return err
+			}
+		} else {
+			localPath := filepath.Join(targetDir, d.Name())
+
+			content, err := fsys.ReadFile(sourcePath)
+			if err != nil {
+				return err
+			}
+			err = os.MkdirAll(filepath.Dir(localPath), 0755)
+			if err != nil {
+				return err
+			}
+			err = os.WriteFile(localPath, content, 0755)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
