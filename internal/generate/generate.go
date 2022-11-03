@@ -16,6 +16,7 @@ import (
 
 	"github.com/hazelops/ize/examples"
 	pp "github.com/psihachina/path-parser"
+	"github.com/sirupsen/logrus"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
@@ -53,6 +54,11 @@ func GetDataFromFile(source, template string) ([]byte, error) {
 
 		defer os.RemoveAll(dir) // clean up
 
+		wr := io.Discard
+		if logrus.GetLevel() == logrus.DebugLevel {
+			wr = os.Stdout
+		}
+
 		if o.Protocol == "ssh" {
 			privateKeyFile := filepath.Join(os.Getenv("HOME"), ".ssh", "id_rsa")
 
@@ -66,7 +72,7 @@ func GetDataFromFile(source, template string) ([]byte, error) {
 					Auth:     publicKeys,
 					URL:      source,
 					Depth:    1,
-					Progress: os.Stdout,
+					Progress: wr,
 				},
 			)
 			if err != nil {
@@ -77,7 +83,7 @@ func GetDataFromFile(source, template string) ([]byte, error) {
 				&git.CloneOptions{
 					URL:      source,
 					Depth:    1,
-					Progress: os.Stdout,
+					Progress: wr,
 				},
 			)
 			if err != nil {
