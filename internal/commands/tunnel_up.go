@@ -552,31 +552,42 @@ func writeSSHConfigFromConfig(forwardHost []string, dir string) error {
 }
 
 func checkTunnel(dir string) (bool, error) {
-	c := exec.Command(
-		"ssh", "-S", "bastion.sock", "-O", "check", "",
-	)
-	out := &bytes.Buffer{}
-	c.Stdout = out
-	c.Stderr = out
-	c.Dir = dir
+	pathToSocket := filepath.Join(dir, "bastion.sock")
+	if _, err := os.Stat(pathToSocket); !os.IsNotExist(err) {
+		pterm.Info.Printfln("A socket file from another tunnel has been detected: %s", pathToSocket)
+		c := exec.Command(
+			"ssh", "-S", "bastion.sock", "-O", "check", "",
+		)
+		out := &bytes.Buffer{}
+		c.Stdout = out
+		c.Stderr = out
+		c.Dir = dir
 
-	err := c.Run()
-	if err == nil {
-		sshConfigPath := fmt.Sprintf("%s/ssh.config", dir)
-		sshConfig, err := getSSHConfig(sshConfigPath)
-		if err != nil {
-			return false, fmt.Errorf("can't check tunnel: %w", err)
+		err := c.Run()
+		if err == nil {
+			sshConfigPath := fmt.Sprintf("%s/ssh.config", dir)
+			sshConfig, err := getSSHConfig(sshConfigPath)
+			if err != nil {
+				return false, fmt.Errorf("can't check tunnel: %w", err)
+			}
+
+			pterm.Success.Println("Tunnel is up. Forwarding config:")
+			hosts := getHosts(sshConfig)
+			var forwardConfig string
+			for _, h := range hosts {
+				forwardConfig += fmt.Sprintf("%s:%s ➡ localhost:%s\n", h[2], h[3], h[1])
+			}
+			pterm.Println(forwardConfig)
+
+			return true, nil
+		} else {
+			pterm.Warning.Println("Tunnel socket file seems to be not useable. We have deleted it")
+			err := os.Remove(pathToSocket)
+			if err != nil {
+				return false, err
+			}
+			return false, nil
 		}
-
-		pterm.Success.Println("Tunnel is up. Forwarding config:")
-		hosts := getHosts(sshConfig)
-		var forwardConfig string
-		for _, h := range hosts {
-			forwardConfig += fmt.Sprintf("%s:%s ➡ localhost:%s\n", h[2], h[3], h[1])
-		}
-		pterm.Println(forwardConfig)
-
-		return true, nil
 	}
 
 	return false, nil
