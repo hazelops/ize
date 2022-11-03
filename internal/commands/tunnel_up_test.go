@@ -2,6 +2,13 @@ package commands
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"reflect"
+	"testing"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -9,12 +16,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/hazelops/ize/internal/config"
-	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"reflect"
-	"testing"
 )
 
 func TestUpOptions_getSSHCommandArgs(t *testing.T) {
@@ -47,7 +48,7 @@ func TestUpOptions_getSSHCommandArgs(t *testing.T) {
 				PublicKeyFile:         "",
 				BastionHostID:         "i-xxxxxxxxxxx",
 				ForwardHost:           nil,
-				StrictHostKeyChecking: false,
+				StrictHostKeyChecking: true,
 			},
 			args: args{sshConfigPath: "./test/ssh.config"},
 			want: []string{"-M", "-t", "-S", "bastion.sock", "-fN", "ubuntu@i-xxxxxxxxxxx", "-F", "./test/ssh.config"},
@@ -59,7 +60,7 @@ func TestUpOptions_getSSHCommandArgs(t *testing.T) {
 				PublicKeyFile:         "",
 				BastionHostID:         "i-xxxxxxxxxxx",
 				ForwardHost:           nil,
-				StrictHostKeyChecking: true,
+				StrictHostKeyChecking: false,
 			},
 			args: args{sshConfigPath: "./test/ssh.config"},
 			want: []string{"-M", "-t", "-S", "bastion.sock", "-fN", "-o", "StrictHostKeyChecking=no", "ubuntu@i-xxxxxxxxxxx", "-F", "./test/ssh.config"},
@@ -71,7 +72,7 @@ func TestUpOptions_getSSHCommandArgs(t *testing.T) {
 				PublicKeyFile:         fmt.Sprintf("%s/.ssh/id_rsa.pub", temp),
 				BastionHostID:         "i-XXXXXXXXXXXXXXXXX",
 				ForwardHost:           nil,
-				StrictHostKeyChecking: false,
+				StrictHostKeyChecking: true,
 			},
 			args: args{sshConfigPath: "./test/ssh.config"},
 			want: []string{"-M", "-t", "-S", "bastion.sock", "-fN", "ubuntu@i-XXXXXXXXXXXXXXXXX", "-F", "./test/ssh.config", "-i", fmt.Sprintf("%s/.ssh/id_rsa", temp)},

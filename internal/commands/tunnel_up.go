@@ -117,7 +117,7 @@ func NewCmdTunnelUp(project *config.Project) *cobra.Command {
 	cmd.Flags().StringSliceVar(&o.ForwardHost, "forward-host", nil, "set forward hosts for redirect with next format: <remote-host>:<remote-port>, <remote-host>:<remote-port>, <remote-host>:<remote-port>. In this case a free local port will be selected automatically.  It's possible to set local manually using <remote-host>:<remote-port>:<local-port>")
 	cmd.Flags().StringVar(&o.PublicKeyFile, "ssh-public-key", "", "set ssh key public path")
 	cmd.Flags().StringVar(&o.PrivateKeyFile, "ssh-private-key", "", "set ssh key private path")
-	cmd.PersistentFlags().BoolVar(&o.StrictHostKeyChecking, "strict-host-key-checking", true, "set strict host key checking")
+	cmd.PersistentFlags().BoolVar(&o.StrictHostKeyChecking, "strict-host-key-checking", false, "set strict host key checking")
 	cmd.PersistentFlags().BoolVar(&o.Metadata, "use-ec2-metadata", false, "send ssh key to EC2 metadata (work only for Ubuntu versions > 20.0)")
 	cmd.Flags().BoolVar(&o.Explain, "explain", false, "bash alternative shown")
 
@@ -275,7 +275,7 @@ func (o *TunnelUpOptions) runSSH(args []string) error {
 
 func (o *TunnelUpOptions) getSSHCommandArgs(sshConfigPath string) []string {
 	args := []string{"-M", "-t", "-S", "bastion.sock", "-fN"}
-	if o.StrictHostKeyChecking {
+	if !o.StrictHostKeyChecking {
 		args = append(args, "-o", "StrictHostKeyChecking=no")
 	}
 	args = append(args, fmt.Sprintf("ubuntu@%s", o.BastionHostID))
