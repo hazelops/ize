@@ -32,7 +32,6 @@ module "squibby" {
     "squibby.${var.root_domain_name}"
   ]
   https_enabled     = false
-  web_proxy_enabled = true
 
   # Environment variables
   app_secrets = [
