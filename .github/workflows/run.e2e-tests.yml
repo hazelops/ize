@@ -97,7 +97,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          go test -v --timeout 0 --tags="e2e ecs_apps" ./test-e2e
+          go test -v --timeout 0 --tags="e2e ecs_apps" ./tests/e2e
 
       - name: Cleanup Infra
         if: ${{ always() }}
@@ -167,7 +167,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          go test -v --timeout 0 --tags="e2e bastion_tunnel" ./test-e2e
+          go test -v --timeout 0 --tags="e2e bastion_tunnel" ./tests/e2e
 
       - name: Cleanup Infra
         if: ${{ always() }}
@@ -232,4 +232,4 @@ jobs:
 
       - name: Run Tests
         run: |
-          go test -v --timeout 0 --tags="e2e terraform" ./test-e2e
+          go test -v --timeout 0 --tags="e2e terraform" ./tests/e2e
