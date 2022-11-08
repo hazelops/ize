@@ -2,10 +2,11 @@ package commands
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
@@ -19,6 +20,7 @@ type LogsOptions struct {
 	Config     *config.Project
 	AppName    string
 	EcsCluster string
+	Task       string
 }
 
 func NewLogsFlags(project *config.Project) *LogsOptions {
@@ -57,6 +59,7 @@ func NewCmdLogs(project *config.Project) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.EcsCluster, "ecs-cluster", "", "set ECS cluster name")
+	cmd.Flags().StringVar(&o.Task, "task", "", "set ECS task id")
 
 	return cmd
 }
@@ -72,14 +75,6 @@ func (o *LogsOptions) Complete(cmd *cobra.Command) error {
 }
 
 func (o *LogsOptions) Validate() error {
-	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("can't validate: env must be specified\n")
-	}
-
-	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("can't validate: namespace must be specified\n")
-	}
-
 	if len(o.AppName) == 0 {
 		return fmt.Errorf("can't validate: app name must be specified\n")
 	}
@@ -89,21 +84,24 @@ func (o *LogsOptions) Validate() error {
 func (o *LogsOptions) Run() error {
 	logGroup := fmt.Sprintf("%s-%s", o.Config.Env, o.AppName)
 
-	lto, err := o.Config.AWSClient.ECSClient.ListTasks(&ecs.ListTasksInput{
-		Cluster:       &o.EcsCluster,
-		DesiredStatus: aws.String("RUNNING"),
-		ServiceName:   &logGroup,
-		MaxResults:    aws.Int64(1),
-	})
+	taskID := o.Task
+	if len(taskID) == 0 {
+		lto, err := o.Config.AWSClient.ECSClient.ListTasks(&ecs.ListTasksInput{
+			Cluster:       &o.EcsCluster,
+			DesiredStatus: aws.String("RUNNING"),
+			ServiceName:   &logGroup,
+			MaxResults:    aws.Int64(1),
+		})
 
-	logrus.Infof("log group: %s, cluster name: %s", logGroup, o.EcsCluster)
+		logrus.Infof("log group: %s, cluster name: %s", logGroup, o.EcsCluster)
 
-	if err != nil {
-		return fmt.Errorf("can't run logs: %w", err)
+		if err != nil {
+			return fmt.Errorf("can't run logs: %w", err)
+		}
+
+		taskID = *lto.TaskArns[0]
+		taskID = taskID[strings.LastIndex(taskID, "/")+1:]
 	}
-
-	taskID := *lto.TaskArns[0]
-	taskID = taskID[strings.LastIndex(taskID, "/")+1:]
 
 	var token *string
 	logStreamName := fmt.Sprintf("main/%s/%s", o.AppName, taskID)
