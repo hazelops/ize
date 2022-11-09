@@ -20,4 +20,6 @@ type Terraform struct {
 type Tunnel struct {
 	BastionInstanceID string   `mapstructure:"bastion_instance_id,omitempty"`
 	ForwardHost       []string `mapstructure:"forward_host,omitempty"`
+	SSHPublicKey      string   `mapstructure:"ssh_public_key,omitempty"`
+	SSHPrivateKey     string   `mapstructure:"ssh_private_key,omitempty"`
 }

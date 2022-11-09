@@ -137,6 +137,14 @@ func (o *TunnelUpOptions) Complete() error {
 		os.Exit(0)
 	}
 
+	if o.PrivateKeyFile == "" && o.Config.Tunnel != nil {
+		o.PrivateKeyFile = o.Config.Tunnel.SSHPrivateKey
+	}
+
+	if o.PublicKeyFile == "" && o.Config.Tunnel != nil {
+		o.PublicKeyFile = o.Config.Tunnel.SSHPublicKey
+	}
+
 	if o.PrivateKeyFile == "" {
 		home, _ := os.UserHomeDir()
 		o.PrivateKeyFile = fmt.Sprintf("%s/.ssh/id_rsa", home)
