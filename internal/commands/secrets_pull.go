@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"text/template"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -14,6 +15,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var explainSecretsPullTmpl = `
+aws ssm get-parameters-by-path \
+	--path "/{{.Env}}/{{svc}}" \
+	--with-decryption \
+	--recursive \
+	--parameter-filters "Key=Type,Values=SecureString" \
+	--output json | jq '.Parameters | [.[] | {(.Name|capture(".*/(?<a>.*)").a): .Value}]|reduce .[] as $item ({}; . + $item)' > {{.EnvDir}}/secrets/{{svc}}.json
+`
+
 type SecretsPullOptions struct {
 	Config      *config.Project
 	AppName     string
@@ -21,6 +31,7 @@ type SecretsPullOptions struct {
 	FilePath    string
 	SecretsPath string
 	Force       bool
+	Explain     bool
 }
 
 func NewSecretsPullFlags(project *config.Project) *SecretsPullOptions {
@@ -63,6 +74,7 @@ func NewCmdSecretsPull(project *config.Project) *cobra.Command {
 	cmd.Flags().StringVar(&o.Backend, "backend", "ssm", "backend type (default=ssm)")
 	cmd.Flags().StringVar(&o.FilePath, "file", "", "file with secrets")
 	cmd.Flags().StringVar(&o.SecretsPath, "path", "", "path where to store secrets (/<env>/<app> by default)")
+	cmd.Flags().BoolVar(&o.Explain, "explain", false, "bash alternative shown")
 	cmd.Flags().BoolVar(&o.Force, "force", false, "allow values overwrite")
 
 	return cmd
@@ -91,6 +103,19 @@ func (o *SecretsPullOptions) Validate() error {
 }
 
 func (o *SecretsPullOptions) Run() error {
+	if o.Explain {
+		err := o.Config.Generate(explainSecretsPullTmpl, template.FuncMap{
+			"svc": func() string {
+				return o.AppName
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	s, _ := pterm.DefaultSpinner.Start(fmt.Sprintf("Pulling secrets for %s...", o.AppName))
 	if o.Backend == "ssm" {
 		err := o.pull(s)
