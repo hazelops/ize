@@ -2,6 +2,9 @@ package commands
 
 import (
 	"fmt"
+	"strings"
+	"text/template"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ecs"
@@ -12,7 +15,6 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"strings"
 )
 
 type ExecOptions struct {
@@ -22,7 +24,20 @@ type ExecOptions struct {
 	Command       []string
 	Task          string
 	ContainerName string
+	Explain       bool
 }
+
+var explainExecTmpl = `
+TASK_ID=$(aws ecs list-tasks --cluster {{.Env}}-{{.Namespace}} --service-name {{.Env}}-{{svc}} --desired-status "RUNNING" | jq -r '.taskArns[]' | cut -d'/' -f3 | head -n 1)
+
+aws ecs execute-command  \
+    --interactive \
+    --region {{.AwsRegion}} \
+    --cluster {{.Env}}-{{.Namespace}} \
+    --task $TASK_ID \
+    --container {{svc}} \
+    --command {{command}}
+`
 
 var execExample = templates.Examples(`
 	# Connect to a container in the ECS via AWS SSM and run command.
@@ -70,6 +85,7 @@ func NewCmdExec(project *config.Project) *cobra.Command {
 	cmd.Flags().StringVar(&o.EcsCluster, "ecs-cluster", "", "set ECS cluster name")
 	cmd.Flags().StringVar(&o.Task, "task", "", "set task id")
 	cmd.Flags().StringVar(&o.ContainerName, "container-name", "", "set container name")
+	cmd.Flags().BoolVar(&o.Explain, "explain", false, "bash alternative shown")
 
 	return cmd
 }
@@ -97,14 +113,6 @@ func (o *ExecOptions) Complete(cmd *cobra.Command, args []string, argsLenAtDash 
 }
 
 func (o *ExecOptions) Validate() error {
-	if len(o.Config.Env) == 0 {
-		return fmt.Errorf("can't validate: env must be specified")
-	}
-
-	if len(o.Config.Namespace) == 0 {
-		return fmt.Errorf("can't validate: namespace must be specified")
-	}
-
 	if len(o.AppName) == 0 {
 		return fmt.Errorf("can't validate: app name must be specified")
 	}
@@ -118,6 +126,22 @@ func (o *ExecOptions) Validate() error {
 
 func (o *ExecOptions) Run() error {
 	appName := fmt.Sprintf("%s-%s", o.Config.Env, o.AppName)
+
+	if o.Explain {
+		err := o.Config.Generate(explainExecTmpl, template.FuncMap{
+			"svc": func() string {
+				return o.AppName
+			},
+			"command": func() string {
+				return strings.Join(o.Command, " ")
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
 
 	logrus.Infof("app name: %s, cluster name: %s", appName, o.EcsCluster)
 	logrus.Infof("region: %s, profile: %s", o.Config.AwsProfile, o.Config.AwsRegion)
