@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"text/template"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -23,7 +24,18 @@ type SecretsPushOptions struct {
 	FilePath    string
 	SecretsPath string
 	Force       bool
+	Explain     bool
 }
+
+var explainSecretsPushTmpl = `
+SERVICE_SECRETS_FILE={{.EnvDir}}/secrets/{{svc}}.json
+SERVICE_SECRETS=$(cat $SERVICE_SECRETS_FILE | jq -e -r '. | keys[]')
+for item in $(echo $SERVICE_SECRETS); do 
+    aws --profile={{.AwsProfile}} ssm put-parameter --name="/{{.Env}}/{{svc}}/${item}" --value="$(cat $SERVICE_SECRETS_FILE | jq -r .$item )" --type SecureString --overwrite && \
+    aws --profile={{.AwsProfile}} ssm add-tags-to-resource --resource-type "Parameter" --resource-id "/{{.Env}}/{{svc}}/${item}" \
+    --tags "Key=Application,Value={{svc}}" "Key=EnvVarName,Value=${item}"
+done
+`
 
 var secretsPushExample = templates.Examples(`
 	# Push secrets:
@@ -76,6 +88,7 @@ func NewCmdSecretsPush(project *config.Project) *cobra.Command {
 	cmd.Flags().StringVar(&o.Backend, "backend", "ssm", "backend type (default=ssm)")
 	cmd.Flags().StringVar(&o.FilePath, "file", "", "file with secrets")
 	cmd.Flags().StringVar(&o.SecretsPath, "path", "", "path where to store secrets (/<env>/<app> by default)")
+	cmd.Flags().BoolVar(&o.Explain, "explain", false, "bash alternative shown")
 	cmd.Flags().BoolVar(&o.Force, "force", false, "allow values overwrite")
 
 	return cmd
@@ -104,6 +117,19 @@ func (o *SecretsPushOptions) Validate() error {
 }
 
 func (o *SecretsPushOptions) Run() error {
+	if o.Explain {
+		err := o.Config.Generate(explainSecretsPushTmpl, template.FuncMap{
+			"svc": func() string {
+				return o.AppName
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	s, _ := pterm.DefaultSpinner.Start(fmt.Sprintf("Pushing secrets for %s...", o.AppName))
 	if o.Backend == "ssm" {
 		err := o.push(s)

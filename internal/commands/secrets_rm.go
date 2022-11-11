@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"text/template"
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -19,7 +20,16 @@ type SecretsRemoveOptions struct {
 	Backend     string
 	SecretsPath string
 	ui          terminal.UI
+	Explain     bool
 }
+
+var explainSecretsRmTmpl = `
+aws ssm delete-parameters --names $(aws ssm get-parameters-by-path \
+	--path "/{{.Env}}/{{svc}}" \
+	--with-decryption \
+	--recursive \
+	--query "Parameters[*].Name" | jq -e -r '. | to_entries[] | .value')
+`
 
 var secretsRemoveExample = templates.Examples(`
 	# Remove secrets:
@@ -61,6 +71,7 @@ func NewCmdSecretsRemove(project *config.Project) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.Backend, "backend", "ssm", "backend type")
+	cmd.Flags().BoolVar(&o.Explain, "explain", false, "bash alternative shown")
 	cmd.Flags().StringVar(&o.SecretsPath, "path", "", "path to secrets")
 
 	return cmd
@@ -87,6 +98,19 @@ func (o *SecretsRemoveOptions) Validate() error {
 }
 
 func (o *SecretsRemoveOptions) Run() error {
+	if o.Explain {
+		err := o.Config.Generate(explainSecretsRmTmpl, template.FuncMap{
+			"svc": func() string {
+				return o.AppName
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	s, _ := pterm.DefaultSpinner.Start(fmt.Sprintf("Removing secrets for %s...", o.AppName))
 	if o.Backend == "ssm" {
 		err := o.rm(s)
