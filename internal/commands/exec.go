@@ -31,12 +31,12 @@ var explainExecTmpl = `
 TASK_ID=$(aws ecs list-tasks --cluster {{.Env}}-{{.Namespace}} --service-name {{.Env}}-{{svc}} --desired-status "RUNNING" | jq -r '.taskArns[]' | cut -d'/' -f3 | head -n 1)
 
 aws ecs execute-command  \
+    --interactive \
     --region {{.AwsRegion}} \
     --cluster {{.Env}}-{{.Namespace}} \
     --task $TASK_ID \
     --container {{svc}} \
-    --command {{command}} \
-    --interactive
+    --command {{command}}
 `
 
 var execExample = templates.Examples(`
