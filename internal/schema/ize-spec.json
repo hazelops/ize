@@ -105,6 +105,14 @@
                         "type": "string",
                         "description": "Forward host."
                     }
+                },
+                "ssh_private_key": {
+                    "type": "string",
+                    "description": "(optional) Path to SSH private key. Default: {user_home_directory}/.ssh/id_rsa"
+                },
+                "ssh_public_key": {
+                    "type": "string",
+                    "description": "(optional) Path to SSH public key. Default: {user_home_directory}/.ssh/id_rsa.pub"
                 }
             },
             "description": "Tunnel configuration.",
