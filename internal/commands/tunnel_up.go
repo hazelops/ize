@@ -506,7 +506,11 @@ func writeSSHConfigFromSSM(wr *SSMWrapper, env string, dir string) (string, []st
 
 	hosts := getHosts(sshConfig)
 	if len(hosts) == 0 {
-		return "", []string{}, fmt.Errorf("can't write SSH config: forwarding config is not valid")
+		errMsg := "can't write SSH config: forwarding config is not valid"
+		if logrus.GetLevel() == logrus.DebugLevel {
+			errMsg += fmt.Sprintf(". Config in SSM: \n%s", sshConfig)
+		}
+		return "", []string{}, fmt.Errorf(errMsg)
 	}
 
 	bastionHostID = to.BastionInstanceID.Value
