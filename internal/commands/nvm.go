@@ -53,6 +53,11 @@ func NewCmdNvm(project *config.Project) *cobra.Command {
 		ValidArgsFunction: config.GetApps,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
+
+			if len(cmd.Flags().Args()) == 0 {
+				return fmt.Errorf("app name must be specified")
+			}
+
 			argsLenAtDash := cmd.ArgsLenAtDash()
 			err := o.Complete(cmd, args, argsLenAtDash)
 			if err != nil {
@@ -91,10 +96,6 @@ func (o *NvmOptions) Complete(cmd *cobra.Command, args []string, argsLenAtDash i
 }
 
 func (o *NvmOptions) Validate() error {
-	if len(o.AppName) == 0 {
-		return fmt.Errorf("can't validate options: app name must be specified")
-	}
-
 	if len(o.Command) == 0 {
 		return fmt.Errorf("can't validate: you must specify at least one command for the container")
 	}
