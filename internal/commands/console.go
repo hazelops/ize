@@ -2,6 +2,8 @@ package commands
 
 import (
 	"fmt"
+	"text/template"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ecs"
@@ -20,7 +22,20 @@ type ConsoleOptions struct {
 	Task          string
 	CustomPrompt  bool
 	ContainerName string
+	Explain       bool
 }
+
+var explainConsoleTmpl = `
+TASK_ID=$(aws ecs list-tasks --cluster {{.Env}}-{{.Namespace}} --service-name {{.Env}}-{{svc}} --desired-status "RUNNING" | jq -r '.taskArns[]' | cut -d'/' -f3 | head -n 1)
+
+aws ecs execute-command  \
+    --interactive \
+    --region {{.AwsRegion}} \
+    --cluster {{.Env}}-{{.Namespace}} \
+    --task $TASK_ID \
+    --container {{svc}} \
+    --command "/bin/sh"
+`
 
 func NewConsoleFlags(project *config.Project) *ConsoleOptions {
 	return &ConsoleOptions{
@@ -61,6 +76,7 @@ func NewCmdConsole(project *config.Project) *cobra.Command {
 	cmd.Flags().StringVar(&o.EcsCluster, "ecs-cluster", "", "set ECS cluster name")
 	cmd.Flags().StringVar(&o.ContainerName, "container-name", "", "set container name")
 	cmd.Flags().StringVar(&o.Task, "task", "", "set task id")
+	cmd.Flags().BoolVar(&o.Explain, "explain", false, "bash alternative shown")
 	cmd.Flags().BoolVar(&o.CustomPrompt, "custom-prompt", false, "enable custom prompt in the console")
 
 	return cmd
@@ -98,6 +114,19 @@ func (o *ConsoleOptions) Validate() error {
 
 func (o *ConsoleOptions) Run() error {
 	appName := fmt.Sprintf("%s-%s", o.Config.Env, o.AppName)
+
+	if o.Explain {
+		err := o.Config.Generate(explainConsoleTmpl, template.FuncMap{
+			"svc": func() string {
+				return o.AppName
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
 
 	logrus.Infof("app name: %s, cluster name: %s", appName, o.EcsCluster)
 	logrus.Infof("region: %s, profile: %s", o.Config.AwsProfile, o.Config.AwsRegion)
