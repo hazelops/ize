@@ -141,6 +141,11 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 		command = npmToYarn(command)
 	}
 
+	if sls.App.Force {
+		command += ` \
+		--force`
+	}
+
 	logrus.SetOutput(w)
 	logrus.Debugf("command: %s", command)
 
@@ -258,7 +263,6 @@ func (sls *Manager) runRemoveDomain(w io.Writer) error {
 				--stage %s`,
 		nvmDir, sls.App.NodeVersion, sls.App.AwsRegion,
 		sls.App.AwsProfile, sls.Project.Env)
-		
 
 	if sls.App.UseYarn {
 		command = npmToYarn(command)

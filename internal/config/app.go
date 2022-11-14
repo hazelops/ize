@@ -24,6 +24,7 @@ type Serverless struct {
 	Path                    string   `mapstructure:",omitempty"`
 	SLSNodeModuleCacheMount string   `mapstructure:",omitempty"`
 	CreateDomain            bool     `mapstructure:"create_domain"`
+	Force                   bool     `mapstructure:"force"`
 	Env                     []string `mapstructure:",omitempty"`
 	Icon                    string   `mapstructure:"icon,omitempty"`
 	UseYarn                 bool     `mapstructure:"use_yarn,omitempty"`
