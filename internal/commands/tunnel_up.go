@@ -17,6 +17,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/Masterminds/semver"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2instanceconnect"
@@ -211,6 +212,11 @@ func (o *TunnelUpOptions) Run() error {
 	logrus.Debugf("public key path: %s", o.PublicKeyFile)
 	logrus.Debugf("private key path: %s", o.PrivateKeyFile)
 
+	err := o.checkOsVersion()
+	if err != nil {
+		return err
+	}
+
 	pk, err := getPublicKey(o.PublicKeyFile)
 	if err != nil {
 		return fmt.Errorf("can't get public key: %s", err)
@@ -237,6 +243,40 @@ func (o *TunnelUpOptions) Run() error {
 
 	pterm.Success.Println("Tunnel is up! Forwarded ports:")
 	pterm.Println(forwardConfig)
+
+	return nil
+}
+
+func (o *TunnelUpOptions) checkOsVersion() error {
+	diio, err := o.Config.AWSClient.SSMClient.DescribeInstanceInformation(&ssm.DescribeInstanceInformationInput{
+		Filters: []*ssm.InstanceInformationStringFilter{
+			{
+				Key:    aws.String("InstanceIds"),
+				Values: aws.StringSlice([]string{o.BastionHostID}),
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("can't get instance '%s' information: %s", o.BastionHostID, err)
+	}
+
+	if len(diio.InstanceInformationList) == 0 {
+		return fmt.Errorf("can't get instance '%s' information", o.BastionHostID)
+	}
+
+	osName := *diio.InstanceInformationList[0].PlatformName
+	osVersion := *diio.InstanceInformationList[0].PlatformVersion
+
+	switch osName {
+	case "Ubuntu":
+		if semver.MustParse(osVersion).LessThan(semver.MustParse("20.04")) {
+			pterm.Warning.Printfln("Your bastion host AMI is Ubuntu %s, Instance Connect is not installed by default on that version of OS", osVersion)
+		}
+	case "Amazon Linux AMI":
+		if semver.MustParse(osVersion).LessThan(semver.MustParse("2.0.20190618")) {
+			pterm.Warning.Printfln("Your bastion host AMI is Amazon Linux AMI %s, Instance Connect is not installed by default on that version of OS", osVersion)
+		}
+	}
 
 	return nil
 }
