@@ -1,12 +1,16 @@
 package ssmsession
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
+	"github.com/Netflix/go-expect"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/hazelops/ize/pkg/term"
 )
@@ -34,16 +38,33 @@ func NewSSMPluginCommand(region string) SSMPluginCommand {
 }
 
 func (s SSMPluginCommand) Start(ssmSession *ecs.Session) error {
+	var output bytes.Buffer
 	response, err := json.Marshal(ssmSession)
 	if err != nil {
 		return fmt.Errorf("marshal session response: %w", err)
 	}
+
+	c, err := expect.NewConsole(expect.WithStdout(&output), expect.WithStdin(os.Stdin))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer c.Close()
+
 	cmd := exec.Command(ssmPluginBinaryName, []string{string(response), s.region, startSessionAction}...)
-	out, _, _, err := s.runner.Run(cmd)
+	cmd.Stdin = c.Tty()
+	cmd.Stdout = c.Tty()
+	cmd.Stderr = c.Tty()
+
+	go func() {
+		c.ExpectEOF()
+	}()
+
+	_, _, _, err = s.Run(cmd)
 	if err != nil {
 		return fmt.Errorf("start session: %w", err)
 	}
-	if strings.Contains(out, "ERROR") {
+	fmt.Println(strings.TrimSpace(output.String()))
+	if strings.Contains(output.String(), "ERROR") {
 		return fmt.Errorf("exit status: 1")
 	}
 
@@ -62,4 +83,23 @@ func (s SSMPluginCommand) StartInteractive(ssmSession *ecs.Session) error {
 	}
 
 	return nil
+}
+
+func (s SSMPluginCommand) Run(cmd *exec.Cmd) (stdout, stderr string, exitCode int, err error) {
+
+	if err = cmd.Start(); err != nil {
+		return
+	}
+
+	err = cmd.Wait()
+
+	if err != nil {
+		if err2, ok := err.(*exec.ExitError); ok {
+			if s, ok := err2.Sys().(syscall.WaitStatus); ok {
+				err = nil
+				exitCode = s.ExitStatus()
+			}
+		}
+	}
+	return
 }
