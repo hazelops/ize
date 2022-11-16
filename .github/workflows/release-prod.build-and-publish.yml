@@ -53,7 +53,7 @@ jobs:
       with:
         source_file: 'website/commands'
         destination_repo: 'hazelops/ize.sh'
-        destination_folder: 'public'
+        destination_folder: 'content'
         user_email: 'ize@hazelops.com'
         user_name: 'ize'
         commit_message: 'Add commands from Ize'
