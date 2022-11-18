@@ -29,6 +29,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 const sshConfig = `# SSH over Session Manager
@@ -199,7 +200,7 @@ func (o *TunnelUpOptions) Validate() error {
 
 	for _, h := range o.ForwardHost {
 		p, _ := strconv.Atoi(strings.Split(h, ":")[2])
-		if err := checkPort(p); err != nil {
+		if err := checkPort(p, o.Config.EnvDir); err != nil {
 			return fmt.Errorf("tunnel forwarding config validation failed: %w", err)
 		}
 	}
@@ -455,7 +456,7 @@ func getFreePort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
-func checkPort(port int) error {
+func checkPort(port int, dir string) error {
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		return fmt.Errorf("can't check address %s: %w", fmt.Sprintf("127.0.0.1:%d", port), err)
@@ -463,11 +464,49 @@ func checkPort(port int) error {
 
 	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		command := fmt.Sprintf("lsof -i tcp:%d | grep LISTEN | awk '{print $1, \"(pid\", $2\")\"}'", port)
+		command := fmt.Sprintf("lsof -i tcp:%d | grep LISTEN | awk '{print $1, $2}'", port)
 		stdout, stderr, code, err := term.New(term.WithStdout(io.Discard), term.WithStderr(io.Discard)).Run(exec.Command("bash", "-c", command))
+		if err != nil {
+			return fmt.Errorf("can't run command '%s': %w", command, err)
+		}
 		if code == 0 {
-			logrus.Error(err)
-			return fmt.Errorf("port %d is in use by %s. Please stop the process or remove the port assigment so it will be auto-assigned", port, strings.TrimSpace(stdout))
+			stdout = strings.TrimSpace(stdout)
+			processName := strings.Split(stdout, " ")[0]
+			processPid, err := strconv.Atoi(strings.Split(stdout, " ")[1])
+			if err != nil {
+				return fmt.Errorf("can't get pid: %w", err)
+			}
+			pterm.Info.Printfln("Can't start tunnel on port %d. It seems like it's take by a process '%s'.", port, processName)
+			proc, err := os.FindProcess(processPid)
+			if err != nil {
+				return fmt.Errorf("can't find process: %w", err)
+			}
+
+			_, err = os.Stat(filepath.Join(dir, "bastion.sock"))
+			if processName == "ssh" && os.IsNotExist(err) {
+				return fmt.Errorf("it could be another ize tunnel, but we can't find a socket. Something went wrong. We suggest terminating it and starting it up again")
+			}
+			isContinue := false
+			if terminal.IsTerminal(int(os.Stdout.Fd())) {
+				isContinue, err = pterm.DefaultInteractiveConfirm.WithDefaultText("Would you like to terminate it?").Show()
+				if err != nil {
+					return err
+				}
+			} else {
+				isContinue = true
+			}
+
+			if !isContinue {
+				return fmt.Errorf("destroying was canceled")
+			}
+			err = proc.Kill()
+			if err != nil {
+				return fmt.Errorf("can't kill process: %w", err)
+			}
+
+			pterm.Info.Printfln("Process '%s' (pid %d) was killed", processName, processPid)
+
+			return nil
 		}
 		return fmt.Errorf("error during run command: %s (exit code: %d, stderr: %s)", command, code, stderr)
 	}
