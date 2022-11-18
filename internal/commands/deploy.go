@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager"
@@ -20,6 +21,7 @@ type DeployOptions struct {
 	Image                  string
 	TaskDefinitionRevision string
 	Unsafe                 bool
+	Force                  bool
 }
 
 var deployLongDesc = templates.LongDesc(`
@@ -85,6 +87,7 @@ func NewCmdDeploy(project *config.Project) *cobra.Command {
 
 	cmd.Flags().StringVar(&o.TaskDefinitionRevision, "task-definition-revision", "", "set task definition revision (ECS only)")
 	cmd.Flags().BoolVar(&o.Unsafe, "unsafe", false, "set unsafe healthcheck options (accelerates deployment if possible)")
+	cmd.Flags().BoolVar(&o.Force, "force", false, "forces a deployment to take place (only serverless)")
 
 	return cmd
 }
@@ -141,6 +144,7 @@ func (o *DeployOptions) Run() error {
 
 	if app, ok := o.Config.Serverless[o.AppName]; ok {
 		app.Name = o.AppName
+		app.Force = o.Force
 		m = &serverless.Manager{
 			Project: o.Config,
 			App:     app,
