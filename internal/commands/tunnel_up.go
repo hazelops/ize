@@ -270,7 +270,7 @@ func (o *TunnelUpOptions) checkOsVersion() error {
 	switch osName {
 	case "Ubuntu":
 		if semver.MustParse(osVersion).LessThan(semver.MustParse("20.04")) {
-			pterm.Warning.Printfln("Your bastion host AMI is Ubuntu %s, Instance Connect is not installed by default on that version of OS", osVersion)
+			pterm.Warning.Printfln("Your bastion host AMI is Ubuntu %s, Instance Connect is not installed by default on that version of OS. Please upgrade to at least v20.04", osVersion)
 		}
 	case "Amazon Linux AMI":
 		if semver.MustParse(osVersion).LessThan(semver.MustParse("2.0.20190618")) {
