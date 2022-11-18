@@ -268,6 +268,7 @@ func (o *TunnelUpOptions) runSSH(args []string) error {
 	c := exec.Command("ssh", args...)
 
 	c.Dir = o.Config.EnvDir
+	os.Setenv("AWS_REGION", o.Config.AwsRegion)
 
 	runner := term.New(term.WithStdin(os.Stdin))
 	_, _, code, err := runner.Run(c)
