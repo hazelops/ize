@@ -274,7 +274,7 @@ func (o *TunnelUpOptions) checkOsVersion() error {
 		}
 	case "Amazon Linux AMI":
 		if semver.MustParse(osVersion).LessThan(semver.MustParse("2.0.20190618")) {
-			pterm.Warning.Printfln("Your bastion host AMI is Amazon Linux AMI %s, Instance Connect is not installed by default on that version of OS", osVersion)
+			pterm.Warning.Printfln("Your bastion host AMI is Amazon Linux AMI %s, Instance Connect is not installed by default on that version of OS. Please upgrade your AMI to at least 2.0.20190618", osVersion)
 		}
 	}
 
