@@ -1,0 +1,36 @@
+name: "Tests: APT Install"
+defaults:
+  run:
+    shell: bash
+
+env:
+  AWS_PROFILE: default
+  AWS_REGION: us-east-1
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * */2'
+
+jobs:
+  build:
+    name: Install On Ubuntu Latest
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: get ize version
+        uses: rez0n/actions-github-release@main
+        id: ize_release
+        env:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: "hazelops/ize"
+          type: "latest"
+
+      - name: Install Ize
+        run: |
+          echo "deb [trusted=yes] https://apt.fury.io/hazelops/ /" | sudo tee /etc/apt/sources.list.d/fury.list
+          sudo apt-get update
+          sudo apt-get install ize
+
+      - name: Run Ize and compare version
+        run: ize -version |grep ${{ steps.ize_release.outputs.release }}
