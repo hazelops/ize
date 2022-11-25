@@ -1,0 +1,32 @@
+name: "Tests: brew install"
+defaults:
+  run:
+    shell: bash
+
+env:
+  AWS_PROFILE: default
+  AWS_REGION: us-east-1
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * */2'
+
+jobs:
+  build:
+    name: Install On MacOS Latest
+    runs-on: macos-latest
+    steps:
+
+      - name: ize_version
+        uses: pozetroninc/github-action-get-latest-release@master
+        with:
+          repository: hazelops/ize
+
+      - name: Install Ize
+        run: |
+          brew tap hazelops/ize
+          brew install ize
+
+      - name: Run Ize and compare version
+        run: ize -version |grep ${{ steps.ize_version.outputs.release }}
