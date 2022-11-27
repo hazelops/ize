@@ -9,11 +9,11 @@ env:
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 3 * * */2'
+#  schedule:
+#    - cron: '0 3 * * */2'
 
 jobs:
-  build:
+  install_and_test:
     name: Install On Ubuntu Latest
     runs-on: ubuntu-latest
     steps:

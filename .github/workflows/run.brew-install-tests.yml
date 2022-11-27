@@ -9,24 +9,39 @@ env:
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 3 * * */2'
+#  schedule:
+#    - cron: '0 3 * * */2'
 
 jobs:
-  build:
+  get_release_version:
+    name: Get Release Version
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.ize_release.outputs.release }}
+    steps:
+      - name: get ize version
+        id: ize_release_version
+        uses: rez0n/actions-github-release@main
+        env:
+          token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          repository: "hazelops/ize"
+          type: "latest"
+
+      - name: Save release version
+        id: ize_release
+        run: |
+          echo "release=${{ steps.ize_release_version.outputs.release }}" >> $GITHUB_OUTPUT
+          echo ${{ steps.ize_release_version.outputs.release }}
+
+  install_ize:
     name: Install On MacOS Latest
     runs-on: macos-latest
+    needs: get_release_version
     steps:
-
-      - name: ize_version
-        uses: pozetroninc/github-action-get-latest-release@master
-        with:
-          repository: hazelops/ize
-
       - name: Install Ize
         run: |
           brew tap hazelops/ize
           brew install ize
 
       - name: Run Ize and compare version
-        run: ize -version |grep ${{ steps.ize_version.outputs.release }}
+        run: ize -version |grep ${{needs.get_release_version.outputs.release}}
