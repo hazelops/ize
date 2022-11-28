@@ -24,7 +24,7 @@ jobs:
         env:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: "hazelops/ize"
-          type: "latest"
+          type: "stable"
 
       - name: Install Ize
         run: |
