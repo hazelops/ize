@@ -1,4 +1,4 @@
-name: "Tests: APT Install"
+name: "Tests: Ubuntu Install"
 defaults:
   run:
     shell: bash
@@ -33,4 +33,4 @@ jobs:
           sudo apt-get install ize
 
       - name: Run Ize and compare version
-        run: ize -version |grep ${{ steps.ize_release.outputs.release }}
+        run: ize --version | grep ${{ steps.ize_release.outputs.release }}

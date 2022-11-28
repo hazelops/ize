@@ -1,4 +1,4 @@
-name: "Tests: brew install"
+name: "Tests: MacOS install"
 defaults:
   run:
     shell: bash
@@ -44,4 +44,4 @@ jobs:
           brew install ize
 
       - name: Run Ize and compare version
-        run: ize -version |grep ${{needs.get_release_version.outputs.release}}
+        run: ize --version | grep ${{needs.get_release_version.outputs.release}}
