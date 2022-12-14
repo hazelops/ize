@@ -44,7 +44,13 @@ jobs:
           brew install ize
 
       - name: Run Ize and compare version
+        id: izeMacTests
         run: ize --version | grep ${{needs.get_release_version.outputs.release}}
+
+      - name: Run Slack Failure Notification
+        if: failure() && steps.izeMacTests.outcome == 'failure'
+        run: |
+          curl -X POST --data-urlencode "payload={\"channel\": \"#core-tools\", \"username\": \"webhookbot\", \"text\": \":x: IZE installation in macOS failed - please check $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID for more info\", \"icon_emoji\": \":ghost:\"}" ${{ secrets.SLACK_WEBHOOK }}
 
   install_ize_ubuntu:
     name: Install On Ubuntu Latest
@@ -58,4 +64,10 @@ jobs:
           sudo apt-get install ize
 
       - name: Run Ize and compare version
+        id: izeUbuntuTests
         run: ize --version | grep ${{needs.get_release_version.outputs.release}}
+
+      - name: Run Slack Failure Notification
+        if: failure() && steps.izeUbuntuTests.outcome == 'failure'
+        run: |
+          curl -X POST --data-urlencode "payload={\"channel\": \"#core-tools\", \"username\": \"webhookbot\", \"text\": \":x: IZE installation in Ubuntu failed - please check $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID for more info\", \"icon_emoji\": \":ghost:\"}" ${{ secrets.SLACK_WEBHOOK }}
