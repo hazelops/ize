@@ -16,6 +16,22 @@ type Ecs struct {
 	DependsOn              []string `mapstructure:"depends_on,omitempty"`
 }
 
+type K8s struct {
+	Name                   string   `mapstructure:",omitempty"`
+	Path                   string   `mapstructure:",omitempty"`
+	Image                  string   `mapstructure:",omitempty"`
+	Cluster                string   `mapstructure:",omitempty"`
+	TaskDefinitionRevision string   `mapstructure:"task_definition_revision"`
+	DockerRegistry         string   `mapstructure:"docker_registry,omitempty"`
+	Timeout                int      `mapstructure:",omitempty"`
+	Unsafe                 bool     `mapstructure:",omitempty"`
+	SkipDeploy             bool     `mapstructure:"skip_deploy,omitempty"`
+	Icon                   string   `mapstructure:"icon,omitempty"`
+	AwsProfile             string   `mapstructure:"aws_profile,omitempty"`
+	AwsRegion              string   `mapstructure:"aws_region,omitempty"`
+	DependsOn              []string `mapstructure:"depends_on,omitempty"`
+}
+
 type Serverless struct {
 	Name                    string   `mapstructure:",omitempty"`
 	File                    string   `mapstructure:",omitempty"`
