@@ -134,6 +134,8 @@ func (o *SecretsPullOptions) Run() error {
 func (o *SecretsPullOptions) pull(s *pterm.SpinnerPrinter) error {
 	s.UpdateText(fmt.Sprintf("Pulling secrets from %s://%s...", o.Backend, o.SecretsPath))
 
+	values := make(map[string]interface{})
+
 	params, err := o.Config.AWSClient.SSMClient.GetParametersByPath(&ssm.GetParametersByPathInput{
 		Path:           aws.String(o.SecretsPath),
 		Recursive:      aws.Bool(true),
@@ -149,11 +151,36 @@ func (o *SecretsPullOptions) pull(s *pterm.SpinnerPrinter) error {
 		return err
 	}
 
-	values := make(map[string]interface{})
-
 	for _, param := range params.Parameters {
 		p := strings.Split(*param.Name, "/")
 		values[p[len(p)-1]] = *param.Value
+	}
+
+	for {
+		if params.NextToken == nil {
+			break
+		}
+
+		params, err = o.Config.AWSClient.SSMClient.GetParametersByPath(&ssm.GetParametersByPathInput{
+			Path:           aws.String(o.SecretsPath),
+			Recursive:      aws.Bool(true),
+			WithDecryption: aws.Bool(true),
+			NextToken:      params.NextToken,
+			ParameterFilters: []*ssm.ParameterStringFilter{
+				{
+					Key:    aws.String("Type"),
+					Values: aws.StringSlice([]string{"SecureString"}),
+				},
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, param := range params.Parameters {
+			p := strings.Split(*param.Name, "/")
+			values[p[len(p)-1]] = *param.Value
+		}
 	}
 
 	b, err := json.MarshalIndent(values, "", "")
