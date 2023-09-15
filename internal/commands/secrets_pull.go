@@ -25,13 +25,14 @@ aws ssm get-parameters-by-path \
 `
 
 type SecretsPullOptions struct {
-	Config      *config.Project
-	AppName     string
-	Backend     string
-	FilePath    string
-	SecretsPath string
-	Force       bool
-	Explain     bool
+	Config         *config.Project
+	AppName        string
+	Backend        string
+	FilePath       string
+	SecretsPath    string
+	Force          bool
+	Explain        bool
+	IncludeStrings bool
 }
 
 func NewSecretsPullFlags(project *config.Project) *SecretsPullOptions {
@@ -76,6 +77,7 @@ func NewCmdSecretsPull(project *config.Project) *cobra.Command {
 	cmd.Flags().StringVar(&o.SecretsPath, "path", "", "path where to store secrets (/<env>/<app> by default)")
 	cmd.Flags().BoolVar(&o.Explain, "explain", false, "bash alternative shown")
 	cmd.Flags().BoolVar(&o.Force, "force", false, "allow values overwrite")
+	cmd.Flags().BoolVar(&o.IncludeStrings, "include-strings", false, "include plaintext strings")
 
 	return cmd
 }
@@ -135,6 +137,11 @@ func (o *SecretsPullOptions) pull(s *pterm.SpinnerPrinter) error {
 	s.UpdateText(fmt.Sprintf("Pulling secrets from %s://%s...", o.Backend, o.SecretsPath))
 
 	values := make(map[string]interface{})
+	typeValues := []string{"SecureString"}
+
+	if o.IncludeStrings {
+		typeValues = []string{"SecureString", "String"}
+	}
 
 	params, err := o.Config.AWSClient.SSMClient.GetParametersByPath(&ssm.GetParametersByPathInput{
 		Path:           aws.String(o.SecretsPath),
@@ -143,7 +150,7 @@ func (o *SecretsPullOptions) pull(s *pterm.SpinnerPrinter) error {
 		ParameterFilters: []*ssm.ParameterStringFilter{
 			{
 				Key:    aws.String("Type"),
-				Values: aws.StringSlice([]string{"SecureString"}),
+				Values: aws.StringSlice(typeValues),
 			},
 		},
 	})
