@@ -65,6 +65,18 @@
             "type": "string",
             "description": "(optional) Terraform version can be set here. 1.1.3 by default"
         },
+        "endpoint_url": {
+            "type": "string",
+            "description": "(optional) AWS Endpoint url (can be used with Localstack)"
+        },
+        "localstack": {
+            "type": "boolean",
+            "description": "(optional) Whether enable Localstack"
+        },
+        "ssh_public_key": {
+            "type": "string",
+            "description": "(optional) provide public key for resources"
+        },
         "docker_registry": {
             "type": "string",
             "description": "(optional) Docker registry can be set here. By default it uses ECR repo with the name of the service."

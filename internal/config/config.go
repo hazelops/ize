@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -93,9 +94,29 @@ func (p *Project) GetConfig() error {
 		return err
 	}
 
+	if p.LocalStack {
+		// Set default Endpoint URL for localstack if it's enabled
+		if len(p.EndpointUrl) == 0 {
+			p.EndpointUrl = "http://127.0.0.1:4566"
+		}
+	}
+
+	if len(p.SshPublicKey) == 0 {
+		// Read id_rsa if it's not set
+		home, _ := os.UserHomeDir()
+		key, err := ioutil.ReadFile(fmt.Sprintf("%s/.ssh/id_rsa.pub", home))
+		if err != nil {
+			return fmt.Errorf("can't read public ssh key: %s", err)
+
+		}
+
+		p.SshPublicKey = string(key)[:len(string(key))-1]
+	}
+
 	sess, err := utils.GetSession(&utils.SessionConfig{
-		Region:  p.AwsRegion,
-		Profile: p.AwsProfile,
+		Region:      p.AwsRegion,
+		Profile:     p.AwsProfile,
+		EndpointUrl: p.EndpointUrl,
 	})
 	if err != nil {
 		return err
@@ -182,8 +203,9 @@ func (p *Project) GetTestConfig() error {
 	}
 
 	sess, err := utils.GetTestSession(&utils.SessionConfig{
-		Region:  p.AwsRegion,
-		Profile: p.AwsProfile,
+		Region:      p.AwsRegion,
+		Profile:     p.AwsProfile,
+		EndpointUrl: p.EndpointUrl,
 	})
 	if err != nil {
 		return err
@@ -236,6 +258,7 @@ func InitConfig() {
 	_ = viper.BindEnv("AWS_PROFILE", "AWS_PROFILE")
 	_ = viper.BindEnv("AWS_REGION", "AWS_REGION")
 	_ = viper.BindEnv("NAMESPACE", "NAMESPACE")
+	_ = viper.BindEnv("SSH_PUBLIC_KEY", "SSH_PUBLIC_KEY")
 
 	// TODO: those static defaults should probably go to a separate package and/or function. Also would include image names and such.
 	viper.SetDefault("TERRAFORM_VERSION", "1.1.3")

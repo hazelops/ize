@@ -32,6 +32,9 @@ type Project struct {
 	PreferRuntime    string `mapstructure:"prefer_runtime,omitempty"`
 	Tag              string `mapstructure:",omitempty"`
 	DockerRegistry   string `mapstructure:"docker_registry,omitempty"`
+	EndpointUrl      string `mapstructure:"endpoint_url,omitempty"`
+	LocalStack       bool   `mapstructure:"localstack,omitempty"`
+	SshPublicKey     string `mapstructure:"ssh_public_key,omitempty"`
 
 	Home      string `mapstructure:",omitempty"`
 	RootDir   string `mapstructure:"root_dir,omitempty"`

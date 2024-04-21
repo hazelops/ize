@@ -99,7 +99,6 @@ func (sls *Manager) runNvm(w io.Writer) error {
 }
 
 func (sls *Manager) runDeploy(w io.Writer) error {
-
 	nvmDir := os.Getenv("NVM_DIR")
 	if len(nvmDir) == 0 {
 		nvmDir = "$HOME/.nvm"

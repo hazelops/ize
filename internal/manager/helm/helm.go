@@ -1,4 +1,4 @@
-package k8s
+package helm
 
 import (
 	"context"
@@ -68,8 +68,9 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 
 	if len(e.App.AwsRegion) != 0 && len(e.App.AwsProfile) != 0 {
 		sess, err := utils.GetSession(&utils.SessionConfig{
-			Region:  e.App.AwsRegion,
-			Profile: e.App.AwsProfile,
+			Region:      e.App.AwsRegion,
+			Profile:     e.App.AwsProfile,
+			EndpointUrl: e.Project.EndpointUrl,
 		})
 		if err != nil {
 			return fmt.Errorf("can't get session: %w", err)
@@ -132,8 +133,9 @@ func (e *Manager) Redeploy(ui terminal.UI) error {
 
 	if len(e.App.AwsRegion) != 0 && len(e.App.AwsProfile) != 0 {
 		sess, err := utils.GetSession(&utils.SessionConfig{
-			Region:  e.App.AwsRegion,
-			Profile: e.App.AwsProfile,
+			Region:      e.App.AwsRegion,
+			Profile:     e.App.AwsProfile,
+			EndpointUrl: e.Project.EndpointUrl,
 		})
 		if err != nil {
 			return fmt.Errorf("can't get session: %w", err)

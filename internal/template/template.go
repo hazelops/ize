@@ -4,16 +4,14 @@ import (
 	"crypto/md5"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"reflect"
-	"strings"
-
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/pterm/pterm"
 	"github.com/zclconf/go-cty/cty"
+	"os"
+	"path/filepath"
+	"reflect"
 )
 
 const (
@@ -133,50 +131,77 @@ func GenerateConfigFile(opts ConfigOpts, path string) error {
 func GenerateBackendTf(opts BackendOpts, path string) error {
 	f := hclwrite.NewEmptyFile()
 
-	if strings.Contains(opts.ENV, "localstack") || strings.Contains(opts.ENV, "local") {
+	if len(opts.LOCALSTACK_ENDPOINT) > 0 {
 		rootBody := f.Body()
 		// AWS Provider block
 		providerBlock := rootBody.AppendNewBlock("provider", []string{"aws"})
-		providerBlock.Body().SetAttributeTraversal("profile", hcl.Traversal{
-			hcl.TraverseRoot{Name: "var"},
-			hcl.TraverseAttr{Name: "aws_profile"},
-		})
-		providerBlock.Body().SetAttributeTraversal("region", hcl.Traversal{
-			hcl.TraverseRoot{Name: "var"},
-			hcl.TraverseAttr{Name: "aws_region"},
-		})
-		providerBlock.Body().SetAttributeValue("s3_force_path_style", cty.True)
-		providerBlock.Body().SetAttributeValue("secret_key", cty.StringVal("mock_secret_key"))
-		providerBlock.Body().SetAttributeValue("skip_credentials_validation", cty.True)
-		providerBlock.Body().SetAttributeValue("skip_metadata_api_check", cty.True)
-		providerBlock.Body().SetAttributeValue("skip_requesting_account_id", cty.True)
+
+		//providerBlock.Body().SetAttributeValue("access_key", cty.StringVal("test"))
+		//providerBlock.Body().SetAttributeValue("secret_key", cty.StringVal("test"))
+		//providerBlock.Body().SetAttributeTraversal("profile", hcl.Traversal{
+		//	hcl.TraverseRoot{Name: "var"},
+		//	hcl.TraverseAttr{Name: "aws_profile"},
+		//})
+
+		//providerBlock.Body().SetAttributeTraversal("region", hcl.Traversal{
+		//	hcl.TraverseRoot{Name: "var"},
+		//	hcl.TraverseAttr{Name: "aws_region"},
+		//})
+		//providerBlock.Body().SetAttributeValue("s3_use_path_style", cty.True)
+		//providerBlock.Body().SetAttributeValue("secret_key", cty.StringVal("mock_secret_key"))
+		//providerBlock.Body().SetAttributeValue("skip_credentials_validation", cty.True)
+		//providerBlock.Body().SetAttributeValue("skip_metadata_api_check", cty.True)
+		//providerBlock.Body().SetAttributeValue("skip_requesting_account_id", cty.True)
 		rootBody.AppendNewline()
 
-		// Endpoints
-		endpointBlock := rootBody.AppendNewBlock("endpoints", []string{})
-		endpointBlock.Body().SetAttributeValue("apigateway", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("acm", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("cloudformation", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("cloudwatch", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("ec2", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("dynamodb", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("es", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("firehose", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("iam", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("kinesis", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("lambda", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("route53", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("redshift", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("s3", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("secretsmanager", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("ses", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("sns", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("sqs", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("ssm", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("stepfunctions", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("sts", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("ecs", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
-		endpointBlock.Body().SetAttributeValue("ecr", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//// Endpoints
+		//endpointsBlock := providerBlock.Body().AppendNewBlock("endpoints", nil)
+		//endpointsBlock.Body().SetAttributeValue("apigateway", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("acm", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("cloudformation", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("cloudwatch", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("ec2", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("dynamodb", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("es", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("firehose", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("iam", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("kinesis", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("lambda", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("route53", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("redshift", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("s3", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("secretsmanager", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("ses", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("sns", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("sqs", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("ssm", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("stepfunctions", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("sts", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("ecs", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		//endpointsBlock.Body().SetAttributeValue("ecr", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+
+		// Terraform block
+		terraformBlock := f.Body().AppendNewBlock("terraform", []string{})
+		// backend s3 block
+		backendBlock := terraformBlock.Body().AppendNewBlock("backend", []string{"s3"})
+		backendBlock.Body().SetAttributeValue("bucket", cty.StringVal(opts.TERRAFORM_STATE_BUCKET_NAME))
+		backendBlock.Body().SetAttributeValue("key", cty.StringVal(opts.TERRAFORM_STATE_KEY))
+		backendBlock.Body().SetAttributeValue("region", cty.StringVal(opts.TERRAFORM_STATE_REGION))
+		backendBlock.Body().SetAttributeValue("profile", cty.StringVal(opts.TERRAFORM_STATE_PROFILE))
+		backendBlock.Body().SetAttributeValue("dynamodb_table", cty.StringVal(opts.TERRAFORM_STATE_DYNAMODB_TABLE))
+		backendBlock.Body().SetAttributeValue("endpoint", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		backendBlock.Body().SetAttributeValue("sts_endpoint", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		backendBlock.Body().SetAttributeValue("iam_endpoint", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		backendBlock.Body().SetAttributeValue("dynamodb_endpoint", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
+		backendBlock.Body().SetAttributeValue("force_path_style", cty.BoolVal(true))
+
+		defaultTagsBlock := providerBlock.Body().AppendNewBlock("default_tags", nil)
+		defaultTagsBlock.Body().SetAttributeValue("tags", cty.ObjectVal(map[string]cty.Value{
+			"terraform": cty.StringVal("true"),
+			"env":       cty.StringVal(opts.ENV),
+			"namespace": cty.StringVal(opts.NAMESPACE),
+		}))
+
 	} else {
 		rootBody := f.Body()
 		// AWS Provider block

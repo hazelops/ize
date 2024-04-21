@@ -84,35 +84,22 @@ func NewDebugCmd(project *config.Project) *cobra.Command {
 					}
 				}
 
-				tags, err := project.AWSClient.IAMClient.ListUserTags(&iam.ListUserTagsInput{
-					UserName: guo.User.UserName,
-				})
-				if aerr, ok := err.(awserr.Error); ok {
-					switch aerr.Code() {
-					case "NoSuchEntity":
-						return fmt.Errorf("error obtaining AWS user with aws_profile=%s: username %s is not found in account %s", project.AwsProfile, *guo.User.UserName, *resp.Account)
-					default:
-						return err
-					}
-				}
-
-				devEnvName := ""
-
-				for _, k := range tags.Tags {
-					if *k.Key == "devEnvironmentName" {
-						devEnvName = *k.Value
-					}
+				var userName string
+				if *guo.User.UserId == "000000000000" {
+					userName = "root"
+				} else {
+					userName = *guo.User.UserId
 				}
 
 				_ = dt.WithData(pterm.TableData{
 					{"AWS PROFILE", project.AwsProfile},
-					{"AWS USER", *guo.User.UserName},
+					{"AWS USER", userName},
 					{"AWS ACCOUNT", *resp.Account},
 				}).WithLeftAlignment().Render()
 
-				if len(devEnvName) > 0 {
+				if len(project.EndpointUrl) > 0 {
 					_ = dt.WithData(pterm.TableData{
-						{"AWS_DEV_ENV_NAME", devEnvName},
+						{"AWS ENDPOINT URL", project.EndpointUrl},
 					}).WithLeftAlignment().Render()
 				}
 			} else {
