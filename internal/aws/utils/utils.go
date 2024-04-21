@@ -31,6 +31,13 @@ func GetSession(c *SessionConfig) (*session.Session, error) {
 	upd := false
 
 	config := aws.NewConfig().WithRegion(c.Region).WithCredentials(credentials.NewSharedCredentials("", c.Profile)).WithEndpoint(c.EndpointUrl)
+
+	if len(c.EndpointUrl) > 0 {
+		logrus.Debug(fmt.Sprintf("Session established. Endpoint: %s", c.EndpointUrl))
+	} else {
+		logrus.Debug(fmt.Sprintf("Session established with a default endpoint"))
+	}
+
 	//
 	//if len(c.EndpointUrl) > 0 {
 	//	// If EndpointUrl is set to a non-default value specify it
@@ -55,8 +62,10 @@ func GetSession(c *SessionConfig) (*session.Session, error) {
 		default:
 			// Error only if it's not a localhost endpoint
 			if !(strings.Contains(c.EndpointUrl, "localhost") || strings.Contains(c.EndpointUrl, "127.0.0.1")) {
+				// If endpoint is not related to LocalStack then it's an error
 				return nil, err
 			}
+
 			logrus.Debug("[NO MFA] Using Endpoint: ", c.EndpointUrl)
 		}
 	}

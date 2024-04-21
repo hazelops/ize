@@ -10,24 +10,22 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/hazelops/ize/internal/aws/utils"
-	"github.com/hazelops/ize/internal/config"
-	"github.com/hazelops/ize/pkg/templates"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/docker/docker/api/types"
+	"github.com/hazelops/ize/internal/aws/utils"
+	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/docker"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
 	"github.com/sirupsen/logrus"
 )
 
-const k8sDeployImage = "hazelops/k8s-deploy:latest"
+const helmDeployImage = "hazelops/helm-deploy:latest"
 
 type Manager struct {
 	Project *config.Project
-	App     *config.K8s
+	App     *config.Helm
 }
 
 func (e *Manager) prepare() {
@@ -59,7 +57,7 @@ func (e *Manager) prepare() {
 	}
 }
 
-// Deploy deploys app container to k8s via k8s deploy
+// Deploy deploys app container to helm via helm deploy
 func (e *Manager) Deploy(ui terminal.UI) error {
 	e.prepare()
 
@@ -86,14 +84,14 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 		return nil
 	}
 
-	if e.App.Unsafe && e.Project.PreferRuntime == "native" {
-		pterm.Warning.Println(templates.Dedent(`
-			deployment will be accelerated (unsafe):
-			- Health Check Interval: 5s
-			- Health Check Timeout: 2s
-			- Healthy Threshold Count: 2
-			- Unhealthy Threshold Count: 2`))
-	}
+	//if e.App.Unsafe && e.Project.PreferRuntime == "native" {
+	//	pterm.Warning.Println(templates.Dedent(`
+	//		deployment will be accelerated (unsafe):
+	//		- Health Check Interval: 5s
+	//		- Health Check Timeout: 2s
+	//		- Healthy Threshold Count: 2
+	//		- Unhealthy Threshold Count: 2`))
+	//}
 
 	s := sg.Add("%s: deploying app container...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
@@ -106,16 +104,14 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 	}
 
 	if e.Project.PreferRuntime == "native" {
-		err := e.deployLocal(s.TermOutput())
+
+		//err := e.deployLocal(s.TermOutput())
 		pterm.SetDefaultOutput(os.Stdout)
-		if err != nil {
-			return fmt.Errorf("unable to deploy app: %w", err)
-		}
+		//if err != nil {
+		//	return fmt.Errorf("unable to deploy app: %w", err)
+		//}
 	} else {
-		err := e.deployWithDocker(s.TermOutput())
-		if err != nil {
-			return fmt.Errorf("unable to deploy app: %w", err)
-		}
+		return fmt.Errorf("runtime not implemented. use native")
 	}
 
 	s.Done()
@@ -148,16 +144,13 @@ func (e *Manager) Redeploy(ui terminal.UI) error {
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	if e.Project.PreferRuntime == "native" {
-		err := e.redeployLocal(s.TermOutput())
+		//err := e.redeployLocal(s.TermOutput())
 		pterm.SetDefaultOutput(os.Stdout)
-		if err != nil {
-			return fmt.Errorf("unable to redeploy app: %w", err)
-		}
+		//if err != nil {
+		//	return fmt.Errorf("unable to redeploy app: %w", err)
+		//}
 	} else {
-		err := e.redeployWithDocker(s.TermOutput())
-		if err != nil {
-			return fmt.Errorf("unable to redeploy app: %w", err)
-		}
+		return fmt.Errorf("runtime not implemented. use native")
 	}
 
 	s.Done()
@@ -317,58 +310,58 @@ func (e *Manager) Build(ui terminal.UI) error {
 	return nil
 }
 
-func definitionsToBulletItems(definitions *k8s.ListTaskDefinitionsOutput) []pterm.BulletListItem {
-	var items []pterm.BulletListItem
-	for _, arn := range definitions.TaskDefinitionArns {
-		items = append(items, pterm.BulletListItem{Level: 0, Text: *arn})
-	}
-
-	return items
-}
+//func definitionsToBulletItems(definitions *Helm.ListTaskDefinitionsOutput) []pterm.BulletListItem {
+//	var items []pterm.BulletListItem
+//	//for _, arn := range definitions.TaskDefinitionArns {
+//	//	items = append(items, pterm.BulletListItem{Level: 0, Text: *arn})
+//	//}
+//
+//	return items
+//}
 
 func (e *Manager) Destroy(ui terminal.UI, autoApprove bool) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("%s: destroying task defintions...", e.App.Name)
+	s := sg.Add("%s: destroying Helm application...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(time.Millisecond * 200) }()
 
-	name := fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name)
-
-	svc := e.Project.AWSClient.k8sClient
-
-	definitions, err := svc.ListTaskDefinitions(&k8s.ListTaskDefinitionsInput{
-		FamilyPrefix: &name,
-		Sort:         aws.String(k8s.SortOrderDesc),
-	})
-	if err != nil {
-		return fmt.Errorf("can't get list task definitions of '%s': %v", name, err)
-	}
-
-	if !autoApprove {
-		pterm.SetDefaultOutput(s.TermOutput())
-
-		pterm.Printfln("this will destroy the following:")
-		pterm.DefaultBulletList.WithItems(definitionsToBulletItems(definitions)).Render()
-
-		isContinue, err := pterm.DefaultInteractiveConfirm.WithDefaultText("Continue?").Show()
-		if err != nil {
-			return err
-		}
-
-		if !isContinue {
-			return fmt.Errorf("destroying was canceled")
-		}
-	}
-
-	for _, tda := range definitions.TaskDefinitionArns {
-		_, err := e.Project.AWSClient.k8sClient.DeregisterTaskDefinition(&k8s.DeregisterTaskDefinitionInput{
-			TaskDefinition: tda,
-		})
-		if err != nil {
-			return fmt.Errorf("can't deregister task definition '%s': %v", *tda, err)
-		}
-	}
+	//name := fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name)
+	//
+	//svc := e.Project.AWSClient.helmClient
+	//
+	//definitions, err := svc.ListTaskDefinitions(&helm.ListTaskDefinitionsInput{
+	//	FamilyPrefix: &name,
+	//	Sort:         aws.String(helm.SortOrderDesc),
+	//})
+	//if err != nil {
+	//	return fmt.Errorf("can't get list task definitions of '%s': %v", name, err)
+	//}
+	//
+	//if !autoApprove {
+	//	pterm.SetDefaultOutput(s.TermOutput())
+	//
+	//	pterm.Printfln("this will destroy the following:")
+	//	pterm.DefaultBulletList.WithItems(definitionsToBulletItems(definitions)).Render()
+	//
+	//	isContinue, err := pterm.DefaultInteractiveConfirm.WithDefaultText("Continue?").Show()
+	//	if err != nil {
+	//		return err
+	//	}
+	//
+	//	if !isContinue {
+	//		return fmt.Errorf("destroying was canceled")
+	//	}
+	//}
+	//
+	//for _, tda := range definitions.TaskDefinitionArns {
+	//	_, err := e.Project.AWSClient.helmClient.DeregisterTaskDefinition(&helm.DeregisterTaskDefinitionInput{
+	//		TaskDefinition: tda,
+	//	})
+	//	if err != nil {
+	//		return fmt.Errorf("can't deregister task definition '%s': %v", *tda, err)
+	//	}
+	//}
 
 	s.Done()
 	s = sg.Add("%s: destroying completed!", e.App.Name)

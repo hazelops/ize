@@ -27,10 +27,12 @@ const (
 )
 
 type Config struct {
-	AwsRegion       string `mapstructure:"aws_region"`
-	AwsProfile      string `mapstructure:"aws_profile"`
-	Namespace       string `mapstructure:"namespace"`
-	Env             string `mapstructure:"env"`
+	AwsRegion  string `mapstructure:"aws_region"`
+	AwsProfile string `mapstructure:"aws_profile"`
+	Namespace  string `mapstructure:"namespace"`
+	Env        string `mapstructure:"env"`
+	LocalStack bool   `mapstructure:"localstack"`
+
 	Session         *session.Session
 	IsGlobal        bool
 	IsDockerRuntime bool
@@ -38,41 +40,23 @@ type Config struct {
 }
 
 func (p *Project) GetConfig() error {
-	switch viper.GetString("log_level") {
-	case "info":
-		logrus.SetLevel(logrus.InfoLevel)
-	case "debug":
-		logrus.SetLevel(logrus.DebugLevel)
-	case "trace":
-		logrus.SetLevel(logrus.TraceLevel)
-	case "panic":
-		logrus.SetLevel(logrus.PanicLevel)
-	case "warn":
-		logrus.SetLevel(logrus.WarnLevel)
-	case "error":
-		logrus.SetLevel(logrus.ErrorLevel)
-	case "fatal":
-		logrus.SetLevel(logrus.FatalLevel)
-	default:
-		logrus.SetLevel(logrus.FatalLevel)
-	}
 
-	err := ConvertApps()
+	err := MigrateAppsConfig()
 	if err != nil {
 		return err
 	}
 
-	err = ConvertInfra()
+	err = MigrateInfraConfig()
 	if err != nil {
 		return err
 	}
 
-	err = ConvertTunnel()
+	err = MigrateTunnelConfig()
 	if err != nil {
 		return err
 	}
 
-	SetTag()
+	err = SetTag()
 	if err != nil {
 		return fmt.Errorf("can't set tag: %w", err)
 	}
@@ -81,8 +65,6 @@ func (p *Project) GetConfig() error {
 	if err != nil {
 		return err
 	}
-
-	logrus.Debug("config file used:", viper.ConfigFileUsed())
 
 	err = viper.Unmarshal(p)
 	if err != nil {
@@ -170,17 +152,17 @@ func (p *Project) GetTestConfig() error {
 		logrus.SetLevel(logrus.FatalLevel)
 	}
 
-	err := ConvertApps()
+	err := MigrateAppsConfig()
 	if err != nil {
 		return err
 	}
 
-	err = ConvertInfra()
+	err = MigrateInfraConfig()
 	if err != nil {
 		return err
 	}
 
-	err = ConvertTunnel()
+	err = MigrateTunnelConfig()
 	if err != nil {
 		return err
 	}
@@ -195,7 +177,7 @@ func (p *Project) GetTestConfig() error {
 		return err
 	}
 
-	logrus.Debug("config file used:", viper.ConfigFileUsed())
+	logrus.Debug("Config file used: ", viper.ConfigFileUsed())
 
 	err = viper.Unmarshal(p)
 	if err != nil {
@@ -232,7 +214,7 @@ func (p *Project) GetTestConfig() error {
 	return nil
 }
 
-func SetTag() {
+func SetTag() error {
 	out, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output()
 	if err != nil {
 		if viper.GetString("ENV") == "" {
@@ -244,6 +226,7 @@ func SetTag() {
 	} else {
 		viper.SetDefault("TAG", strings.Trim(string(out), "\n"))
 	}
+	return err
 }
 
 func InitConfig() {
@@ -253,6 +236,27 @@ func InitConfig() {
 	viper.SetEnvKeyReplacer(replacer)
 	viper.AutomaticEnv()
 
+	// Set Log Level
+	switch viper.GetString("log_level") {
+	case "info":
+		logrus.SetLevel(logrus.InfoLevel)
+	case "debug":
+		logrus.SetLevel(logrus.DebugLevel)
+	case "trace":
+		logrus.SetLevel(logrus.TraceLevel)
+	case "panic":
+		logrus.SetLevel(logrus.PanicLevel)
+	case "warn":
+		logrus.SetLevel(logrus.WarnLevel)
+	case "error":
+		logrus.SetLevel(logrus.ErrorLevel)
+	case "fatal":
+		logrus.SetLevel(logrus.FatalLevel)
+	default:
+		logrus.SetLevel(logrus.FatalLevel)
+	}
+
+	// Variables that would be read even without IZE_ prefix (in addition to IZE_ENV, IZE_TAG, etc)
 	_ = viper.BindEnv("ENV", "ENV")
 	_ = viper.BindEnv("TAG", "TAG")
 	_ = viper.BindEnv("AWS_PROFILE", "AWS_PROFILE")
@@ -265,29 +269,36 @@ func InitConfig() {
 	viper.SetDefault("PREFER_RUNTIME", "native")
 	viper.SetDefault("CUSTOM_PROMPT", false)
 	viper.SetDefault("PLAIN_TEXT_OUTPUT", false)
+	viper.SetDefault("LOCALSTACK", false)
 
 	home, err := os.UserHomeDir()
 	if err != nil {
-		logrus.Fatalln("can't initialize config: %w", err)
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		logrus.Fatalln("can't initialize config: %w", err)
+		logrus.Fatalln("Can't initialize config: %w", err)
 	}
 
-	// set default apps folder
-	_, err = os.Stat(filepath.Join(cwd, "projects"))
-	if os.IsNotExist(err) {
-		viper.SetDefault("APPS_PATH", filepath.Join(cwd, "apps"))
-	} else {
-		viper.SetDefault("APPS_PATH", filepath.Join(cwd, "projects"))
+	cwd, err := os.Getwd()
+	if err != nil {
+		logrus.Fatalln("Can't initialize config: %w", err)
 	}
+
+	// Set default apps folder - first option is `projects`
+	appsPath := filepath.Join(cwd, "projects")
+	_, err = os.Stat(appsPath)
+	if os.IsNotExist(err) {
+		// Second (and final) option `apps`
+		appsPath = filepath.Join(cwd, "apps")
+	}
+
+	logrus.Debugf("Setting APPS_PATH to %v", appsPath)
+	viper.SetDefault("APPS_PATH", appsPath)
 
 	viper.SetDefault("ROOT_DIR", cwd)
 	viper.SetDefault("HOME", fmt.Sprintf("%v", home))
+
 	setDefaultInfraDir(cwd)
 
-	cfg, err := readConfigFile(viper.GetString("config_file"))
+	configFileLocation := viper.GetString("config_file")
+	cfg, err := readConfigFile(configFileLocation)
 	if err != nil {
 		logrus.Fatal("can't initialize config: %w", err)
 	}
@@ -299,7 +310,7 @@ func InitConfig() {
 		}
 	}
 
-	logrus.Debug("config file used:", viper.ConfigFileUsed())
+	logrus.Debug("Config file used: ", viper.ConfigFileUsed())
 
 	if cfg == nil {
 		if err := viper.Unmarshal(&cfg); err != nil {
@@ -309,6 +320,7 @@ func InitConfig() {
 
 	viper.SetDefault("TF_LOG", "")
 
+	// Global Config is an experimental feature where you can have one config in your home directory
 	if cfg.IsGlobal {
 		viper.SetDefault("ENV_DIR", fmt.Sprintf("%s/.ize/%s/%s", home, cfg.Namespace, cfg.Env))
 		_, err := os.Stat(viper.GetString("ENV_DIR"))
@@ -399,13 +411,33 @@ func findDuplicates(cfg *Project) error {
 }
 
 func setDefaultInfraDir(cwd string) {
-	viper.SetDefault("IZE_DIR", fmt.Sprintf("%v/.ize", cwd))
-	viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.ize/env/%v", cwd, viper.GetString("ENV")))
-	_, err := os.Stat(viper.GetString("IZE_DIR"))
+	izeDir := fmt.Sprintf("%v/.ize", cwd)
+	envDir := fmt.Sprintf("%v/env/%v", izeDir, viper.GetString("ENV"))
+
+	_, err := os.Stat(izeDir) // Check if directory that we've set exists
 	if err != nil {
-		viper.SetDefault("IZE_DIR", fmt.Sprintf("%v/.infra", cwd))
-		viper.SetDefault("ENV_DIR", fmt.Sprintf("%v/.infra/env/%v", cwd, viper.GetString("ENV")))
+		// izeDir doesn't exist, so setting the default to .infra
+		logrus.Debugf("Tried %v, but not found.", izeDir)
+
+		izeDir = fmt.Sprintf("%v/.infra", cwd)
+		envDir = fmt.Sprintf("%v/env/%v", izeDir, viper.GetString("ENV"))
+
+		_, err := os.Stat(izeDir) // Check if directory that we've set exists
+		if err != nil {
+			// izeDir doesn't exist, so setting the default to .infra
+			logrus.Debugf("Tried %v, but not found.", izeDir)
+
+			izeDir = fmt.Sprintf("%v", cwd)
+			envDir = fmt.Sprintf("%v/env/%v", izeDir, viper.GetString("ENV"))
+		}
 	}
+
+	logrus.Debug("Setting IZE_DIR to ", izeDir)
+	viper.SetDefault("IZE_DIR", izeDir)
+
+	logrus.Debug("Setting ENV_DIR to ", envDir)
+	viper.SetDefault("ENV_DIR", envDir)
+
 }
 
 func readGlobalConfigFile() (*Config, error) {
@@ -448,13 +480,25 @@ func readGlobalConfigFile() (*Config, error) {
 }
 
 func readConfigFile(path string) (*Config, error) {
+
 	if len(path) != 0 {
+		// If path is defined use it to read config
+		logrus.Debug("Reading config file:", path)
 		viper.SetConfigFile(path)
+
 	} else {
+		// If path is undefined read using viper's ConfigPath
+		logrus.Debug("Config file is not overriden via `config_file`")
+
 		viper.SetConfigName("ize")
 		viper.SetConfigType("toml")
 		viper.AddConfigPath(".")
-		viper.AddConfigPath(viper.GetString("ENV_DIR"))
+
+		envDir := filepath.Join(viper.GetString("ENV_DIR"))
+
+		logrus.Debug(fmt.Sprintf("Adding config path to viper: %s", envDir))
+		viper.AddConfigPath(envDir)
+
 	}
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
@@ -472,7 +516,7 @@ func readConfigFile(path string) (*Config, error) {
 	return &cfg, nil
 }
 
-func ConvertApps() error {
+func MigrateAppsConfig() error {
 	ecs := map[string]interface{}{}
 	serverless := map[string]interface{}{}
 
@@ -514,7 +558,7 @@ func ConvertApps() error {
 	return nil
 }
 
-func ConvertInfra() error {
+func MigrateInfraConfig() error {
 	tf := viper.GetStringMap("infra.terraform")
 
 	version, ok := tf["terraform_version"]
@@ -533,7 +577,7 @@ func ConvertInfra() error {
 	return nil
 }
 
-func ConvertTunnel() error {
+func MigrateTunnelConfig() error {
 	tunnel := viper.GetStringMap("infra.tunnel")
 
 	err := viper.MergeConfigMap(map[string]interface{}{

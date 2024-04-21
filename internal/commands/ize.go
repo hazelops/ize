@@ -89,6 +89,7 @@ func newRootCmd(project *config.Project) *cobra.Command {
 		NewCmdPush(project),
 		NewCmdUp(project),
 		NewCmdNvm(project),
+		NewCmdBoostrap(project),
 		NewValidateCmd(),
 		NewVersionCmd())
 
@@ -119,8 +120,8 @@ func Execute() {
 }
 
 func getConfig(cfg *config.Project) {
-	if slices.Contains(os.Args, "terraform") || 
-	slices.Contains(os.Args, "nvm") ||
+	if slices.Contains(os.Args, "terraform") ||
+		slices.Contains(os.Args, "nvm") ||
 		!(slices.Contains(os.Args, "aws-profile") ||
 			slices.Contains(os.Args, "doc") ||
 			slices.Contains(os.Args, "completion") ||

@@ -148,6 +148,7 @@ func (o *UpInfraOptions) Validate() error {
 
 func (o *UpInfraOptions) Run() error {
 	if o.Explain {
+		// TODO: Get actual backend.tf from the ize gen tfenv template
 		tmpl := `# Change to the dir
 cd {{.EnvDir}}
 

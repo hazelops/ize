@@ -70,8 +70,15 @@
             "description": "(optional) AWS Endpoint url (can be used with Localstack)"
         },
         "localstack": {
-            "type": "boolean",
-            "description": "(optional) Whether enable Localstack"
+            "description": "(optional) Whether enable Localstack",
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "boolean"
+                }
+            ]
         },
         "ssh_public_key": {
             "type": "string",

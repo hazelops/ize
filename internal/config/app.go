@@ -16,7 +16,7 @@ type Ecs struct {
 	DependsOn              []string `mapstructure:"depends_on,omitempty"`
 }
 
-type K8s struct {
+type Helm struct {
 	Name                   string   `mapstructure:",omitempty"`
 	Path                   string   `mapstructure:",omitempty"`
 	Image                  string   `mapstructure:",omitempty"`
