@@ -36,13 +36,14 @@ type Project struct {
 	LocalStack       bool   `mapstructure:"localstack,omitempty"`
 	SshPublicKey     string `mapstructure:"ssh_public_key,omitempty"`
 
-	Home      string `mapstructure:"home,omitempty"`
-	RootDir   string `mapstructure:"root_dir,omitempty"`
-	InfraDir  string `mapstructure:"ize_dir,omitempty"`
-	EnvDir    string `mapstructure:"env_dir,omitempty"`
-	AppsPath  string `mapstructure:"apps_path,omitempty"`
-	TFLog     string `mapstructure:"tf_log,omitempty"`
-	TFLogPath string `mapstructure:"tf_log_path,omitempty"`
+	Home         string `mapstructure:"home,omitempty"`
+	RootDir      string `mapstructure:"root_dir,omitempty"`
+	InfraDir     string `mapstructure:"ize_dir,omitempty"`
+	EnvDir       string `mapstructure:"env_dir,omitempty"`
+	AppsPath     string `mapstructure:"apps_path,omitempty"`
+	TFLog        string `mapstructure:"tf_log,omitempty"`
+	TFLogPath    string `mapstructure:"tf_log_path,omitempty"`
+	AppsProvider string `mapstructure:"apps_provider,omitempty"`
 
 	Session   *session.Session
 	AWSClient *awsClient
@@ -51,6 +52,7 @@ type Project struct {
 	Terraform  map[string]*Terraform  `mapstructure:",omitempty"`
 	Ecs        map[string]*Ecs        `mapstructure:",omitempty"`
 	Serverless map[string]*Serverless `mapstructure:",omitempty"`
+	Helm       map[string]*Helm       `mapstructure:",omitempty"`
 	Alias      map[string]*Alias      `mapstructure:",omitempty"`
 }
 

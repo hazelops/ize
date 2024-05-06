@@ -135,6 +135,7 @@ func GenerateBackendTf(opts BackendOpts, path string) error {
 		rootBody := f.Body()
 		// AWS Provider block
 		providerBlock := rootBody.AppendNewBlock("provider", []string{"aws"})
+		providerBlock.Body().SetAttributeValue("shared_credentials_files", cty.ListVal([]cty.Value{cty.StringVal("./localstack-user-credentials.config")}))
 
 		//providerBlock.Body().SetAttributeValue("access_key", cty.StringVal("test"))
 		//providerBlock.Body().SetAttributeValue("secret_key", cty.StringVal("test"))
@@ -194,6 +195,7 @@ func GenerateBackendTf(opts BackendOpts, path string) error {
 		backendBlock.Body().SetAttributeValue("iam_endpoint", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
 		backendBlock.Body().SetAttributeValue("dynamodb_endpoint", cty.StringVal(opts.LOCALSTACK_ENDPOINT))
 		backendBlock.Body().SetAttributeValue("force_path_style", cty.BoolVal(true))
+		backendBlock.Body().SetAttributeValue("shared_credentials_file", cty.StringVal("./localstack-user-credentials.config"))
 
 		defaultTagsBlock := providerBlock.Body().AppendNewBlock("default_tags", nil)
 		defaultTagsBlock.Body().SetAttributeValue("tags", cty.ObjectVal(map[string]cty.Value{

@@ -35,12 +35,13 @@ func NewDebugCmd(project *config.Project) *cobra.Command {
 				{"ENV", project.Env},
 				{"NAMESPACE", project.Namespace},
 				{"TAG", project.Tag},
-				{"INFRA DIR", project.InfraDir},
-				{"PWD", cwd},
-				{"IZE VERSION", version.FullVersionNumber()},
-				{"GIT REVISION", version.GitCommit},
-				{"ENV DIR", project.EnvDir},
+				{"IZE_VERSION", version.FullVersionNumber()},
+				{"GIT_REVISION", version.GitCommit},
 				{"PREFER_RUNTIME", project.PreferRuntime},
+				{"INFRA_DIR", project.InfraDir},
+				{"ENV_DIR", project.EnvDir},
+				{"APPS_PATH", project.AppsPath},
+				{"PWD", cwd},
 			}).WithLeftAlignment().Render()
 
 			v := project.TerraformVersion
@@ -92,20 +93,20 @@ func NewDebugCmd(project *config.Project) *cobra.Command {
 				}
 
 				_ = dt.WithData(pterm.TableData{
-					{"AWS PROFILE", project.AwsProfile},
-					{"AWS USER", userName},
-					{"AWS ACCOUNT", *resp.Account},
+					{"AWS_PROFILE", project.AwsProfile},
+					{"AWS_USER", userName},
+					{"AWS_ACCOUNT", *resp.Account},
 				}).WithLeftAlignment().Render()
 
 				if len(project.EndpointUrl) > 0 {
 					_ = dt.WithData(pterm.TableData{
-						{"AWS ENDPOINT URL", project.EndpointUrl},
+						{"AWS_ENDPOINT_URL", project.EndpointUrl},
 					}).WithLeftAlignment().Render()
 				}
 			} else {
 				pterm.Println("No AWS profile credentials detected. Parameters used:")
 				_ = dt.WithData(pterm.TableData{
-					{"AWS PROFILE", project.AwsProfile},
+					{"AWS_PROFILE", project.AwsProfile},
 				}).WithLeftAlignment().Render()
 			}
 

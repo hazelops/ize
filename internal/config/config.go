@@ -58,7 +58,7 @@ func (p *Project) GetConfig() error {
 
 	err = SetTag()
 	if err != nil {
-		return fmt.Errorf("can't set tag: %w", err)
+		return fmt.Errorf("can't set tag: %w. \nIs it a git repo?", err)
 	}
 
 	err = schema.Validate(viper.AllSettings())
@@ -114,7 +114,12 @@ func (p *Project) GetConfig() error {
 	}
 
 	if len(p.DockerRegistry) == 0 {
-		p.DockerRegistry = fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, p.AwsRegion)
+		if p.LocalStack {
+			p.DockerRegistry = fmt.Sprintf("%v.dkr.ecr.%v.localhost.localstack.cloud:4512", *resp.Account, p.AwsRegion)
+		} else {
+			p.DockerRegistry = fmt.Sprintf("%v.dkr.ecr.%v.amazonaws.com", *resp.Account, p.AwsRegion)
+		}
+		logrus.Debugf("Setting Docker Registry to %s", p.DockerRegistry)
 	}
 	// Reset env directory to default because env may change
 	if len(p.DockerRegistry) == 0 {
@@ -169,7 +174,7 @@ func (p *Project) GetTestConfig() error {
 
 	SetTag()
 	if err != nil {
-		return fmt.Errorf("can't set tag: %w", err)
+		return fmt.Errorf("can't set tag: %w. \nIs it a git repo?", err)
 	}
 
 	err = schema.Validate(viper.AllSettings())
@@ -270,6 +275,7 @@ func InitConfig() {
 	viper.SetDefault("CUSTOM_PROMPT", false)
 	viper.SetDefault("PLAIN_TEXT_OUTPUT", false)
 	viper.SetDefault("LOCALSTACK", false)
+	viper.SetDefault("apps_provider", "ecs")
 
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -285,8 +291,12 @@ func InitConfig() {
 	appsPath := filepath.Join(cwd, "projects")
 	_, err = os.Stat(appsPath)
 	if os.IsNotExist(err) {
-		// Second (and final) option `apps`
+		// Second option `apps`
 		appsPath = filepath.Join(cwd, "apps")
+
+		// TODO: Add multi-repo support (cwd is the app directory).
+		// Maybe use ../../cwd? so the repo directory would be the app name? and ize.toml would be in the root of the repo.
+		// For now try setting `export APPS_PATH=../
 	}
 
 	logrus.Debugf("Setting APPS_PATH to %v", appsPath)

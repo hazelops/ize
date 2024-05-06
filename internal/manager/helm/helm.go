@@ -5,7 +5,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/hazelops/ize/pkg/term"
+	"io"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"time"
@@ -44,8 +47,8 @@ func (e *Manager) prepare() {
 		}
 	}
 
-	if len(e.App.Cluster) == 0 {
-		e.App.Cluster = fmt.Sprintf("%s-%s", e.Project.Env, e.Project.Namespace)
+	if len(e.App.Namespace) == 0 {
+		e.App.Namespace = fmt.Sprintf("%s-%s", e.Project.Env, e.Project.Namespace)
 	}
 
 	if len(e.App.DockerRegistry) == 0 {
@@ -107,9 +110,12 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 
 		//err := e.deployLocal(s.TermOutput())
 		pterm.SetDefaultOutput(os.Stdout)
-		//if err != nil {
-		//	return fmt.Errorf("unable to deploy app: %w", err)
-		//}
+		s = sg.Add("%s: deploying app [run helm deploy]...", e.App.Name)
+		err := e.runDeploy(s.TermOutput())
+
+		if err != nil {
+			return fmt.Errorf("unable to deploy app: %w", err)
+		}
 	} else {
 		return fmt.Errorf("runtime not implemented. use native")
 	}
@@ -121,43 +127,37 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 	return nil
 }
 
-func (e *Manager) Redeploy(ui terminal.UI) error {
-	e.prepare()
+func (helm *Manager) runDeploy(w io.Writer) error {
 
-	sg := ui.StepGroup()
-	defer sg.Wait()
+	// TODO build image name as a part of helm manager
+	logrus.Debugf(helm.Project.Namespace)
+	helmImageName := fmt.Sprintf("%s/%s-%s", helm.App.DockerRegistry, helm.Project.Namespace, helm.App.Name)
+	helmChartDir := fmt.Sprintf("%s", path.Join(helm.App.Path, "helm/api"))
 
-	if len(e.App.AwsRegion) != 0 && len(e.App.AwsProfile) != 0 {
-		sess, err := utils.GetSession(&utils.SessionConfig{
-			Region:      e.App.AwsRegion,
-			Profile:     e.App.AwsProfile,
-			EndpointUrl: e.Project.EndpointUrl,
-		})
-		if err != nil {
-			return fmt.Errorf("can't get session: %w", err)
-		}
+	var command string
+	namespace := fmt.Sprintf("%s-%s", helm.Project.Env, helm.Project.Namespace)
+	command = fmt.Sprintf(
+		`AWS_PROFILE="localstack-user" KUBECONFIG=/Users/dmitry/.kube/metameetings-local \
+		 helm upgrade --atomic --install --namespace "%s" "%s" %s \
+			--set image.repository=%s \
+			--set image.tag="%s"
+		`, namespace, helm.App.Name, helmChartDir, helmImageName, helm.Project.Tag)
 
-		e.Project.SettingAWSClient(sess)
-	}
+	//if sls.App.Force {
+	//	command += ` \
+	//	--force`
+	//}
 
-	s := sg.Add("%s: redeploying app container...", e.App.Name)
-	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
+	logrus.SetOutput(w)
+	logrus.Debugf("command: %s", command)
 
-	if e.Project.PreferRuntime == "native" {
-		//err := e.redeployLocal(s.TermOutput())
-		pterm.SetDefaultOutput(os.Stdout)
-		//if err != nil {
-		//	return fmt.Errorf("unable to redeploy app: %w", err)
-		//}
-	} else {
-		return fmt.Errorf("runtime not implemented. use native")
-	}
+	cmd := exec.Command("bash", "-c", command)
 
-	s.Done()
-	s = sg.Add("%s: redeployment completed!", e.App.Name)
-	s.Done()
-
-	return nil
+	return term.New(
+		term.WithDir(helm.App.Path),
+		term.WithStdout(w),
+		term.WithStderr(w),
+	).InteractiveRun(cmd)
 }
 
 func (e *Manager) Push(ui terminal.UI) error {
@@ -271,10 +271,14 @@ func (e *Manager) Build(ui terminal.UI) error {
 		return fmt.Errorf("unable to get relative path: %w", err)
 	}
 
+	cache := []string{fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", e.Project.Env))}
+	logrus.Debugf("Using CACHE_IMAGE: %s", cache)
+
 	buildArgs := map[string]*string{
 		"PROJECT_PATH": &relProjectPath,
 		"APP_PATH":     &relProjectPath,
 		"APP_NAME":     &e.App.Name,
+		"CACHE_IMAGE":  &cache[0],
 	}
 
 	tags := []string{
@@ -284,8 +288,6 @@ func (e *Manager) Build(ui terminal.UI) error {
 	}
 
 	dockerfile := path.Join(e.App.Path, "Dockerfile")
-
-	cache := []string{fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", e.Project.Env))}
 
 	platform := "linux/amd64"
 	if e.Project.PreferRuntime == "docker-arm64" {
@@ -367,5 +369,11 @@ func (e *Manager) Destroy(ui terminal.UI, autoApprove bool) error {
 	s = sg.Add("%s: destroying completed!", e.App.Name)
 	s.Done()
 
+	return nil
+}
+func (e *Manager) Redeploy(ui terminal.UI) error {
+	return nil
+}
+func (e *Manager) Explain() error {
 	return nil
 }

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"text/template"
 
@@ -16,13 +17,14 @@ import (
 )
 
 type ConsoleOptions struct {
-	Config        *config.Project
-	AppName       string
-	EcsCluster    string
-	Task          string
-	CustomPrompt  bool
-	ContainerName string
-	Explain       bool
+	Config           *config.Project
+	AppName          string
+	EcsCluster       string
+	EcsServiceName   string
+	Task             string
+	CustomPrompt     bool
+	EcsContainerName string
+	Explain          bool
 }
 
 var explainConsoleTmpl = `
@@ -74,7 +76,7 @@ func NewCmdConsole(project *config.Project) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.EcsCluster, "ecs-cluster", "", "set ECS cluster name")
-	cmd.Flags().StringVar(&o.ContainerName, "container-name", "", "set container name")
+	cmd.Flags().StringVar(&o.EcsContainerName, "container-name", "", "set container name")
 	cmd.Flags().StringVar(&o.Task, "task", "", "set task id")
 	cmd.Flags().BoolVar(&o.Explain, "explain", false, "bash alternative shown")
 	cmd.Flags().BoolVar(&o.CustomPrompt, "custom-prompt", false, "enable custom prompt in the console")
@@ -97,10 +99,6 @@ func (o *ConsoleOptions) Complete(cmd *cobra.Command) error {
 
 	o.AppName = cmd.Flags().Args()[0]
 
-	if len(o.ContainerName) == 0 {
-		o.ContainerName = o.AppName
-	}
-
 	return nil
 }
 
@@ -113,12 +111,19 @@ func (o *ConsoleOptions) Validate() error {
 }
 
 func (o *ConsoleOptions) Run() error {
-	appName := fmt.Sprintf("%s-%s", o.Config.Env, o.AppName)
+	var err error
+
+	if len(o.EcsServiceName) == 0 {
+		o.EcsServiceName, err = getEcsServiceName(o)
+		if err != nil {
+			return err
+		}
+	}
 
 	if o.Explain {
 		err := o.Config.Generate(explainConsoleTmpl, template.FuncMap{
 			"svc": func() string {
-				return o.AppName
+				return o.EcsServiceName
 			},
 		})
 		if err != nil {
@@ -128,23 +133,27 @@ func (o *ConsoleOptions) Run() error {
 		return nil
 	}
 
-	logrus.Infof("app name: %s, cluster name: %s", appName, o.EcsCluster)
+	logrus.Infof("app name: %s, cluster name: %s", o.EcsServiceName, o.EcsCluster)
 	logrus.Infof("region: %s, profile: %s", o.Config.AwsProfile, o.Config.AwsRegion)
 
 	s, _ := pterm.DefaultSpinner.WithRemoveWhenDone().Start("Getting access to container...")
 
 	if o.Task == "" {
+		// Infer task name from the app name
 		lto, err := o.Config.AWSClient.ECSClient.ListTasks(&ecs.ListTasksInput{
 			Cluster:       &o.EcsCluster,
 			DesiredStatus: aws.String(ecs.DesiredStatusRunning),
-			ServiceName:   &appName,
+			ServiceName:   &o.EcsServiceName,
 		})
+
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case "ClusterNotFoundException":
 				return fmt.Errorf("ECS cluster %s not found", o.EcsCluster)
 			default:
-				return err
+				{
+					return err
+				}
 			}
 		}
 
@@ -155,6 +164,13 @@ func (o *ConsoleOptions) Run() error {
 		}
 
 		o.Task = *lto.TaskArns[0]
+	}
+
+	if len(o.EcsContainerName) == 0 {
+		o.EcsContainerName, err = getEcsContainerName(o)
+		if err != nil {
+			return err
+		}
 	}
 
 	s.UpdateText("Executing command...")
@@ -168,7 +184,7 @@ func (o *ConsoleOptions) Run() error {
 	}
 
 	out, err := o.Config.AWSClient.ECSClient.ExecuteCommand(&ecs.ExecuteCommandInput{
-		Container:   &o.ContainerName,
+		Container:   &o.EcsContainerName,
 		Interactive: aws.Bool(true),
 		Cluster:     &o.EcsCluster,
 		Task:        &o.Task,
@@ -192,4 +208,124 @@ func (o *ConsoleOptions) Run() error {
 	}
 
 	return nil
+}
+
+func getEcsServiceName(o *ConsoleOptions) (string, error) {
+	ecsServiceCandidates := []string{
+		o.AppName,
+		fmt.Sprintf("%s-%s", o.Config.Env, o.AppName),
+		fmt.Sprintf("%s-%s-%s", o.Config.Env, o.Config.Namespace, o.AppName),
+	}
+
+	for _, v := range ecsServiceCandidates {
+
+		logrus.Debugf("Checking if ECS service %s exists in cluster %s.", v, o.EcsCluster)
+		_, err := o.Config.AWSClient.ECSClient.ListTasks(&ecs.ListTasksInput{
+			Cluster:       &o.EcsCluster,
+			DesiredStatus: aws.String(ecs.DesiredStatusRunning),
+			ServiceName:   &v,
+		})
+
+		var aerr awserr.Error
+		if errors.As(err, &aerr) {
+			switch aerr.Code() {
+			case "ClusterNotFoundException":
+				return "", fmt.Errorf("ECS cluster %s not found", o.EcsCluster)
+			case "ServiceNotFoundException":
+				{
+					logrus.Infof("ECS Service not found: %s in cluster %s.", v, o.EcsCluster)
+					continue
+				}
+			default:
+				{
+					return "", err
+				}
+			}
+
+		}
+		return v, err
+	}
+	err := errors.New("ECS Service not found")
+	return "", err
+}
+
+func getEcsContainerName(o *ConsoleOptions) (string, error) {
+	ecsContainerNameCandidates := []string{
+		o.AppName,
+		fmt.Sprintf("%s-%s", o.Config.Namespace, o.AppName),
+		fmt.Sprintf("%s-%s", o.Config.Env, o.AppName),
+		fmt.Sprintf("%s-%s-%s", o.Config.Env, o.Config.Namespace, o.AppName),
+	}
+
+	for _, v := range ecsContainerNameCandidates {
+		logrus.Debugf("Checking if ECS container %s exists in task %s.", v, o.Task)
+		t, err := o.Config.AWSClient.ECSClient.ListTasks(&ecs.ListTasksInput{
+			Cluster:       &o.EcsCluster,
+			DesiredStatus: aws.String(ecs.DesiredStatusRunning),
+			ServiceName:   &o.EcsServiceName,
+		})
+
+		if err != nil {
+			return "", err
+		}
+
+		if len(t.TaskArns) > 0 {
+			tasks, err := o.Config.AWSClient.ECSClient.DescribeTasks(&ecs.DescribeTasksInput{
+				Cluster: &o.EcsCluster,
+				Tasks:   t.TaskArns,
+			})
+
+			if err != nil {
+				return "", err
+			}
+
+			if len(tasks.Tasks) > 0 {
+				for _, task := range tasks.Tasks {
+					logrus.Debugf("Task arn is %s", *task.TaskArn)
+
+					for _, container := range task.Containers {
+						for _, ecsContainerNameCandidate := range ecsContainerNameCandidates {
+							logrus.Debugf("Checking if %s==%s", ecsContainerNameCandidate, *container.Name)
+							if ecsContainerNameCandidate == *container.Name {
+								return *container.Name, nil
+							} else {
+								continue
+							}
+						}
+					}
+
+					return "", errors.New(fmt.Sprintf("Can't find a container for %s in %s", o.AppName, task.TaskDefinitionArn))
+				}
+			} else {
+				fmt.Println("No tasks found.")
+			}
+
+		}
+
+		//_, err := o.Config.AWSClient.ECSClient.ListContainerInstances(&ecs.ListContainerInstancesInput{
+		//	Cluster: &o.EcsCluster,
+		//	//Filter:  "",
+		//})
+
+		var aerr awserr.Error
+		if errors.As(err, &aerr) {
+			switch aerr.Code() {
+			case "ClusterNotFoundException":
+				return "", fmt.Errorf("ECS cluster %s not found", o.EcsCluster)
+			case "ServiceNotFoundException":
+				{
+					logrus.Infof("ECS Service not found: %s in cluster %s.", v, o.EcsCluster)
+					continue
+				}
+			default:
+				{
+					return "", err
+				}
+			}
+
+		}
+		return v, err
+	}
+	err := errors.New(fmt.Sprintf("ECS Container for %s not found", o.AppName))
+	return "", err
 }

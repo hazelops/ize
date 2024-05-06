@@ -111,6 +111,10 @@
             ],
             "description": "(optional) Custom prompt can be enabled here for all console connections. Default: false."
         },
+        "apps_provider": {
+            "type": "string",
+            "description": "(optional) When there is no apps in the config which provider to use during `ize deploy app`"
+        },
         "tunnel": {
             "type": "object",
             "properties": {
@@ -158,6 +162,17 @@
                 }
             },
             "description": "Ecs apps configuration.",
+            "additionalProperties": false
+        },
+        "helm": {
+            "id": "#/properties/helm",
+            "type": "object",
+            "patternProperties": {
+                "^[a-zA-Z0-9._-]+$": {
+                    "$ref": "#/definitions/helm"
+                }
+            },
+            "description": "Helm apps configuration.",
             "additionalProperties": false
         },
         "serverless": {
@@ -392,6 +407,58 @@
                 }
             },
             "description": "Ecs app configuration.",
+            "additionalProperties": false
+        },
+        "helm": {
+            "id": "#/definitions/helm",
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "(optional) Path to helm app folder can be specified here. By default it's derived from apps path and app name."
+                },
+                "force": {
+                    "type": "boolean",
+                    "description": "(optional) forces a deployment to take place"
+                },
+                "image" : {
+                    "type": "string",
+                    "description": "(optional) Docker image can be specified here. By default it's derived from the app name."
+                },
+                "helm_release" : {
+                    "type": "string",
+                    "description": "(optional) Helm release can be specified here. By default a new release is created during deployment. Normally this parameter can be used via cli during specific release needs."
+                },
+                "timeout" : {
+                    "type": "integer",
+                    "description": "(optional) helm deployment timeout can be specified here."
+                },
+                "docker_registry"  : {
+                    "type": "string",
+                    "description": "(optional) Docker registry can be set here. By default it uses ECR repo with the name of the service."
+                },
+                "skip_deploy": {
+                    "type": "boolean",
+                    "description": "(optional) skip deploy app."
+                },
+                "icon": {
+                    "type": "string",
+                    "description": "(optional) set icon"
+                },
+                "aws_region"   : {
+                    "type": "string",
+                    "description": "(optional) helm-specific AWS Region of this environment should be specified here. Normally global AWS_REGION is used."
+                },
+                "aws_profile"  : {
+                    "type": "string",
+                    "description": "(optional) helm-specific AWS profile (optional) can be specified here (but normally it should be inherited from a global AWS_PROFILE)."
+                },
+                "depends_on": {
+                    "type": "array",
+                    "description": "(optional) expresses startup and shutdown dependencies between apps"
+                }
+            },
+            "description": "helm app configuration.",
             "additionalProperties": false
         },
         "serverless": {

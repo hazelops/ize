@@ -211,6 +211,7 @@ func (e *Manager) Push(ui terminal.UI) error {
 		repository = out.Repository
 	} else {
 		repository = dro.Repositories[0]
+		logrus.Debugf("Using ECR repository: %s", *repository.RepositoryUri)
 	}
 
 	gat, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
@@ -280,10 +281,15 @@ func (e *Manager) Build(ui terminal.UI) error {
 		return fmt.Errorf("unable to get relative path: %w", err)
 	}
 
+	cache := []string{fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", e.Project.Env))}
+
+	logrus.Debugf("Using CACHE_IMAGE: %s", cache)
+
 	buildArgs := map[string]*string{
 		"PROJECT_PATH": &relProjectPath,
 		"APP_PATH":     &relProjectPath,
 		"APP_NAME":     &e.App.Name,
+		"CACHE_IMAGE":  &cache[0],
 	}
 
 	tags := []string{
@@ -293,8 +299,6 @@ func (e *Manager) Build(ui terminal.UI) error {
 	}
 
 	dockerfile := path.Join(e.App.Path, "Dockerfile")
-
-	cache := []string{fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", e.Project.Env))}
 
 	platform := "linux/amd64"
 	if e.Project.PreferRuntime == "docker-arm64" {
