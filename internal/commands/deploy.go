@@ -135,43 +135,38 @@ func (o *DeployOptions) Run() error {
 	var m manager.Manager
 	var providerUsed string
 	// Note, Viper doesn't read empty TOML sections (https://github.com/spf13/viper/issues/1131 so if there are no app sections, we'll use apps_provider
-	logrus.Debugf("FYI, Viper can't read/see empty TOML sections. Will try to use apps_provider config.", o.Config.AppsProvider)
+	logrus.Debugf("FYI, Viper can't read/see empty TOML sections. If they are empty, we'll try to use `apps_provider` config if it's set in ize.toml. See more here https://github.com/spf13/viper/issues/1131")
 	//if o.Config.AppsProvider == "helm" {
 	//	logrus.Debugf("Found helm app")
 	//
 
-	if _, ok := o.Config.Ecs[o.AppName]; o.Config.AppsProvider == "ecs" || ok {
+	if app, ok := o.Config.Ecs[o.AppName]; o.Config.AppsProvider == "ecs" || ok {
 		providerUsed = "ecs"
+		app.Name = o.AppName
 		m = &ecs.Manager{
 			Project: o.Config,
-			App: &config.Ecs{
-				Name:                   o.AppName,
-				TaskDefinitionRevision: o.TaskDefinitionRevision,
-				Unsafe:                 o.Unsafe,
-				SkipDeploy:             false,
-			},
+			App:     app,
 		}
 	}
 
-	if _, ok := o.Config.Helm[o.AppName]; o.Config.AppsProvider == "helm" || ok {
+	if app, ok := o.Config.Helm[o.AppName]; o.Config.AppsProvider == "helm" || ok {
 		providerUsed = "helm"
+		app.Name = o.AppName
+		app.Force = o.Force
 		m = &helm.Manager{
 			Project: o.Config,
-			App: &config.Helm{
-				Name:  o.AppName,
-				Force: o.Force,
-			},
+			App:     app,
 		}
 	}
 
-	if _, ok := o.Config.Serverless[o.AppName]; o.Config.AppsProvider == "serverless" || ok {
+	if app, ok := o.Config.Serverless[o.AppName]; o.Config.AppsProvider == "serverless" || ok {
 		providerUsed = "serverless"
+		app.Name = o.AppName
+		app.Force = o.Force
+
 		m = &serverless.Manager{
 			Project: o.Config,
-			App: &config.Serverless{
-				Name:  o.AppName,
-				Force: o.Force,
-			},
+			App:     app,
 		}
 	}
 

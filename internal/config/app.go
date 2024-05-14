@@ -14,6 +14,7 @@ type Ecs struct {
 	AwsProfile             string   `mapstructure:"aws_profile,omitempty"`
 	AwsRegion              string   `mapstructure:"aws_region,omitempty"`
 	DependsOn              []string `mapstructure:"depends_on,omitempty"`
+	ServiceName            string   `mapstructure:"service_name,omitempty"`
 }
 
 type Helm struct {

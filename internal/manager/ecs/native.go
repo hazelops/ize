@@ -21,18 +21,16 @@ func (e *Manager) deployLocal(w io.Writer) error {
 
 	svc := e.Project.AWSClient.ECSClient
 
-	name := fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name)
-
 	dso, err := svc.DescribeServices(&ecs.DescribeServicesInput{
 		Cluster:  &e.App.Cluster,
-		Services: []*string{&name},
+		Services: []*string{&e.App.ServiceName},
 	})
 	if err != nil {
 		return err
 	}
 
 	if len(dso.Services) == 0 {
-		return fmt.Errorf("app %s not found not found in %s cluster", name, e.App.Cluster)
+		return fmt.Errorf("app %s not found not found in %s cluster", e.App.ServiceName, e.App.Cluster)
 	}
 
 	dtdo, err := svc.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
@@ -43,7 +41,7 @@ func (e *Manager) deployLocal(w io.Writer) error {
 	}
 
 	definitions, err := svc.ListTaskDefinitions(&ecs.ListTaskDefinitionsInput{
-		FamilyPrefix: &name,
+		FamilyPrefix: &e.App.ServiceName,
 		Sort:         aws.String(ecs.SortOrderDesc),
 	})
 	if err != nil {
@@ -109,22 +107,22 @@ func (e *Manager) deployLocal(w io.Writer) error {
 
 	pterm.Printfln("Successfully created revision: %s:%d", *rtdo.TaskDefinition.Family, *rtdo.TaskDefinition.Revision)
 
-	if err = e.updateTaskDefinition(&newTaskDef, &oldTaskDef, name, "Deploying new task definition"); err != nil {
-		err := e.getLastContainerLogs(fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name))
+	if err = e.updateTaskDefinition(&newTaskDef, &oldTaskDef, e.App.ServiceName, "Deploying new task definition"); err != nil {
+		err := e.getLastContainerLogs(fmt.Sprintf("%s", e.App.ServiceName))
 		if err != nil {
 			pterm.Println("Failed to get logs:", err)
 		}
 
-		sr, err := getStoppedReason(e.App.Cluster, name, svc)
+		sr, err := getStoppedReason(e.App.Cluster, e.App.ServiceName, svc)
 		if err != nil {
 			return err
 		}
 
-		pterm.Printfln("Container %s couldn't start: %s", name, sr)
+		pterm.Printfln("Container %s couldn't start: %s", e.App.ServiceName, sr)
 
 		pterm.Printfln("Rolling back to old task definition: %s:%d", *oldTaskDef.Family, *oldTaskDef.Revision)
 		e.App.Timeout = 600
-		if err = e.updateTaskDefinition(&oldTaskDef, &newTaskDef, name, "Deploying previous task definition"); err != nil {
+		if err = e.updateTaskDefinition(&oldTaskDef, &newTaskDef, e.App.ServiceName, "Deploying previous task definition"); err != nil {
 			return fmt.Errorf("unable to rollback to old task definition: %w", err)
 		}
 
@@ -197,7 +195,7 @@ func (e *Manager) redeployLocal(w io.Writer) error {
 
 	if err = e.updateTaskDefinition(td, nil, name, "Redeploying new task definition"); err != nil {
 		pterm.Println(err)
-		err := e.getLastContainerLogs(fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name))
+		err := e.getLastContainerLogs(fmt.Sprintf("%s", e.App.ServiceName))
 		if err != nil {
 			pterm.Println("Failed to get logs:", err)
 		}

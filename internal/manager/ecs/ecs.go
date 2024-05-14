@@ -59,6 +59,10 @@ func (e *Manager) prepare() {
 	if e.App.Timeout == 0 {
 		e.App.Timeout = 300
 	}
+
+	if len(e.App.ServiceName) == 0 {
+		e.App.ServiceName = fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name)
+	}
 }
 
 // Deploy deploys app container to ECS via ECS deploy
@@ -101,6 +105,7 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	if e.App.Image == "" {
+		// Set image name to <docker-registry>/<namespace>-<app-name>:<tag> by default
 		e.App.Image = fmt.Sprintf("%s/%s:%s",
 			e.App.DockerRegistry,
 			fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name),
@@ -290,6 +295,7 @@ func (e *Manager) Build(ui terminal.UI) error {
 		"APP_PATH":     &relProjectPath,
 		"APP_NAME":     &e.App.Name,
 		"CACHE_IMAGE":  &cache[0],
+		"TAG":          &e.Project.Tag,
 	}
 
 	tags := []string{

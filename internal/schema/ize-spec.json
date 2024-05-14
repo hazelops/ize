@@ -404,9 +404,13 @@
                 "depends_on": {
                     "type": "array",
                     "description": "(optional) expresses startup and shutdown dependencies between apps"
+                },
+                "service_name"  : {
+                    "type": "string",
+                    "description": "(optional) ECS-specific service name (optional) can be specified here (but normally it should be deducted from namespace/app name."
                 }
             },
-            "description": "Ecs app configuration.",
+            "description": "ECS app configuration.",
             "additionalProperties": false
         },
         "helm": {
