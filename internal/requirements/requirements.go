@@ -124,6 +124,11 @@ func isStructured() bool {
 		isStructured = true
 	}
 
+	_, err = os.Stat(filepath.Join(cwd, "ize.toml"))
+	if !os.IsNotExist(err) {
+		isStructured = true
+	}
+
 	return isStructured
 }
 

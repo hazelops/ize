@@ -3,6 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"github.com/pterm/pterm"
 	"os"
 	"strings"
 	"time"
@@ -86,6 +87,7 @@ func (o *LogsOptions) Validate() error {
 
 func (o *LogsOptions) Run() error {
 	var err error
+	s, _ := pterm.DefaultSpinner.WithRemoveWhenDone().Start("Getting access to logs...")
 
 	if len(o.LogGroupName) == 0 {
 		o.LogGroupName, err = getEcsServiceLogGroupName(o)
@@ -123,6 +125,8 @@ func (o *LogsOptions) Run() error {
 
 		o.LogStreamName = fmt.Sprintf("%s/%s", logStreamPrefix, taskID)
 	}
+
+	s.Success()
 
 	GetLogs(o.Config.AWSClient.CloudWatchLogsClient, o.LogGroupName, o.LogStreamName, token)
 
@@ -169,9 +173,9 @@ func formatMessage(e *cloudwatchlogs.OutputLogEvent) (t time.Time, m string) {
 func getEcsServiceLogGroupName(o *LogsOptions) (string, error) {
 	// TODO: Move core logic to a shared function (since it's used in deploy too)
 	ecsServiceLogGroupCandidates := []string{
-		o.AppName,
-		fmt.Sprintf("%s-%s", o.Config.Env, o.AppName),
 		fmt.Sprintf("%s-%s-%s", o.Config.Env, o.Config.Namespace, o.AppName),
+		fmt.Sprintf("%s-%s", o.Config.Env, o.AppName),
+		o.AppName,
 	}
 
 	for _, v := range ecsServiceLogGroupCandidates {
@@ -201,10 +205,10 @@ func getEcsServiceLogGroupName(o *LogsOptions) (string, error) {
 
 func getEcsServiceLogStreamPrefix(o *LogsOptions) (string, error) {
 	ecsServiceLogStreamNameCandidates := []string{
-		o.AppName,
-		fmt.Sprintf("main/%s-%s", o.Config.Namespace, o.AppName),
-		fmt.Sprintf("main/%s-%s", o.Config.Env, o.AppName),
 		fmt.Sprintf("main/%s-%s-%s", o.Config.Env, o.Config.Namespace, o.AppName),
+		fmt.Sprintf("main/%s-%s", o.Config.Env, o.AppName),
+		fmt.Sprintf("main/%s-%s", o.Config.Namespace, o.AppName),
+		o.AppName,
 	}
 
 	for _, v := range ecsServiceLogStreamNameCandidates {

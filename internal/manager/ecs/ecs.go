@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"os"
 	"path"
 	"path/filepath"
@@ -61,7 +63,11 @@ func (e *Manager) prepare() {
 	}
 
 	if len(e.App.ServiceName) == 0 {
-		e.App.ServiceName = fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name)
+		var err error
+		e.App.ServiceName, err = getEcsServiceName(e)
+		if err != nil {
+
+		}
 	}
 }
 
@@ -101,7 +107,7 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 			- Unhealthy Threshold Count: 2`))
 	}
 
-	s := sg.Add("%s: deploying app container...", e.App.Name)
+	s := sg.Add("%s: deploying to ECS %s", e.App.Name, e.App.ServiceName)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	if e.App.Image == "" {
@@ -151,7 +157,7 @@ func (e *Manager) Redeploy(ui terminal.UI) error {
 		e.Project.SettingAWSClient(sess)
 	}
 
-	s := sg.Add("%s: redeploying app container...", e.App.Name)
+	s := sg.Add("%s: redeploying to ECS %s", e.App.Name, e.App.ServiceName)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	if e.Project.PreferRuntime == "native" {
@@ -180,7 +186,7 @@ func (e *Manager) Push(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("%s: push app image...", e.App.Name)
+	s := sg.Add("%s: pushing app image...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	if len(e.App.Image) != 0 {
@@ -268,11 +274,11 @@ func (e *Manager) Build(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("%s: building app container...", e.App.Name)
+	s := sg.Add("%s: building docker image...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	if len(e.App.Image) != 0 {
-		s.Update("%s: building app container... (skipped, using %s)", e.App.Name, e.App.Image)
+		s.Update("%s: building docker image... (skipped, using %s)", e.App.Name, e.App.Image)
 
 		s.Done()
 		return nil
@@ -387,4 +393,44 @@ func (e *Manager) Destroy(ui terminal.UI, autoApprove bool) error {
 	s.Done()
 
 	return nil
+}
+
+func getEcsServiceName(e *Manager) (string, error) {
+	// TODO: Move core logic to a shared function (since it's used in deploy too)
+	ecsServiceCandidates := []string{
+		fmt.Sprintf("%s-%s-%s", e.Project.Env, e.Project.Namespace, e.App.Name),
+		fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name),
+		e.App.Name,
+	}
+
+	for _, v := range ecsServiceCandidates {
+		logrus.Debugf("Checking if ECS service %s exists in cluster %s.", v, e.App.Cluster)
+
+		_, err := e.Project.AWSClient.ECSClient.ListTasks(&ecs.ListTasksInput{
+			Cluster:       &e.App.Cluster,
+			DesiredStatus: aws.String(ecs.DesiredStatusRunning),
+			ServiceName:   &v,
+		})
+
+		var aerr awserr.Error
+		if errors.As(err, &aerr) {
+			switch aerr.Code() {
+			case "ClusterNotFoundException":
+				return "", fmt.Errorf("ECS cluster %s not found", e.App.Cluster)
+			case "ServiceNotFoundException":
+				{
+					logrus.Infof("ECS Service not found: %s in cluster %s. Checking other options.", v, e.App.Cluster)
+					continue
+				}
+			default:
+				{
+					return "", err
+				}
+			}
+
+		}
+		return v, err
+	}
+	err := errors.New("ECS Service not found")
+	return "", err
 }

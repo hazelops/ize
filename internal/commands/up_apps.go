@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -103,9 +104,16 @@ func (o *UpAppsOptions) Run() error {
 	ui.Output("Deploying apps...", terminal.WithHeaderStyle())
 
 	err := manager.InDependencyOrder(aws.BackgroundContext(), o.Config.GetApps(), func(c context.Context, name string) error {
-		o.Config.AwsProfile = o.Config.Terraform["infra"].AwsProfile
+		var err error
+		if len(o.Config.AwsProfile) == 0 {
+			if v, exists := o.Config.Terraform["infra"]; exists {
+				o.Config.AwsProfile = v.AwsProfile
+			} else {
+				err = errors.New("can't detect aws_profile. Please set it via env var (AWS_PROFILE) or in ize.toml")
+			}
+		}
 
-		err := deployApp(name, ui, o.Config, false)
+		err = deployApp(name, ui, o.Config, false)
 		if err != nil {
 			return err
 		}
@@ -116,7 +124,7 @@ func (o *UpAppsOptions) Run() error {
 		return err
 	}
 
-	ui.Output("Deploy all completed!\n", terminal.WithSuccessStyle())
+	ui.Output("Deploy complete!\n", terminal.WithSuccessStyle())
 
 	return nil
 }
@@ -160,7 +168,7 @@ func deployApp(name string, ui terminal.UI, cfg *config.Project, isExplain bool)
 		icon += " "
 	}
 
-	ui.Output("Deploying %s%s app...", icon, name, terminal.WithHeaderStyle())
+	ui.Output("%s%s: bringing up...", icon, name, terminal.WithHeaderStyle())
 
 	// build app container
 	err := m.Build(ui)
@@ -180,8 +188,7 @@ func deployApp(name string, ui terminal.UI, cfg *config.Project, isExplain bool)
 		return fmt.Errorf("can't deploy app: %w", err)
 	}
 
-	ui.Output("Deploy app %s%s completed\n", icon, name, terminal.WithSuccessStyle())
+	ui.Output("%s%s: done.\n", icon, name, terminal.WithSuccessStyle())
 
 	return nil
 }
-

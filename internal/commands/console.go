@@ -213,12 +213,13 @@ func (o *ConsoleOptions) Run() error {
 func getEcsServiceName(o *ConsoleOptions) (string, error) {
 	// TODO: Move core logic to a shared function (since it's used in deploy too)
 	ecsServiceCandidates := []string{
-		o.AppName,
-		fmt.Sprintf("%s-%s", o.Config.Env, o.AppName),
 		fmt.Sprintf("%s-%s-%s", o.Config.Env, o.Config.Namespace, o.AppName),
+		fmt.Sprintf("%s-%s", o.Config.Env, o.AppName),
+		o.AppName,
 	}
 
 	for _, v := range ecsServiceCandidates {
+		// Searching for a service that has running tasks
 		logrus.Debugf("Checking if ECS service %s exists in cluster %s.", v, o.EcsCluster)
 		_, err := o.Config.AWSClient.ECSClient.ListTasks(&ecs.ListTasksInput{
 			Cluster:       &o.EcsCluster,
@@ -226,6 +227,7 @@ func getEcsServiceName(o *ConsoleOptions) (string, error) {
 			ServiceName:   &v,
 		})
 
+		// If during the search we encounter exceptions, handle them.
 		var aerr awserr.Error
 		if errors.As(err, &aerr) {
 			switch aerr.Code() {

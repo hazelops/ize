@@ -1,7 +1,9 @@
 package ecs
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io"
 	"strconv"
 	"strings"
@@ -64,6 +66,12 @@ func (e *Manager) deployLocal(w io.Writer) error {
 		oldTaskDef = *dtdo.TaskDefinition
 	}
 
+	oldTaskDefJson, err := json.Marshal(oldTaskDef)
+	if err != nil {
+		return err
+	}
+
+	logrus.Debugf("oldTaskDef: %s", string(oldTaskDefJson))
 	pterm.Printfln("Deploying based on task definition: %s:%d", *oldTaskDef.Family, *oldTaskDef.Revision)
 
 	var image string
@@ -105,6 +113,12 @@ func (e *Manager) deployLocal(w io.Writer) error {
 
 	newTaskDef = *rtdo.TaskDefinition
 
+	newTaskDefJson, err := json.Marshal(newTaskDef)
+	if err != nil {
+		return err
+	}
+
+	logrus.Debugf("newTaskDef: %s", string(newTaskDefJson))
 	pterm.Printfln("Successfully created revision: %s:%d", *rtdo.TaskDefinition.Family, *rtdo.TaskDefinition.Revision)
 
 	if err = e.updateTaskDefinition(&newTaskDef, &oldTaskDef, e.App.ServiceName, "Deploying new task definition"); err != nil {
@@ -121,7 +135,10 @@ func (e *Manager) deployLocal(w io.Writer) error {
 		pterm.Printfln("Container %s couldn't start: %s", e.App.ServiceName, sr)
 
 		pterm.Printfln("Rolling back to old task definition: %s:%d", *oldTaskDef.Family, *oldTaskDef.Revision)
+
 		e.App.Timeout = 600
+		logrus.Debugf("Setting timeout to %d seconds", e.App.Timeout)
+
 		if err = e.updateTaskDefinition(&oldTaskDef, &newTaskDef, e.App.ServiceName, "Deploying previous task definition"); err != nil {
 			return fmt.Errorf("unable to rollback to old task definition: %w", err)
 		}
@@ -221,7 +238,7 @@ func getService(name string, cluster string, svc ecsiface.ECSAPI) (*ecs.Describe
 }
 
 func (e *Manager) updateTaskDefinition(newTD *ecs.TaskDefinition, oldTD *ecs.TaskDefinition, serviceName string, title string) error {
-	pterm.Println("Updating service")
+	pterm.Printfln("Updating ECS service: %s (timeout: %d)", e.App.ServiceName, e.App.Timeout)
 
 	svc := e.Project.AWSClient.ECSClient
 
