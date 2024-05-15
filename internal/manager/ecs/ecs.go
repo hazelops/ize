@@ -92,7 +92,7 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 	}
 
 	if e.App.SkipDeploy {
-		s := sg.Add("%s: deploy will be skipped", e.App.Name)
+		s := sg.Add("%s: deploy is skipped", e.App.Name)
 		defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 		s.Done()
 		return nil
@@ -186,11 +186,11 @@ func (e *Manager) Push(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("%s: pushing app image...", e.App.Name)
+	s := sg.Add("%s: pushing docker image...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	if len(e.App.Image) != 0 {
-		s.Update("%s: pushing app image... (skipped, using %s) ", e.App.Name, e.App.Image)
+		s.Update("%s: pushing docker image... (skipped, using %s) ", e.App.Name, e.App.Image)
 		s.Done()
 
 		return nil

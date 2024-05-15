@@ -166,11 +166,11 @@ func (e *Manager) Push(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("%s: push app image...", e.App.Name)
+	s := sg.Add("%s: push docker image...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	if len(e.App.Image) != 0 {
-		s.Update("%s: pushing app image... (skipped, using %s) ", e.App.Name, e.App.Image)
+		s.Update("%s: pushing docker image... (skipped, using %s) ", e.App.Name, e.App.Image)
 		s.Done()
 
 		return nil

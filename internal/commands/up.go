@@ -95,7 +95,7 @@ func NewCmdUp(project *config.Project) *cobra.Command {
 	cmd.Flags().BoolVar(&o.UseYarn, "use-yarn", false, "execute sls commands using yarn")
 	cmd.Flags().BoolVar(&o.SkipGen, "skip-gen", false, "skip generating terraform files")
 	cmd.Flags().BoolVar(&o.Explain, "explain", false, "bash alternative shown")
- 
+
 	cmd.AddCommand(
 		NewCmdUpInfra(project),
 		NewCmdUpApps(project),
