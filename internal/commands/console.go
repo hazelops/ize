@@ -296,7 +296,7 @@ func getEcsContainerName(o *ConsoleOptions) (string, error) {
 						}
 					}
 
-					return "", errors.New(fmt.Sprintf("Can't find a container for %s in %s", o.AppName, task.TaskDefinitionArn))
+					return "", errors.New(fmt.Sprintf("Can't find a container for %s in %s", o.AppName, *task.TaskDefinitionArn))
 				}
 			} else {
 				fmt.Println("No tasks found.")

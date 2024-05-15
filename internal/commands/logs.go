@@ -186,7 +186,7 @@ func getEcsServiceLogGroupName(o *LogsOptions) (string, error) {
 		})
 
 		if len(resp.LogGroups) == 0 {
-			logrus.Debug("No log groups with prefix %s. Trying other options", v)
+			logrus.Debugf("No log groups with prefix %s. Trying other options", v)
 			continue
 		}
 
