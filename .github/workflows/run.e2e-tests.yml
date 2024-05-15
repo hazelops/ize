@@ -62,11 +62,14 @@ jobs:
           echo "ENV=${{ github.job }}-$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }
+        env:
+          AWS_PROFILE:  # This is required due to a bug https://stackoverflow.com/a/77731682
+
 
       - name: Install Go
         uses: actions/setup-go@v5
@@ -126,11 +129,14 @@ jobs:
           echo "ENV=${{ github.job }}-$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
           aws-region: ${{ env.AWS_REGION }}
+        env:
+          AWS_PROFILE:  # This is required due to a bug https://stackoverflow.com/a/77731682
+
 
       - name: Install Go
         uses: actions/setup-go@v5
@@ -197,11 +203,13 @@ jobs:
           echo "ENV=${{ github.job }}-$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
           aws-region: ${{ env.AWS_REGION }}
+        env:
+          AWS_PROFILE:  # This is required due to a bug https://stackoverflow.com/a/77731682
 
       - name: Install Go
         uses: actions/setup-go@v5
