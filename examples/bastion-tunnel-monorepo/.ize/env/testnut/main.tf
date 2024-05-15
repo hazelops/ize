@@ -79,7 +79,7 @@ module "ec2_profile" {
 
 module "bastion" {
   source  = "hazelops/ec2-openvpn-connector/aws"
-  version = "~>0.2"
+  version = "~>0.4.1"
 
   vpn_enabled         = false
   env                 = var.env
