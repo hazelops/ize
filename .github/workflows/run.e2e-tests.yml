@@ -156,7 +156,7 @@ jobs:
       - name: Make Executable
         run: |
           chmod +rx "${{ github.workspace }}/bin/ize"
-          ize  --version
+          ize --version
 
       - name: Create AWS Profile
         run: ize gen aws-profile

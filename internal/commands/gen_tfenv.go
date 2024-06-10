@@ -145,7 +145,7 @@ func GenerateTerraformFiles(name string, terraformStateBucketName string, projec
 	)
 	if err != nil {
 		pterm.Error.Printfln("Generate terraform file for \"%s\" not completed", name)
-		return fmt.Errorf("can't generate backent.tf: %s", err)
+		return fmt.Errorf("can't generate backend.tf: %s", err)
 	}
 
 	varsOpts := template.VarsOpts{

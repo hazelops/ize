@@ -9,6 +9,7 @@ env:
 
 on:
   workflow_dispatch:
+    # TODO: Re-enable this after the tests are stable
 #  schedule:
 #    - cron: '0 3 * * */2'
 
