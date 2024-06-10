@@ -8,6 +8,7 @@ import (
 func NewCmdTunnel(project *config.Project) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "tunnel",
+		Aliases:          []string{"atun"},
 		Short:            "Tunnel management",
 		Long:             "Tunnel management",
 		Args:             cobra.NoArgs,

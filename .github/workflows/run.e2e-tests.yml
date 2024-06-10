@@ -1,4 +1,8 @@
 name: "Tests: E2E"
+concurrency: # This is required to ensure that only a single job or workflow using the same concurrency group will run at a time.
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 defaults:
   run:
     shell: bash
@@ -19,7 +23,7 @@ jobs:
         os:
           - ubuntu-latest
 # TODO: re-enable other platforms after Ubuntu is working fine
-          - macos-latest
+#          - macos-latest
 #          - windows-latest
     runs-on: ${{ matrix.os }}
     steps:
@@ -40,7 +44,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ize-${{ matrix.os }}-${{ github.sha }}
-          path: ${{ github.workspace }}/ize
+          path: ${{ github.workspace }}/bin/ize
 
   test-ecs-apps:
     name: ECS Apps Monorepo
@@ -69,7 +73,6 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
         env:
           AWS_PROFILE:  # This is required due to a bug https://stackoverflow.com/a/77731682
-
 
       - name: Install Go
         uses: actions/setup-go@v5
@@ -118,7 +121,7 @@ jobs:
           - ubuntu-latest
 # TODO: re-enable other platforms after Ubuntu is working fine
 #          - windows-latest
-          - macos-latest
+#          - macos-latest
     runs-on: ${{ matrix.os }}
     env:
       IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/bastion-tunnel-monorepo

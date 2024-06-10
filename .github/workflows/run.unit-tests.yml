@@ -44,7 +44,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ize-${{ matrix.os }}-${{ github.sha }}
-          path: ${{ github.workspace }}/ize
+          path: ${{ github.workspace }}/bin/ize
 
   # TODO: this should be executed before the release and fail in proper cases
   unit-tests:
@@ -64,6 +64,7 @@ jobs:
           go install github.com/golang/mock/mockgen@v1.6.0
           go generate ./...
 
+      # TODO: Download build
       - name: Build
         run: go build -v ./...
 
