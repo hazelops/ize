@@ -19,8 +19,8 @@ module "vpc" {
   azs = [
     "us-east-1a",
     "us-east-1b",
-
   ]
+
   public_subnets = [
     "10.0.1.0/24",
     "10.0.2.0/24"
@@ -36,10 +36,6 @@ module "vpc" {
   enable_dns_hostnames                = true
   manage_default_network_acl          = true
   default_network_acl_name            = "${var.env}-${var.namespace}"
-  tags = {
-    Terraform = "true"
-    Env       = var.env
-  }
 }
 
 data "aws_route53_zone" "root" {
@@ -54,7 +50,6 @@ resource "aws_route53_record" "env_ns_record" {
   ttl     = "60"
   records = aws_route53_zone.env_domain.name_servers
 }
-
 
 resource "aws_route53_zone" "env_domain" {
   name = "${var.env}.${var.root_domain_name}"
@@ -78,19 +73,12 @@ resource "aws_security_group" "default_permissive" {
     to_port     = 0
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  tags = {
-    Terraform = "true"
-    Env       = var.env
-    Name      = "${var.env}-default-permissive"
-  }
 }
 
 module "ecs" {
   source  = "registry.terraform.io/terraform-aws-modules/ecs/aws"
   version = "~> 3.0"
   name    = "${var.env}-${var.namespace}"
-
 }
 
 module "ec2_profile" {

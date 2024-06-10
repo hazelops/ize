@@ -1,48 +1,23 @@
+# Basic usage example from https://github.com/hazelops/terraform-aws-ecs-app?tab=readme-ov-file#usage
 module "goblin" {
-  depends_on = [
-    module.ecs
-  ]
   source  = "registry.terraform.io/hazelops/ecs-app/aws"
-  version = "~>1.4"
+  version = "~>2.0"
+  name    = "${var.namespace}-goblin"
 
-  name             = "goblin"
-  app_type         = "web"
-  env              = var.env
-  namespace        = var.namespace
-  ecs_cluster_name = local.ecs_cluster_name
+  env                 = var.env
+  ecs_cluster_name    = module.ecs.ecs_cluster_name
+  vpc_id              = module.vpc.vpc_id
+  public_subnets      = module.vpc.public_subnets
+  private_subnets     = module.vpc.private_subnets
+  security_groups     = [aws_security_group.default_permissive.id]
+  alb_security_groups = [aws_security_group.default_permissive.id]
+  root_domain_name    = var.root_domain_name
+  zone_id             = aws_route53_zone.env_domain.id
+  ecr_repo_create     = true
+  https_enabled = false # Disabled for simplicity
 
-  # Containers
-  docker_registry      = local.docker_registry
-#  image_id             = local.image_id
-  docker_image_tag     = local.docker_image_tag
-  iam_instance_profile = local.iam_instance_profile
-  key_name             = local.key_name
-
-  # Load Balancer
-  public                = true
-  alb_health_check_path = "/"
-  alb_security_groups   = local.alb_security_groups
-
-  # Network
-  vpc_id                       = local.vpc_id
-  public_subnets               = local.public_subnets
-  private_subnets              = local.private_subnets
-  security_groups              = local.security_groups
-  root_domain_name             = var.root_domain_name
-  zone_id                      = local.zone_id
-#  route53_health_check_enabled = false
-#  sns_service_subscription_endpoint = "nutcorp-ops@hazelops.com"
-#  sns_service_subscription_endpoint_protocol = "email"
-  domain_names = [
-    "goblin.${var.root_domain_name}"
-  ]
-  https_enabled = false
-
-  # Environment variables
-  app_secrets = [
-    "EXAMPLE_SECRET"
-  ]
   environment = {
-    EXAMPLE_API_KEY = "Api Key"
+    API_KEY   = "00000000000000000000000000000000"
+    JWT_TOKEN = "99999999999999999999999999999999"
   }
 }

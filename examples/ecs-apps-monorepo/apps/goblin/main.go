@@ -7,15 +7,26 @@ import (
 )
 
 func main() {
-
+	var err error
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		VarEnv := getEnv("EXAMPLE_SECRET", "default-pass")
 		VarSecret := getEnv("EXAMPLE_API_KEY", "default-pass")
-		fmt.Fprintln(w, VarSecret, "Welcome to goblin! demo service👾")
-		fmt.Fprintln(w, VarEnv, "Welcome to goblin! demo service👾")
+		_, err = fmt.Fprintln(w, VarSecret, "Welcome to goblin! demo service👾")
+		if err != nil {
+			fmt.Printf("%s", err)
+		}
+
+		_, err = fmt.Fprintln(w, VarEnv, "Welcome to goblin! demo service👾")
+		if err != nil {
+			fmt.Printf("%s", err)
+		}
+
 	})
-	println("Goblin demo service started on port 3000")
-	http.ListenAndServe(":3000", nil)
+	fmt.Printf("Goblin demo service started on port 3000")
+	err = http.ListenAndServe(":3000", nil)
+	if err != nil {
+		fmt.Printf("%s", err)
+	}
 }
 
 // getEnv get key environment variable if exist otherwise return defalutValue

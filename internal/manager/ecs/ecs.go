@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/hazelops/ize/internal/aws/utils"
@@ -110,11 +111,16 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 	s := sg.Add("%s: deploying to ECS %s", e.App.Name, e.App.ServiceName)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
+	imageName, err := getEcsAppImageName(e)
+	if err != nil {
+		logrus.Error(err)
+	}
+
 	if e.App.Image == "" {
 		// Set image name to <docker-registry>/<namespace>-<app-name>:<tag> by default
 		e.App.Image = fmt.Sprintf("%s/%s:%s",
 			e.App.DockerRegistry,
-			fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name),
+			imageName,
 			fmt.Sprintf("%s-%s", e.Project.Env, "latest"))
 	}
 
@@ -196,24 +202,26 @@ func (e *Manager) Push(ui terminal.UI) error {
 		return nil
 	}
 
-	image := fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name)
+	//image := fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name)
+	imageName, err := getEcsAppImageName(e)
+	logrus.Debugf("Image name is %s", imageName)
 
 	svc := e.Project.AWSClient.ECRClient
 
 	var repository *ecr.Repository
 
 	dro, err := svc.DescribeRepositories(&ecr.DescribeRepositoriesInput{
-		RepositoryNames: []*string{aws.String(image)},
+		RepositoryNames: []*string{aws.String(imageName)},
 	})
 	if err != nil {
 		return fmt.Errorf("can't describe repositories: %w", err)
 	}
 
 	if dro == nil || len(dro.Repositories) == 0 {
-		logrus.Info("no ECR repository detected, creating", "name", image)
+		logrus.Info("no ECR repository detected, creating", "name", imageName)
 
 		out, err := svc.CreateRepository(&ecr.CreateRepositoryInput{
-			RepositoryName: aws.String(image),
+			RepositoryName: aws.String(imageName),
 		})
 		if err != nil {
 			return fmt.Errorf("unable to create repository: %w", err)
@@ -250,7 +258,7 @@ func (e *Manager) Push(ui terminal.UI) error {
 	token := base64.URLEncoding.EncodeToString(authBytes)
 
 	tagLatest := fmt.Sprintf("%s-latest", e.Project.Env)
-	imageUri := fmt.Sprintf("%s/%s", e.App.DockerRegistry, image)
+	imageUri := fmt.Sprintf("%s/%s", e.App.DockerRegistry, imageName)
 	platform := "linux/amd64"
 	if e.Project.PreferRuntime == "docker-arm64" {
 		platform = "linux/arm64"
@@ -258,6 +266,7 @@ func (e *Manager) Push(ui terminal.UI) error {
 
 	r := docker.NewRegistry(*repository.RepositoryUri, token, platform)
 
+	// TODO: Check if image exists locally, error out or maybe build it
 	err = r.Push(context.Background(), s.TermOutput(), imageUri, []string{e.Project.Tag, tagLatest})
 	if err != nil {
 		return fmt.Errorf("can't push image: %w", err)
@@ -274,7 +283,7 @@ func (e *Manager) Build(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("%s: building docker image...", e.App.Name)
+	s := sg.Add("%s: building docker image %s...", e.App.Name, e.App.Image)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	if len(e.App.Image) != 0 {
@@ -284,8 +293,11 @@ func (e *Manager) Build(ui terminal.UI) error {
 		return nil
 	}
 
-	image := fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name)
-	imageUri := fmt.Sprintf("%s/%s", e.App.DockerRegistry, image)
+	imageName, err := getEcsAppImageName(e)
+	logrus.Debugf("Image name is %s", imageName)
+
+	// TODO: Standardize imageUri / App.Image / inageName
+	imageUri := fmt.Sprintf("%s/%s", e.App.DockerRegistry, imageName)
 
 	relProjectPath, err := filepath.Rel(e.Project.RootDir, e.App.Path)
 	if err != nil {
@@ -305,7 +317,7 @@ func (e *Manager) Build(ui terminal.UI) error {
 	}
 
 	tags := []string{
-		image,
+		imageName,
 		fmt.Sprintf("%s:%s", imageUri, e.Project.Tag),
 		fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", e.Project.Env)),
 	}
@@ -327,6 +339,11 @@ func (e *Manager) Build(ui terminal.UI) error {
 
 	err = b.Build(ui, s, e.Project.RootDir)
 	if err != nil {
+
+		if strings.Contains(fmt.Sprintf("%s", err), "Is the docker daemon running?") {
+			err = errors.New(fmt.Sprintf("%s. If you are using Docker Desktop for Mac, try updating it and enabling default Docker Socket (https://github.com/docker/for-mac/issues/7127#issuecomment-2096197838)", err))
+		}
+
 		return fmt.Errorf("unable to build image: %w", err)
 	}
 
@@ -395,8 +412,48 @@ func (e *Manager) Destroy(ui terminal.UI, autoApprove bool) error {
 	return nil
 }
 
+func getEcsAppImageName(e *Manager) (string, error) {
+	// TODO: Move core logic to a shared function (since it's used in helm too)
+	ecsAppImageNameCandidates := []string{
+		fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name),
+		e.App.Name,
+	}
+
+	//for _, v := range ecsAppImageNameCandidates {
+	//logrus.Debugf("Checking if ECR repo %s exists in %s ", v, e.App.DockerRegistry)
+
+	repos, err := e.Project.AWSClient.ECRClient.DescribeRepositories(&ecr.DescribeRepositoriesInput{
+		RepositoryNames: aws.StringSlice([]string{"squibby"}),
+		//RepositoryNames: aws.StringSlice([]string{"s"}),
+	})
+
+	if repos != nil {
+		for _, nc := range ecsAppImageNameCandidates {
+			logrus.Debugf("Checking if %s is in the list of repos", nc)
+			for _, r := range repos.Repositories {
+				logrus.Debugf("Checking if %s == %s", nc, *r.RepositoryName)
+				if nc == *r.RepositoryName {
+					logrus.Debugf("image: %s == %s", nc, *r.RepositoryName)
+					return nc, err
+
+				}
+				logrus.Infof("ECR image not found: %s in registry %s. Checking other options.", nc, e.App.DockerRegistry)
+				continue
+			}
+		}
+	}
+
+	err = errors.New(fmt.Sprintf("Can't find registry for %s in registry %s. Giving up.", e.App.Name, e.App.DockerRegistry))
+
+	if err != nil {
+		logrus.Debugf("%s", err)
+	}
+
+	return "", err
+}
+
 func getEcsServiceName(e *Manager) (string, error) {
-	// TODO: Move core logic to a shared function (since it's used in deploy too)
+	// TODO: Move core logic to a shared function (since it's used in helm too)
 	ecsServiceCandidates := []string{
 		fmt.Sprintf("%s-%s-%s", e.Project.Env, e.Project.Namespace, e.App.Name),
 		fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name),
@@ -406,6 +463,7 @@ func getEcsServiceName(e *Manager) (string, error) {
 	for _, v := range ecsServiceCandidates {
 		logrus.Debugf("Checking if ECS service %s exists in cluster %s.", v, e.App.Cluster)
 
+		// TODO: Consider pagination
 		_, err := e.Project.AWSClient.ECSClient.ListTasks(&ecs.ListTasksInput{
 			Cluster:       &e.App.Cluster,
 			DesiredStatus: aws.String(ecs.DesiredStatusRunning),
