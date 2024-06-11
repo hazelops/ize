@@ -9,6 +9,7 @@ defaults:
 
 env:
   AWS_PROFILE: default
+  AWS_REGION: us-west-2
   NAMESPACE: e2eize
   IZE_LOG_LEVEL: debug
   IZE_PLAIN_TEXT: true
@@ -120,13 +121,10 @@ jobs:
           chmod +rx "${{ github.workspace }}/bin/ize"
 
       - name: IZE init
-        run: ize init
-
-      - name: IZE create AWS Profile
-        run: ize gen aws-profile
-
-      - name: IZE gen tfenv
-        run: ize gen tfenv
+        run: |
+          ize init
+          ize gen aws-profile
+          ize gen tfenv
 
       # Clone existing "testnut" environment as an environment for a current test
       - name: Prepare Environment
