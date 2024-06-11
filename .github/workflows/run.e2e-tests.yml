@@ -133,7 +133,6 @@ jobs:
           cp -R "testnut" "${{ env.ENV }}"
 
       - name: Run Tests
-        working-directory: test
         run: |
           go test -v --timeout 0 --tags="${{ matrix.tags }}" ./tests/e2e
 
