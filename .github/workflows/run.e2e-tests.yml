@@ -64,9 +64,9 @@ jobs:
           - name: bastion-tunnel-monorepo
             env: e2eize01
             tags: e2e bastion_tunnel
-#          - name: ecs-apps-monorepo
-#            env: e2eize02
-#            tags: e2e ecs_apps
+          - name: ecs-apps-monorepo
+            env: e2eize02
+            tags: e2e ecs_apps
 #          - name: sls-apps-monorepo
 #            env: e2eize03
 #            tags: e2e terraform
