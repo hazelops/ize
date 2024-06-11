@@ -17,8 +17,8 @@ module "vpc" {
   cidr = "10.0.0.0/16"
 
   azs = [
-    "us-east-1a",
-    "us-east-1b",
+    "${var.aws_region}a",
+    "${var.aws_region}b",
   ]
 
   public_subnets = [
