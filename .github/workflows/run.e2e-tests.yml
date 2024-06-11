@@ -98,8 +98,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_SA }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_SA }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Generate Test SSH Key
@@ -130,7 +130,7 @@ jobs:
 
       # Clone existing "testnut" environment as an environment for a current test
       - name: Prepare Environment
-        working-directory: examples/${{ matrix.name }}/.ize/env/
+        working-directory: "examples/${{ matrix.name }}/.ize/env/"
         run: |          
           cp -R "testnut" "${{ env.ENV }}"
 
