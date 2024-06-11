@@ -79,7 +79,7 @@ jobs:
     env:
       ENV: ${{ matrix.env }}
       IZE_EXAMPLES_PATH: "${{ github.workspace }}/examples/${{ matrix.name }}"
-      GITHUB_PATH: "${{ github.workspace }}/bin/:${{ GITHUB_PATH }}"
+      GITHUB_PATH: "${{ github.workspace }}/bin/:${GITHUB_PATH}"
 
     steps:
       - name: Configure Environment Variables
