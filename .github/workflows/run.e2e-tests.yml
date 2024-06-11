@@ -11,7 +11,6 @@ env:
   AWS_PROFILE: default
   AWS_REGION: us-west-2
   NAMESPACE: tftest
-  IZE_LOG_LEVEL: debug
   IZE_PLAIN_TEXT: true
   IZE_VERSION: 0.0.0-dev
 
