@@ -80,7 +80,6 @@ jobs:
     env:
       ENV: ${{ matrix.env }}
       IZE_EXAMPLES_PATH: "${{ github.workspace }}/examples/${{ matrix.name }}"
-      GITHUB_PATH: "${{ github.workspace }}/bin/:${GITHUB_PATH}"
 
     steps:
       - name: Configure Environment Variables
@@ -115,11 +114,12 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: ize-${{ matrix.os }}-${{ github.sha }}
-          path: bin
+          path: $GITHUB_PATH
 
       - name: Make Executable
         run: |
-          chmod +rx "${{ github.workspace }}/bin/ize"
+          ls -la $GITHUB_PATH
+          chmod +rx "${GITHUB_PATH}/ize"
 
       - name: IZE init
         run: |
