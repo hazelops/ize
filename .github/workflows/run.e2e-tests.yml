@@ -85,7 +85,7 @@ jobs:
       - name: Configure Environment Variables
         run: |
           echo "$GITHUB_PATH"
-#          echo "${{ github.workspace }}/bin/" >> $GITHUB_PATH
+          echo "${{ github.workspace }}/bin/" >> $GITHUB_PATH
 
       - name: Install Go
         uses: actions/setup-go@v5
@@ -114,12 +114,11 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: ize-${{ matrix.os }}-${{ github.sha }}
-          path: $GITHUB_PATH
+          path: bin
 
       - name: Make Executable
         run: |
-          ls -la $GITHUB_PATH
-          chmod +rx "${GITHUB_PATH}/ize"
+          chmod +rx "${{ github.workspace }}/bin/ize"
 
       - name: IZE init
         run: |
