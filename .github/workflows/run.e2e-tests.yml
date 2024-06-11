@@ -115,6 +115,7 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: ize-${{ matrix.os }}-${{ github.sha }}
+          path: bin
 
       - name: Make Executable
         run: |
