@@ -15,7 +15,9 @@ module "squibby" {
   root_domain_name = var.root_domain_name
   zone_id          = aws_route53_zone.env_domain.id
   ecr_repo_create  = true
-  https_enabled = false # Disabled for simplicity
+
+  https_enabled = false # Disabled for easier testing
+  ecr_force_delete = true # Enabled for easier testing
 
   environment = {
     API_KEY   = "00000000000000000000000000000000"
