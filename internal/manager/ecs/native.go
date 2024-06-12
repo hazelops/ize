@@ -79,7 +79,8 @@ func (e *Manager) deployLocal(w io.Writer) error {
 		container := oldTaskDef.ContainerDefinitions[i]
 
 		// We are changing the image/tag only for the app-specific container (not sidecars)
-		if *container.Name == e.App.Name {
+		if strings.Contains(*container.Name, e.App.Name) {
+			// If the project has a tag, but app image is not set we construct the image name.
 			if len(e.Project.Tag) != 0 && len(e.App.Image) == 0 {
 				name := strings.Split(*container.Image, ":")[0]
 				image = fmt.Sprintf("%s:%s", name, e.Project.Tag)

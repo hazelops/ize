@@ -317,7 +317,6 @@ func (e *Manager) Build(ui terminal.UI) error {
 	}
 
 	tags := []string{
-		imageName,
 		fmt.Sprintf("%s:%s", imageUri, e.Project.Tag),
 		fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", e.Project.Env)),
 	}
@@ -421,15 +420,17 @@ func getEcsAppImageName(e *Manager) (string, error) {
 
 	//for _, v := range ecsAppImageNameCandidates {
 	//logrus.Debugf("Checking if ECR repo %s exists in %s ", v, e.App.DockerRegistry)
+	var err error
 
-	repos, err := e.Project.AWSClient.ECRClient.DescribeRepositories(&ecr.DescribeRepositoriesInput{
-		RepositoryNames: aws.StringSlice([]string{"squibby"}),
-		//RepositoryNames: aws.StringSlice([]string{"s"}),
-	})
+	for _, nc := range ecsAppImageNameCandidates {
+		logrus.Debugf("Checking if %s is in the list of repos", nc)
 
-	if repos != nil {
-		for _, nc := range ecsAppImageNameCandidates {
-			logrus.Debugf("Checking if %s is in the list of repos", nc)
+		// TODO: do a query with a list of nc's
+		repos, err := e.Project.AWSClient.ECRClient.DescribeRepositories(&ecr.DescribeRepositoriesInput{
+			RepositoryNames: aws.StringSlice([]string{nc}),
+			//RepositoryNames: aws.StringSlice([]string{"s"}),
+		})
+		if repos != nil {
 			for _, r := range repos.Repositories {
 				logrus.Debugf("Checking if %s == %s", nc, *r.RepositoryName)
 				if nc == *r.RepositoryName {

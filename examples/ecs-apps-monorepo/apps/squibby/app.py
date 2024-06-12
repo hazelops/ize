@@ -13,7 +13,7 @@ def hello_world():
     return (text)
 
 @app.route('/health')
-def hello_world():
+def health():
     return (text)
 
 

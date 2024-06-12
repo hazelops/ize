@@ -1,8 +1,8 @@
 FROM golang:1.17
 
 ENV \
-EXAMPLE_API_KEY=Default \
-EXAMPLE_SECRET=Default
+    EXAMPLE_API_KEY=Default \
+    EXAMPLE_SECRET=Default
 
 ARG PROJECT_PATH=.
 WORKDIR /go/src/app
