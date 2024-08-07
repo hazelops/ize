@@ -1,6 +1,7 @@
 package serverless
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -49,15 +50,28 @@ func (sls *Manager) nvm(w io.Writer, command string) error {
 		return err
 	}
 
+	logrus.Debugf("Running: bash -c source %s/nvm.sh && nvm install %s && %s", nvmDir, sls.App.NodeVersion, command)
 	cmd := exec.Command("bash", "-c",
 		fmt.Sprintf("source %s/nvm.sh && nvm install %s && %s", nvmDir, sls.App.NodeVersion, command),
 	)
 
-	return term.New(
+	// Capture stderr in a buffer
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	t := term.New(
 		term.WithDir(sls.App.Path),
 		term.WithStdout(w),
-		term.WithStderr(w),
-	).InteractiveRun(cmd)
+		term.WithStderr(&stderr),
+	)
+
+	err = t.InteractiveRun(cmd)
+	if err != nil {
+		// Return the error along with stderr output
+		return fmt.Errorf("command failed with error: %w, stderr: %s", err, stderr.String())
+	}
+
+	return nil
 }
 
 func (sls *Manager) readNvmrc() error {
@@ -70,6 +84,7 @@ func (sls *Manager) readNvmrc() error {
 		}
 		sls.App.NodeVersion = strings.TrimSpace(string(file))
 	}
+
 	return nil
 }
 
