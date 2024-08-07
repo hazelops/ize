@@ -106,11 +106,23 @@ func (sls *Manager) runNvm(w io.Writer) error {
 
 	cmd := exec.Command("bash", "-c", command)
 
-	return term.New(
+	// Capture stderr in a buffer
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	t := term.New(
 		term.WithDir(sls.App.Path),
 		term.WithStdout(w),
-		term.WithStderr(w),
-	).InteractiveRun(cmd)
+		term.WithStderr(&stderr),
+	)
+
+	err = t.InteractiveRun(cmd)
+	if err != nil {
+		// Return the error along with stderr output
+		return fmt.Errorf("command failed with error: %w, stderr: %s", err, stderr.String())
+	}
+
+	return nil
 }
 
 func (sls *Manager) runDeploy(w io.Writer) error {
@@ -165,11 +177,23 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 
 	cmd := exec.Command("bash", "-c", command)
 
-	return term.New(
+	// Capture stderr in a buffer
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	t := term.New(
 		term.WithDir(sls.App.Path),
 		term.WithStdout(w),
-		term.WithStderr(w),
-	).InteractiveRun(cmd)
+		term.WithStderr(&stderr),
+	)
+
+	err := t.InteractiveRun(cmd)
+	if err != nil {
+		// Return the error along with stderr output
+		return fmt.Errorf("command failed with error: %w, stderr: %s", err, stderr.String())
+	}
+
+	return nil
 }
 
 func (sls *Manager) runRemove(w io.Writer) error {
@@ -221,11 +245,23 @@ func (sls *Manager) runRemove(w io.Writer) error {
 
 	cmd := exec.Command("bash", "-c", command)
 
-	return term.New(
+	// Capture stderr in a buffer
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	t := term.New(
 		term.WithDir(sls.App.Path),
 		term.WithStdout(w),
-		term.WithStderr(w),
-	).InteractiveRun(cmd)
+		term.WithStderr(&stderr),
+	)
+
+	err := t.InteractiveRun(cmd)
+	if err != nil {
+		// Return the error along with stderr output
+		return fmt.Errorf("command failed with error: %w, stderr: %s", err, stderr.String())
+	}
+
+	return nil
 }
 
 func (sls *Manager) runCreateDomain(w io.Writer) error {
@@ -254,11 +290,23 @@ func (sls *Manager) runCreateDomain(w io.Writer) error {
 
 	cmd := exec.Command("bash", "-c", command)
 
-	return term.New(
+	// Capture stderr in a buffer
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	t := term.New(
 		term.WithDir(sls.App.Path),
 		term.WithStdout(w),
-		term.WithStderr(w),
-	).InteractiveRun(cmd)
+		term.WithStderr(&stderr),
+	)
+
+	err := t.InteractiveRun(cmd)
+	if err != nil {
+		// Return the error along with stderr output
+		return fmt.Errorf("command failed with error: %w, stderr: %s", err, stderr.String())
+	}
+
+	return nil
 }
 
 func (sls *Manager) runRemoveDomain(w io.Writer) error {
@@ -287,11 +335,23 @@ func (sls *Manager) runRemoveDomain(w io.Writer) error {
 
 	cmd := exec.Command("bash", "-c", command)
 
-	return term.New(
+	// Capture stderr in a buffer
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	t := term.New(
 		term.WithDir(sls.App.Path),
 		term.WithStdout(w),
-		term.WithStderr(w),
-	).InteractiveRun(cmd)
+		term.WithStderr(&stderr),
+	)
+
+	err := t.InteractiveRun(cmd)
+	if err != nil {
+		// Return the error along with stderr output
+		return fmt.Errorf("command failed with error: %w, stderr: %s", err, stderr.String())
+	}
+
+	return nil
 }
 
 func npmToYarn(cmd string) string {
