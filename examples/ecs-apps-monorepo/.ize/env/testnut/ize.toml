@@ -38,7 +38,7 @@ timeout = 0                          	# (optional) ECS deployment timeout can be
 
 
 [ecs.goblin]
-timeout = 0                        	# (optional) ECS deployment timeout can be specified here.
+timeout = 0                        	    # (optional) ECS deployment timeout can be specified here.
 # docker_registry = ""                	# (optional) Docker registry can be set here. By default it uses ECR repo with the name of the service.
 # skip_deploy = false                 	# skip deploy app
 # path = ""                           	# (optional) Path to ecs app folder can be specified here. By default it's derived from apps path and app name.
