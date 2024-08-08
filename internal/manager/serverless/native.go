@@ -19,7 +19,7 @@ func (sls *Manager) runNpmInstall(w io.Writer) error {
 		nvmDir = "$HOME/.nvm"
 	}
 
-	command := fmt.Sprintf("source --debug %s/nvm.sh && nvm use %s && npm install --save-dev", nvmDir, sls.App.NodeVersion)
+	command := fmt.Sprintf("source %s/nvm.sh && nvm use %s && npm install --save-dev", nvmDir, sls.App.NodeVersion)
 
 	if sls.App.UseYarn {
 		command = npmToYarn(command)
@@ -64,9 +64,16 @@ func (sls *Manager) nvm(w io.Writer, command string) error {
 		return err
 	}
 
-	logrus.Debugf("Running: bash -c source --debug %s/nvm.sh && nvm install %s && %s", nvmDir, sls.App.NodeVersion, command)
-	cmd := exec.Command("bash", "-xv", "-c",
-		fmt.Sprintf("source --debug %s/nvm.sh && nvm install %s && %s", nvmDir, sls.App.NodeVersion, command),
+	logrus.Debugf("Running: bash -c source %s/nvm.sh && nvm install %s && %s", nvmDir, sls.App.NodeVersion, command)
+
+	var bashFlags = "-c"
+	// If log level is debug or trace, enable verbose mode for bash wrapper
+	if sls.Project.LogLevel == "debug" || sls.Project.LogLevel == "trace" {
+		bashFlags = "-xvc"
+	}
+
+	cmd := exec.Command("bash", bashFlags,
+		fmt.Sprintf("source %s/nvm.sh && nvm install %s && %s", nvmDir, sls.App.NodeVersion, command),
 	)
 
 	// Capture stderr in a buffer
@@ -115,7 +122,7 @@ func (sls *Manager) runNvm(w io.Writer) error {
 		return err
 	}
 
-	command := fmt.Sprintf("source --debug %s/nvm.sh && nvm install %s", nvmDir, sls.App.NodeVersion)
+	command := fmt.Sprintf("source %s/nvm.sh && nvm install %s", nvmDir, sls.App.NodeVersion)
 
 	logrus.SetOutput(w)
 	logrus.Debugf("command: %s", command)
@@ -153,7 +160,7 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 	// SLS v3 has breaking changes in syntax
 	if sls.App.ServerlessVersion == "3" {
 		command = fmt.Sprintf(
-			`source --debug %s/nvm.sh && 
+			`source %s/nvm.sh && 
 				nvm use %s &&
 				npx serverless deploy \
 				--config=%s \
@@ -167,7 +174,7 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 			sls.App.AwsProfile, sls.Project.Env)
 	} else {
 		command = fmt.Sprintf(
-			`source --debug %s/nvm.sh && 
+			`source %s/nvm.sh && 
 				nvm use %s &&
 				npx serverless deploy \
 				--config %s \
@@ -228,7 +235,7 @@ func (sls *Manager) runRemove(w io.Writer) error {
 	// SLS v3 has breaking changes in syntax
 	if sls.App.ServerlessVersion == "3" {
 		command = fmt.Sprintf(
-			`source --debug %s/nvm.sh && \
+			`source %s/nvm.sh && \
 				nvm use %s && \
 				npx serverless remove \
 				--config=%s \
@@ -242,7 +249,7 @@ func (sls *Manager) runRemove(w io.Writer) error {
 			sls.App.AwsProfile, sls.Project.Env)
 	} else {
 		command = fmt.Sprintf(
-			`source --debug %s/nvm.sh && \
+			`source %s/nvm.sh && \
 				nvm use %s && \
 				npx serverless remove \
 				--config %s \
@@ -293,7 +300,7 @@ func (sls *Manager) runCreateDomain(w io.Writer) error {
 	}
 
 	command := fmt.Sprintf(
-		`source --debug %s/nvm.sh && \
+		`source %s/nvm.sh && \
 				nvm use %s && \
 				npx serverless create_domain \
 				--verbose \
@@ -340,7 +347,7 @@ func (sls *Manager) runRemoveDomain(w io.Writer) error {
 	}
 
 	command := fmt.Sprintf(
-		`source --debug %s/nvm.sh && \
+		`source %s/nvm.sh && \
 				nvm use %s && \
 				npx serverless delete_domain \
 				--verbose \
