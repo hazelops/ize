@@ -45,6 +45,10 @@ func (sls *Manager) nvm(w io.Writer, command string) error {
 	if len(nvmDir) == 0 {
 		nvmDir = "$HOME/.nvm"
 	}
+
+	// TODO: If nvm.sh doesn't exist in the nvmDir, we should install it
+	// curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+
 	err := sls.readNvmrc()
 	if err != nil {
 		return err
@@ -57,7 +61,9 @@ func (sls *Manager) nvm(w io.Writer, command string) error {
 
 	// Capture stderr in a buffer
 	var stderr bytes.Buffer
+	var stdout bytes.Buffer
 	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
 
 	t := term.New(
 		term.WithDir(sls.App.Path),
@@ -68,7 +74,7 @@ func (sls *Manager) nvm(w io.Writer, command string) error {
 	err = t.InteractiveRun(cmd)
 	if err != nil {
 		// Return the error along with stderr output
-		return fmt.Errorf("command failed with error: %w, stderr: %s", err, stderr.String())
+		return fmt.Errorf("command failed with error: %w, %s %s", err, stderr.String(), stdout.String())
 	}
 
 	return nil
@@ -108,7 +114,9 @@ func (sls *Manager) runNvm(w io.Writer) error {
 
 	// Capture stderr in a buffer
 	var stderr bytes.Buffer
+	var stdout bytes.Buffer
 	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
 
 	t := term.New(
 		term.WithDir(sls.App.Path),
@@ -119,7 +127,7 @@ func (sls *Manager) runNvm(w io.Writer) error {
 	err = t.InteractiveRun(cmd)
 	if err != nil {
 		// Return the error along with stderr output
-		return fmt.Errorf("command failed with error: %w, stderr: %s", err, stderr.String())
+		return fmt.Errorf("command failed with error: %w, %s %s", err, stderr.String(), stdout.String())
 	}
 
 	return nil
@@ -179,7 +187,9 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 
 	// Capture stderr in a buffer
 	var stderr bytes.Buffer
+	var stdout bytes.Buffer
 	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
 
 	t := term.New(
 		term.WithDir(sls.App.Path),
@@ -190,7 +200,7 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 	err := t.InteractiveRun(cmd)
 	if err != nil {
 		// Return the error along with stderr output
-		return fmt.Errorf("command failed with error: %w, stderr: %s", err, stderr.String())
+		return fmt.Errorf("command failed with error: %w, %s %s", err, stderr.String(), stdout.String())
 	}
 
 	return nil
@@ -247,7 +257,9 @@ func (sls *Manager) runRemove(w io.Writer) error {
 
 	// Capture stderr in a buffer
 	var stderr bytes.Buffer
+	var stdout bytes.Buffer
 	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
 
 	t := term.New(
 		term.WithDir(sls.App.Path),
@@ -258,7 +270,7 @@ func (sls *Manager) runRemove(w io.Writer) error {
 	err := t.InteractiveRun(cmd)
 	if err != nil {
 		// Return the error along with stderr output
-		return fmt.Errorf("command failed with error: %w, stderr: %s", err, stderr.String())
+		return fmt.Errorf("command failed with error: %w, %s %s", err, stderr.String(), stdout.String())
 	}
 
 	return nil
@@ -292,7 +304,9 @@ func (sls *Manager) runCreateDomain(w io.Writer) error {
 
 	// Capture stderr in a buffer
 	var stderr bytes.Buffer
+	var stdout bytes.Buffer
 	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
 
 	t := term.New(
 		term.WithDir(sls.App.Path),
@@ -303,7 +317,7 @@ func (sls *Manager) runCreateDomain(w io.Writer) error {
 	err := t.InteractiveRun(cmd)
 	if err != nil {
 		// Return the error along with stderr output
-		return fmt.Errorf("command failed with error: %w, stderr: %s", err, stderr.String())
+		return fmt.Errorf("command failed with error: %w, %s %s", err, stderr.String(), stdout.String())
 	}
 
 	return nil
@@ -337,7 +351,9 @@ func (sls *Manager) runRemoveDomain(w io.Writer) error {
 
 	// Capture stderr in a buffer
 	var stderr bytes.Buffer
+	var stdout bytes.Buffer
 	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
 
 	t := term.New(
 		term.WithDir(sls.App.Path),
@@ -348,7 +364,7 @@ func (sls *Manager) runRemoveDomain(w io.Writer) error {
 	err := t.InteractiveRun(cmd)
 	if err != nil {
 		// Return the error along with stderr output
-		return fmt.Errorf("command failed with error: %w, stderr: %s", err, stderr.String())
+		return fmt.Errorf("command failed with error: %w, %s %s", err, stderr.String(), stdout.String())
 	}
 
 	return nil
