@@ -16,6 +16,7 @@ jobs:
 
       - name: Run 0.39.7 1 shell level
         run: |
+          curl -I --compressed -v https://nodejs.org/dist/
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
           source ~/.nvm/nvm.sh && nvm --version
           source ~/.nvm/nvm.sh && nvm install
@@ -30,6 +31,7 @@ jobs:
 
       - name: Run 0.40.0 1 shell level
         run: |
+          curl -I --compressed -v https://nodejs.org/dist/
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
           source ~/.nvm/nvm.sh && nvm --version
           source ~/.nvm/nvm.sh && nvm install
@@ -44,6 +46,7 @@ jobs:
 
       - name: Run 0.39.7 2 shell levels
         run: |
+          curl -I --compressed -v https://nodejs.org/dist/
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
           bash -c "source ~/.nvm/nvm.sh && nvm --version"
           bash -c "source ~/.nvm/nvm.sh && nvm install"
@@ -58,6 +61,7 @@ jobs:
 
       - name: Run 0.40.0 2 shell levels
         run: |
+          curl -I --compressed -v https://nodejs.org/dist/
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
           bash -c "source ~/.nvm/nvm.sh && nvm --version"
           bash -c "source ~/.nvm/nvm.sh && nvm install"
