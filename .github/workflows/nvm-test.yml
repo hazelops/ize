@@ -1,5 +1,9 @@
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+      - v2.x
 
 jobs:
   nvm-test:
