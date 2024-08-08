@@ -6,7 +6,7 @@ on:
       - v2.x
 
 jobs:
-  nvm-test:
+  nvm-0-39-7-1shell-lvl:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -18,16 +18,39 @@ jobs:
         run: |
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
           source ~/.nvm/nvm.sh && nvm --version
+  nvm-0-40-0-1shell-lvl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Run 0.40.0 1 shell level
         run: |
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
           source ~/.nvm/nvm.sh && nvm --version
 
+  nvm-0-39-7-2shell-lvls:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
       - name: Run 0.39.7 2 shell levels
         run: |
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
           bash -c "source ~/.nvm/nvm.sh && nvm --version"
+
+  nvm-0-40-0-2shell-lvls:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Run 0.40.0 2 shell levels
         run: |
