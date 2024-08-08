@@ -202,7 +202,7 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 		term.WithStderr(&stderr),
 	)
 
-	err := t.InteractiveRun(cmd)
+	err = t.InteractiveRun(cmd)
 	if err != nil {
 		// Return the error along with stderr output
 		return fmt.Errorf("command failed with error: %w, %s %s", err, stderr.String(), stdout.String())
@@ -272,7 +272,7 @@ func (sls *Manager) runRemove(w io.Writer) error {
 		term.WithStderr(&stderr),
 	)
 
-	err := t.InteractiveRun(cmd)
+	err = t.InteractiveRun(cmd)
 	if err != nil {
 		// Return the error along with stderr output
 		return fmt.Errorf("command failed with error: %w, %s %s", err, stderr.String(), stdout.String())
@@ -319,7 +319,7 @@ func (sls *Manager) runCreateDomain(w io.Writer) error {
 		term.WithStderr(&stderr),
 	)
 
-	err := t.InteractiveRun(cmd)
+	err = t.InteractiveRun(cmd)
 	if err != nil {
 		// Return the error along with stderr output
 		return fmt.Errorf("command failed with error: %w, %s %s", err, stderr.String(), stdout.String())
@@ -366,7 +366,7 @@ func (sls *Manager) runRemoveDomain(w io.Writer) error {
 		term.WithStderr(&stderr),
 	)
 
-	err := t.InteractiveRun(cmd)
+	err = t.InteractiveRun(cmd)
 	if err != nil {
 		// Return the error along with stderr output
 		return fmt.Errorf("command failed with error: %w, %s %s", err, stderr.String(), stdout.String())
