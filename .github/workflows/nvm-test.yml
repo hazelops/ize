@@ -18,6 +18,8 @@ jobs:
         run: |
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
           source ~/.nvm/nvm.sh && nvm --version
+          source ~/.nvm/nvm.sh && nvm install
+
   nvm-0-40-0-1shell-lvl:
     runs-on: ubuntu-latest
     steps:
@@ -30,6 +32,7 @@ jobs:
         run: |
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
           source ~/.nvm/nvm.sh && nvm --version
+          source ~/.nvm/nvm.sh && nvm install
 
   nvm-0-39-7-2shell-lvls:
     runs-on: ubuntu-latest
@@ -43,6 +46,7 @@ jobs:
         run: |
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
           bash -c "source ~/.nvm/nvm.sh && nvm --version"
+          bash -c "source ~/.nvm/nvm.sh && nvm install"
 
   nvm-0-40-0-2shell-lvls:
     runs-on: ubuntu-latest
@@ -56,3 +60,4 @@ jobs:
         run: |
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
           bash -c "source ~/.nvm/nvm.sh && nvm --version"
+          bash -c "source ~/.nvm/nvm.sh && nvm install"
