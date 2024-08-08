@@ -412,7 +412,7 @@ func (sls *Manager) installNvm() (string, error) {
 		}
 
 	}
-	logrus.Debugf("No correct nvm version found is incorrect, (re)installing nvm")
+	logrus.Debug("No correct nvm version found is incorrect, (re)installing nvm")
 
 	// Install nvm.
 	cmd := exec.Command("bash", "-c", fmt.Sprintf("curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v%s/install.sh | bash", sls.Project.NvmVersion))
