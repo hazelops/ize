@@ -29,7 +29,7 @@ func (sls *Manager) Nvm(ui terminal.UI, command []string) error {
 
 	err := sls.nvm(s.TermOutput(), strings.Join(command, " "))
 	if err != nil {
-		return fmt.Errorf("can't run nvm: %w", err)
+		return fmt.Errorf("can't run nvm: %s ", err)
 	}
 
 	s.Done()

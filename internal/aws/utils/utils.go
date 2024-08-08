@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/sirupsen/logrus"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"gopkg.in/ini.v1"
 )
@@ -21,14 +22,30 @@ const (
 )
 
 type SessionConfig struct {
-	Region  string
-	Profile string
+	Region      string
+	Profile     string
+	EndpointUrl string
 }
 
 func GetSession(c *SessionConfig) (*session.Session, error) {
 	upd := false
 
-	config := aws.NewConfig().WithRegion(c.Region).WithCredentials(credentials.NewSharedCredentials("", c.Profile))
+	config := aws.NewConfig().WithRegion(c.Region).WithCredentials(credentials.NewSharedCredentials("", c.Profile)).WithEndpoint(c.EndpointUrl)
+
+	if len(c.EndpointUrl) > 0 {
+		logrus.Debug(fmt.Sprintf("Session established. Endpoint: %s", c.EndpointUrl))
+	} else {
+		logrus.Debug(fmt.Sprintf("Session established with a default endpoint"))
+	}
+
+	//
+	//if len(c.EndpointUrl) > 0 {
+	//	// If EndpointUrl is set to a non-default value specify it
+	//
+	//} else {
+	//	config = aws.NewConfig().WithRegion(c.Region).WithCredentials(credentials.NewSharedCredentials("", c.Profile))
+	//}
+
 	sess, err := session.NewSessionWithOptions(session.Options{
 		Config: *config,
 	})
@@ -41,9 +58,15 @@ func GetSession(c *SessionConfig) (*session.Session, error) {
 		switch aerr.Code() {
 		case "SharedCredsLoad":
 			logrus.Error(err)
-			return nil, fmt.Errorf("AWS_PROFILE is not set. Please set it via AWS_PROFILE env var,--aws-profile flag or aws_profile config entry in ize.toml")
+			return nil, fmt.Errorf("AWS_PROFILE is not set. Please set it via AWS_PROFILE env var, --aws-profile flag or aws_profile config entry in ize.toml")
 		default:
-			return nil, err
+			// Error only if it's not a localhost endpoint
+			if !(strings.Contains(c.EndpointUrl, "localhost") || strings.Contains(c.EndpointUrl, "127.0.0.1")) {
+				// If endpoint is not related to LocalStack then it's an error
+				return nil, err
+			}
+
+			logrus.Debug("[NO MFA] Using Endpoint: ", c.EndpointUrl)
 		}
 	}
 

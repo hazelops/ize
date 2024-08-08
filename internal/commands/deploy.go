@@ -2,16 +2,17 @@ package commands
 
 import (
 	"fmt"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hazelops/ize/internal/config"
 	"github.com/hazelops/ize/internal/manager"
 	"github.com/hazelops/ize/internal/manager/alias"
 	"github.com/hazelops/ize/internal/manager/ecs"
+	"github.com/hazelops/ize/internal/manager/helm"
 	"github.com/hazelops/ize/internal/manager/serverless"
 	"github.com/hazelops/ize/internal/requirements"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -132,38 +133,50 @@ func (o *DeployOptions) Run() error {
 	defer sg.Wait()
 
 	var m manager.Manager
+	var providerUsed string
+	// Note, Viper doesn't read empty TOML sections (https://github.com/spf13/viper/issues/1131 so if there are no app sections, we'll use apps_provider
+	logrus.Debugf("FYI, Viper can't read/see empty TOML sections. If they are empty, we'll try to use `apps_provider` config if it's set in ize.toml. See more here https://github.com/spf13/viper/issues/1131")
+	//if o.Config.AppsProvider == "helm" {
+	//	logrus.Debugf("Found helm app")
+	//
 
-	m = &ecs.Manager{
-		Project: o.Config,
-		App: &config.Ecs{
-			Name:                   o.AppName,
-			TaskDefinitionRevision: o.TaskDefinitionRevision,
-			Unsafe:                 o.Unsafe,
-		},
+	if app, ok := o.Config.Ecs[o.AppName]; o.Config.AppsProvider == "ecs" || ok {
+		providerUsed = "ecs"
+		app.Name = o.AppName
+		m = &ecs.Manager{
+			Project: o.Config,
+			App:     app,
+		}
 	}
 
-	if app, ok := o.Config.Serverless[o.AppName]; ok {
+	if app, ok := o.Config.Helm[o.AppName]; o.Config.AppsProvider == "helm" || ok {
+		providerUsed = "helm"
 		app.Name = o.AppName
 		app.Force = o.Force
+		m = &helm.Manager{
+			Project: o.Config,
+			App:     app,
+		}
+	}
+
+	if app, ok := o.Config.Serverless[o.AppName]; o.Config.AppsProvider == "serverless" || ok {
+		providerUsed = "serverless"
+		app.Name = o.AppName
+		app.Force = o.Force
+
 		m = &serverless.Manager{
 			Project: o.Config,
 			App:     app,
 		}
 	}
-	if app, ok := o.Config.Alias[o.AppName]; ok {
-		app.Name = o.AppName
+
+	if _, ok := o.Config.Alias[o.AppName]; o.Config.AppsProvider == "alias" || ok {
+		providerUsed = "alias"
 		m = &alias.Manager{
 			Project: o.Config,
-			App:     app,
-		}
-	}
-	if app, ok := o.Config.Ecs[o.AppName]; ok {
-		app.Name = o.AppName
-		app.TaskDefinitionRevision = o.TaskDefinitionRevision
-		app.Unsafe = o.Unsafe
-		m = &ecs.Manager{
-			Project: o.Config,
-			App:     app,
+			App: &config.Alias{
+				Name: o.AppName,
+			},
 		}
 	}
 
@@ -178,6 +191,7 @@ func (o *DeployOptions) Run() error {
 		return nil
 	}
 
+	logrus.Debugf("Deploying using %s. (default_app_provier=%s)", providerUsed, o.Config.AppsProvider)
 	err := m.Deploy(ui)
 	if err != nil {
 		return err

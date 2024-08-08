@@ -14,22 +14,23 @@ type Ecs struct {
 	AwsProfile             string   `mapstructure:"aws_profile,omitempty"`
 	AwsRegion              string   `mapstructure:"aws_region,omitempty"`
 	DependsOn              []string `mapstructure:"depends_on,omitempty"`
+	ServiceName            string   `mapstructure:"service_name,omitempty"`
 }
 
-type K8s struct {
-	Name                   string   `mapstructure:",omitempty"`
-	Path                   string   `mapstructure:",omitempty"`
-	Image                  string   `mapstructure:",omitempty"`
-	Cluster                string   `mapstructure:",omitempty"`
-	TaskDefinitionRevision string   `mapstructure:"task_definition_revision"`
-	DockerRegistry         string   `mapstructure:"docker_registry,omitempty"`
-	Timeout                int      `mapstructure:",omitempty"`
-	Unsafe                 bool     `mapstructure:",omitempty"`
-	SkipDeploy             bool     `mapstructure:"skip_deploy,omitempty"`
-	Icon                   string   `mapstructure:"icon,omitempty"`
-	AwsProfile             string   `mapstructure:"aws_profile,omitempty"`
-	AwsRegion              string   `mapstructure:"aws_region,omitempty"`
-	DependsOn              []string `mapstructure:"depends_on,omitempty"`
+type Helm struct {
+	Name           string   `mapstructure:",omitempty"`
+	Path           string   `mapstructure:",omitempty"`
+	Image          string   `mapstructure:",omitempty"`
+	Namespace      string   `mapstructure:",omitempty"`
+	HelmRelease    string   `mapstructure:"helm_release,omitempty"`
+	DockerRegistry string   `mapstructure:"docker_registry,omitempty"`
+	Timeout        int      `mapstructure:",omitempty"`
+	SkipDeploy     bool     `mapstructure:"skip_deploy,omitempty"`
+	Force          bool     `mapstructure:"force"`
+	Icon           string   `mapstructure:"icon,omitempty"`
+	AwsProfile     string   `mapstructure:"aws_profile,omitempty"`
+	AwsRegion      string   `mapstructure:"aws_region,omitempty"`
+	DependsOn      []string `mapstructure:"depends_on,omitempty"`
 }
 
 type Serverless struct {

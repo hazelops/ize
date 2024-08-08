@@ -1,6 +1,7 @@
 package serverless
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -40,24 +41,48 @@ func (sls *Manager) runNpmInstall(w io.Writer) error {
 }
 
 func (sls *Manager) nvm(w io.Writer, command string) error {
-	nvmDir := os.Getenv("NVM_DIR")
-	if len(nvmDir) == 0 {
-		nvmDir = "$HOME/.nvm"
-	}
-	err := sls.readNvmrc()
+
+	nvmDir, err := sls.installNvm()
 	if err != nil {
 		return err
 	}
 
-	cmd := exec.Command("bash", "-c",
+	err = sls.readNvmrc()
+	if err != nil {
+		return err
+	}
+
+	logrus.Debugf("Running: bash -c source %s/nvm.sh && nvm install %s && %s", nvmDir, sls.App.NodeVersion, command)
+
+	var bashFlags = "-c"
+	// If log level is debug or trace, enable verbose mode for bash wrapper
+	if sls.Project.LogLevel == "debug" || sls.Project.LogLevel == "trace" {
+		bashFlags = "-xvc"
+	}
+
+	cmd := exec.Command("bash", bashFlags,
 		fmt.Sprintf("source %s/nvm.sh && nvm install %s && %s", nvmDir, sls.App.NodeVersion, command),
 	)
 
-	return term.New(
+	// Capture stderr in a buffer
+	var stderr bytes.Buffer
+	var stdout bytes.Buffer
+	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
+
+	t := term.New(
 		term.WithDir(sls.App.Path),
 		term.WithStdout(w),
-		term.WithStderr(w),
-	).InteractiveRun(cmd)
+		term.WithStderr(&stderr),
+	)
+
+	err = t.InteractiveRun(cmd)
+	if err != nil {
+		// Return the error along with stderr output
+		return fmt.Errorf("command failed with error: %w, %s %s", err, stderr.String(), stdout.String())
+	}
+
+	return nil
 }
 
 func (sls *Manager) readNvmrc() error {
@@ -70,16 +95,17 @@ func (sls *Manager) readNvmrc() error {
 		}
 		sls.App.NodeVersion = strings.TrimSpace(string(file))
 	}
+
 	return nil
 }
 
 func (sls *Manager) runNvm(w io.Writer) error {
-	nvmDir := os.Getenv("NVM_DIR")
-	if len(nvmDir) == 0 {
-		nvmDir = "$HOME/.nvm"
+	nvmDir, err := sls.installNvm()
+	if err != nil {
+		return err
 	}
 
-	err := sls.readNvmrc()
+	err = sls.readNvmrc()
 	if err != nil {
 		return err
 	}
@@ -91,18 +117,31 @@ func (sls *Manager) runNvm(w io.Writer) error {
 
 	cmd := exec.Command("bash", "-c", command)
 
-	return term.New(
+	// Capture stderr in a buffer
+	var stderr bytes.Buffer
+	var stdout bytes.Buffer
+	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
+
+	t := term.New(
 		term.WithDir(sls.App.Path),
 		term.WithStdout(w),
-		term.WithStderr(w),
-	).InteractiveRun(cmd)
+		term.WithStderr(&stderr),
+	)
+
+	err = t.InteractiveRun(cmd)
+	if err != nil {
+		// Return the error along with stderr output
+		return fmt.Errorf("command failed with error: %w, %s %s", err, stderr.String(), stdout.String())
+	}
+
+	return nil
 }
 
 func (sls *Manager) runDeploy(w io.Writer) error {
-
-	nvmDir := os.Getenv("NVM_DIR")
-	if len(nvmDir) == 0 {
-		nvmDir = "$HOME/.nvm"
+	nvmDir, err := sls.installNvm()
+	if err != nil {
+		return err
 	}
 	var command string
 
@@ -151,18 +190,32 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 
 	cmd := exec.Command("bash", "-c", command)
 
-	return term.New(
+	// Capture stderr in a buffer
+	var stderr bytes.Buffer
+	var stdout bytes.Buffer
+	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
+
+	t := term.New(
 		term.WithDir(sls.App.Path),
 		term.WithStdout(w),
-		term.WithStderr(w),
-	).InteractiveRun(cmd)
+		term.WithStderr(&stderr),
+	)
+
+	err = t.InteractiveRun(cmd)
+	if err != nil {
+		// Return the error along with stderr output
+		return fmt.Errorf("command failed with error: %w, %s %s", err, stderr.String(), stdout.String())
+	}
+
+	return nil
 }
 
 func (sls *Manager) runRemove(w io.Writer) error {
 
-	nvmDir := os.Getenv("NVM_DIR")
-	if len(nvmDir) == 0 {
-		nvmDir = "$HOME/.nvm"
+	nvmDir, err := sls.installNvm()
+	if err != nil {
+		return err
 	}
 
 	var command string
@@ -207,17 +260,31 @@ func (sls *Manager) runRemove(w io.Writer) error {
 
 	cmd := exec.Command("bash", "-c", command)
 
-	return term.New(
+	// Capture stderr in a buffer
+	var stderr bytes.Buffer
+	var stdout bytes.Buffer
+	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
+
+	t := term.New(
 		term.WithDir(sls.App.Path),
 		term.WithStdout(w),
-		term.WithStderr(w),
-	).InteractiveRun(cmd)
+		term.WithStderr(&stderr),
+	)
+
+	err = t.InteractiveRun(cmd)
+	if err != nil {
+		// Return the error along with stderr output
+		return fmt.Errorf("command failed with error: %w, %s %s", err, stderr.String(), stdout.String())
+	}
+
+	return nil
 }
 
 func (sls *Manager) runCreateDomain(w io.Writer) error {
-	nvmDir := os.Getenv("NVM_DIR")
-	if len(nvmDir) == 0 {
-		nvmDir = "$HOME/.nvm"
+	nvmDir, err := sls.installNvm()
+	if err != nil {
+		return err
 	}
 
 	command := fmt.Sprintf(
@@ -240,17 +307,31 @@ func (sls *Manager) runCreateDomain(w io.Writer) error {
 
 	cmd := exec.Command("bash", "-c", command)
 
-	return term.New(
+	// Capture stderr in a buffer
+	var stderr bytes.Buffer
+	var stdout bytes.Buffer
+	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
+
+	t := term.New(
 		term.WithDir(sls.App.Path),
 		term.WithStdout(w),
-		term.WithStderr(w),
-	).InteractiveRun(cmd)
+		term.WithStderr(&stderr),
+	)
+
+	err = t.InteractiveRun(cmd)
+	if err != nil {
+		// Return the error along with stderr output
+		return fmt.Errorf("command failed with error: %w, %s %s", err, stderr.String(), stdout.String())
+	}
+
+	return nil
 }
 
 func (sls *Manager) runRemoveDomain(w io.Writer) error {
-	nvmDir := os.Getenv("NVM_DIR")
-	if len(nvmDir) == 0 {
-		nvmDir = "$HOME/.nvm"
+	nvmDir, err := sls.installNvm()
+	if err != nil {
+		return err
 	}
 
 	command := fmt.Sprintf(
@@ -273,14 +354,77 @@ func (sls *Manager) runRemoveDomain(w io.Writer) error {
 
 	cmd := exec.Command("bash", "-c", command)
 
-	return term.New(
+	// Capture stderr in a buffer
+	var stderr bytes.Buffer
+	var stdout bytes.Buffer
+	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
+
+	t := term.New(
 		term.WithDir(sls.App.Path),
 		term.WithStdout(w),
-		term.WithStderr(w),
-	).InteractiveRun(cmd)
+		term.WithStderr(&stderr),
+	)
+
+	err = t.InteractiveRun(cmd)
+	if err != nil {
+		// Return the error along with stderr output
+		return fmt.Errorf("command failed with error: %w, %s %s", err, stderr.String(), stdout.String())
+	}
+
+	return nil
 }
 
 func npmToYarn(cmd string) string {
 	cmd = strings.ReplaceAll(cmd, "npm", "yarn")
 	return strings.ReplaceAll(cmd, "npx", "yarn")
+}
+
+func (sls *Manager) installNvm() (string, error) {
+	var err error
+
+	nvmDir := os.Getenv("NVM_DIR")
+	if len(nvmDir) == 0 {
+		nvmDir = "$HOME/.nvm"
+	}
+
+	// Check if nvm.sh exists in the nvmDir
+	nvmShPath := filepath.Join(nvmDir, "nvm.sh")
+	_, err = os.Stat(nvmShPath)
+	if !os.IsNotExist(err) {
+		logrus.Debug("nvm.sh found in the directory:", nvmDir)
+
+		//check if version is what we expect
+		cmd := exec.Command("bash", "-c", fmt.Sprintf("source %s/nvm.sh && nvm --version", nvmDir))
+		cmd.Dir = sls.Project.RootDir
+
+		var out bytes.Buffer
+		cmd.Stdout = &out
+		err = cmd.Run()
+		if err != nil {
+			logrus.Debug("Error checking nvm version:", err)
+			return "", err
+		}
+
+		if strings.TrimSpace(out.String()) == sls.Project.NvmVersion {
+			logrus.Debugf("nvm version is correct. Expected: %s, Found: %s", sls.Project.NvmVersion, strings.TrimSpace(out.String()))
+			return nvmDir, nil
+		}
+
+	}
+	logrus.Debug("No correct nvm version found is incorrect, (re)installing nvm")
+
+	// Install nvm.
+	cmd := exec.Command("bash", "-c", fmt.Sprintf("curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v%s/install.sh | bash", sls.Project.NvmVersion))
+	cmd.Dir = sls.Project.RootDir
+	err = cmd.Run()
+	if err != nil {
+		logrus.Debugf("Error installing nvm:", err)
+		return "", err
+	}
+
+	// TODO: If nvm.sh doesn't exist in the nvmDir, we should install it
+	// curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+
+	return nvmDir, nil
 }

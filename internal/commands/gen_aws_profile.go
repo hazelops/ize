@@ -77,7 +77,17 @@ func ConfigureAwsProfile() (string, error) {
 		return awsCredentialsPath, fmt.Errorf("AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, AWS_PROFILE must be set")
 	}
 
-	_, err = f.WriteString(fmt.Sprintf("[%v]\naws_access_key_id = %v\naws_secret_access_key = %v\nregion = %v\n\n", p, ak, sk, r))
+	ls := ""
+	localStackEnabled := viper.GetBool("LOCALSTACK")
+	if localStackEnabled == true {
+		localstackEndpoint := viper.GetString("LOCALSTACK_ENDPOINT")
+		if localstackEndpoint == "" {
+			localstackEndpoint = "http://127.0.0.1:4566"
+		}
+		ls = fmt.Sprintf("endpoint_url = %s", localstackEndpoint)
+	}
+
+	_, err = f.WriteString(fmt.Sprintf("[%v]\naws_access_key_id = %v\naws_secret_access_key = %v\nregion = %v\n%s\n\n", p, ak, sk, r, ls))
 	if err != nil {
 		return awsCredentialsPath, fmt.Errorf("can't write to %s", filepath.Join(awsCredentialsPath))
 	}

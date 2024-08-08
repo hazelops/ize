@@ -21,10 +21,12 @@ func Validate(config map[string]interface{}) error {
 	if err := compiler.AddResource("schema.json", strings.NewReader(Schema)); err != nil {
 		panic(err)
 	}
+
 	schema, err := compiler.Compile("schema.json")
 	if err != nil {
 		panic(err)
 	}
+
 	err = schema.ValidateInterface(config)
 	if err != nil {
 		i, m := GetErrorMessage(err.(*jsonschema.ValidationError))
@@ -33,6 +35,7 @@ func Validate(config map[string]interface{}) error {
 		} else {
 			i = strings.ReplaceAll(i[2:], "/", ".")
 		}
+
 		errMsg := fmt.Sprintf("%s in %s of config file (or environment variables)", m, i)
 		if strings.Contains(errMsg, "additionalProperties") {
 			errMsg += ". The following options are available:\n"

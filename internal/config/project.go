@@ -24,22 +24,27 @@ type Project struct {
 	TerraformVersion string `mapstructure:"terraform_version,omitempty"`
 	AwsRegion        string `mapstructure:"aws_region,omitempty"`
 	AwsProfile       string `mapstructure:"aws_profile,omitempty"`
-	Namespace        string `mapstructure:",omitempty"`
-	Env              string `mapstructure:",omitempty"`
+	Namespace        string `mapstructure:"namespace,omitempty"`
+	Env              string `mapstructure:"env,omitempty"`
 	LogLevel         string `mapstructure:"log_level,omitempty"`
 	PlainText        bool   `mapstructure:"plain_text_output,omitempty"`
 	CustomPrompt     bool   `mapstructure:"custom_prompt,omitempty"`
 	PreferRuntime    string `mapstructure:"prefer_runtime,omitempty"`
-	Tag              string `mapstructure:",omitempty"`
+	Tag              string `mapstructure:"tag,omitempty"`
 	DockerRegistry   string `mapstructure:"docker_registry,omitempty"`
+	EndpointUrl      string `mapstructure:"endpoint_url,omitempty"`
+	LocalStack       bool   `mapstructure:"localstack,omitempty"`
+	SshPublicKey     string `mapstructure:"ssh_public_key,omitempty"`
+	NvmVersion       string `mapstructure:"nvm_version"`
 
-	Home      string `mapstructure:",omitempty"`
-	RootDir   string `mapstructure:"root_dir,omitempty"`
-	InfraDir  string `mapstructure:"ize_dir,omitempty"`
-	EnvDir    string `mapstructure:"env_dir,omitempty"`
-	AppsPath  string `mapstructure:"apps_path,omitempty"`
-	TFLog     string `mapstructure:"tf_log,omitempty"`
-	TFLogPath string `mapstructure:"tf_log_path,omitempty"`
+	Home         string `mapstructure:"home,omitempty"`
+	RootDir      string `mapstructure:"root_dir,omitempty"`
+	InfraDir     string `mapstructure:"ize_dir,omitempty"`
+	EnvDir       string `mapstructure:"env_dir,omitempty"`
+	AppsPath     string `mapstructure:"apps_path,omitempty"`
+	TFLog        string `mapstructure:"tf_log,omitempty"`
+	TFLogPath    string `mapstructure:"tf_log_path,omitempty"`
+	AppsProvider string `mapstructure:"apps_provider,omitempty"`
 
 	Session   *session.Session
 	AWSClient *awsClient
@@ -48,6 +53,7 @@ type Project struct {
 	Terraform  map[string]*Terraform  `mapstructure:",omitempty"`
 	Ecs        map[string]*Ecs        `mapstructure:",omitempty"`
 	Serverless map[string]*Serverless `mapstructure:",omitempty"`
+	Helm       map[string]*Helm       `mapstructure:",omitempty"`
 	Alias      map[string]*Alias      `mapstructure:",omitempty"`
 }
 

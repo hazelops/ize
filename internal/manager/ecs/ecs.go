@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"os"
 	"path"
 	"path/filepath"
@@ -29,6 +31,7 @@ const ecsDeployImage = "hazelops/ecs-deploy:latest"
 type Manager struct {
 	Project *config.Project
 	App     *config.Ecs
+	config  *config.Config
 }
 
 func (e *Manager) prepare() {
@@ -58,6 +61,14 @@ func (e *Manager) prepare() {
 	if e.App.Timeout == 0 {
 		e.App.Timeout = 300
 	}
+
+	if len(e.App.ServiceName) == 0 {
+		var err error
+		e.App.ServiceName, err = getEcsServiceName(e)
+		if err != nil {
+
+		}
+	}
 }
 
 // Deploy deploys app container to ECS via ECS deploy
@@ -69,8 +80,9 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 
 	if len(e.App.AwsRegion) != 0 && len(e.App.AwsProfile) != 0 {
 		sess, err := utils.GetSession(&utils.SessionConfig{
-			Region:  e.App.AwsRegion,
-			Profile: e.App.AwsProfile,
+			Region:      e.App.AwsRegion,
+			Profile:     e.App.AwsProfile,
+			EndpointUrl: e.Project.EndpointUrl,
 		})
 		if err != nil {
 			return fmt.Errorf("can't get session: %w", err)
@@ -80,7 +92,7 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 	}
 
 	if e.App.SkipDeploy {
-		s := sg.Add("%s: deploy will be skipped", e.App.Name)
+		s := sg.Add("%s: deploy is skipped", e.App.Name)
 		defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 		s.Done()
 		return nil
@@ -95,10 +107,11 @@ func (e *Manager) Deploy(ui terminal.UI) error {
 			- Unhealthy Threshold Count: 2`))
 	}
 
-	s := sg.Add("%s: deploying app container...", e.App.Name)
+	s := sg.Add("%s: deploying to ECS %s", e.App.Name, e.App.ServiceName)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	if e.App.Image == "" {
+		// Set image name to <docker-registry>/<namespace>-<app-name>:<tag> by default
 		e.App.Image = fmt.Sprintf("%s/%s:%s",
 			e.App.DockerRegistry,
 			fmt.Sprintf("%s-%s", e.Project.Namespace, e.App.Name),
@@ -133,8 +146,9 @@ func (e *Manager) Redeploy(ui terminal.UI) error {
 
 	if len(e.App.AwsRegion) != 0 && len(e.App.AwsProfile) != 0 {
 		sess, err := utils.GetSession(&utils.SessionConfig{
-			Region:  e.App.AwsRegion,
-			Profile: e.App.AwsProfile,
+			Region:      e.App.AwsRegion,
+			Profile:     e.App.AwsProfile,
+			EndpointUrl: e.Project.EndpointUrl,
 		})
 		if err != nil {
 			return fmt.Errorf("can't get session: %w", err)
@@ -143,7 +157,7 @@ func (e *Manager) Redeploy(ui terminal.UI) error {
 		e.Project.SettingAWSClient(sess)
 	}
 
-	s := sg.Add("%s: redeploying app container...", e.App.Name)
+	s := sg.Add("%s: redeploying to ECS %s", e.App.Name, e.App.ServiceName)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	if e.Project.PreferRuntime == "native" {
@@ -172,11 +186,11 @@ func (e *Manager) Push(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("%s: push app image...", e.App.Name)
+	s := sg.Add("%s: pushing docker image...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	if len(e.App.Image) != 0 {
-		s.Update("%s: pushing app image... (skipped, using %s) ", e.App.Name, e.App.Image)
+		s.Update("%s: pushing docker image... (skipped, using %s) ", e.App.Name, e.App.Image)
 		s.Done()
 
 		return nil
@@ -208,6 +222,7 @@ func (e *Manager) Push(ui terminal.UI) error {
 		repository = out.Repository
 	} else {
 		repository = dro.Repositories[0]
+		logrus.Debugf("Using ECR repository: %s", *repository.RepositoryUri)
 	}
 
 	gat, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
@@ -259,11 +274,11 @@ func (e *Manager) Build(ui terminal.UI) error {
 	sg := ui.StepGroup()
 	defer sg.Wait()
 
-	s := sg.Add("%s: building app container...", e.App.Name)
+	s := sg.Add("%s: building docker image...", e.App.Name)
 	defer func() { s.Abort(); time.Sleep(50 * time.Millisecond) }()
 
 	if len(e.App.Image) != 0 {
-		s.Update("%s: building app container... (skipped, using %s)", e.App.Name, e.App.Image)
+		s.Update("%s: building docker image... (skipped, using %s)", e.App.Name, e.App.Image)
 
 		s.Done()
 		return nil
@@ -277,10 +292,16 @@ func (e *Manager) Build(ui terminal.UI) error {
 		return fmt.Errorf("unable to get relative path: %w", err)
 	}
 
+	cache := []string{fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", e.Project.Env))}
+
+	logrus.Debugf("Using CACHE_IMAGE: %s", cache)
+
 	buildArgs := map[string]*string{
 		"PROJECT_PATH": &relProjectPath,
 		"APP_PATH":     &relProjectPath,
 		"APP_NAME":     &e.App.Name,
+		"CACHE_IMAGE":  &cache[0],
+		"TAG":          &e.Project.Tag,
 	}
 
 	tags := []string{
@@ -290,8 +311,6 @@ func (e *Manager) Build(ui terminal.UI) error {
 	}
 
 	dockerfile := path.Join(e.App.Path, "Dockerfile")
-
-	cache := []string{fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", e.Project.Env))}
 
 	platform := "linux/amd64"
 	if e.Project.PreferRuntime == "docker-arm64" {
@@ -374,4 +393,44 @@ func (e *Manager) Destroy(ui terminal.UI, autoApprove bool) error {
 	s.Done()
 
 	return nil
+}
+
+func getEcsServiceName(e *Manager) (string, error) {
+	// TODO: Move core logic to a shared function (since it's used in deploy too)
+	ecsServiceCandidates := []string{
+		fmt.Sprintf("%s-%s-%s", e.Project.Env, e.Project.Namespace, e.App.Name),
+		fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name),
+		e.App.Name,
+	}
+
+	for _, v := range ecsServiceCandidates {
+		logrus.Debugf("Checking if ECS service %s exists in cluster %s.", v, e.App.Cluster)
+
+		_, err := e.Project.AWSClient.ECSClient.ListTasks(&ecs.ListTasksInput{
+			Cluster:       &e.App.Cluster,
+			DesiredStatus: aws.String(ecs.DesiredStatusRunning),
+			ServiceName:   &v,
+		})
+
+		var aerr awserr.Error
+		if errors.As(err, &aerr) {
+			switch aerr.Code() {
+			case "ClusterNotFoundException":
+				return "", fmt.Errorf("ECS cluster %s not found", e.App.Cluster)
+			case "ServiceNotFoundException":
+				{
+					logrus.Infof("ECS Service not found: %s in cluster %s. Checking other options.", v, e.App.Cluster)
+					continue
+				}
+			default:
+				{
+					return "", err
+				}
+			}
+
+		}
+		return v, err
+	}
+	err := errors.New("ECS Service not found")
+	return "", err
 }

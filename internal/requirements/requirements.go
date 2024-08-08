@@ -46,12 +46,12 @@ func CheckRequirements(options ...Option) error {
 
 	switch viper.GetString("prefer_runtime") {
 	case "native":
-		logrus.Debug("use native runtime")
+		logrus.Debug("Using native runtime")
 	case "docker":
 		if err := checkDocker(); err != nil {
 			return err
 		}
-		logrus.Debug("use docker runtime")
+		logrus.Debug("Using docker runtime (deprecated)")
 	default:
 		return fmt.Errorf("unknown runtime type: %s", viper.GetString("prefer_runtime"))
 	}
@@ -120,6 +120,11 @@ func isStructured() bool {
 	}
 
 	_, err = os.Stat(filepath.Join(cwd, ".infra"))
+	if !os.IsNotExist(err) {
+		isStructured = true
+	}
+
+	_, err = os.Stat(filepath.Join(cwd, "ize.toml"))
 	if !os.IsNotExist(err) {
 		isStructured = true
 	}

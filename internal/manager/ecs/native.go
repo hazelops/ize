@@ -1,7 +1,9 @@
 package ecs
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io"
 	"strconv"
 	"strings"
@@ -17,22 +19,19 @@ import (
 )
 
 func (e *Manager) deployLocal(w io.Writer) error {
-	pterm.SetDefaultOutput(w)
 
 	svc := e.Project.AWSClient.ECSClient
 
-	name := fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name)
-
 	dso, err := svc.DescribeServices(&ecs.DescribeServicesInput{
 		Cluster:  &e.App.Cluster,
-		Services: []*string{&name},
+		Services: []*string{&e.App.ServiceName},
 	})
 	if err != nil {
 		return err
 	}
 
 	if len(dso.Services) == 0 {
-		return fmt.Errorf("app %s not found not found in %s cluster", name, e.App.Cluster)
+		return fmt.Errorf("app %s not found not found in %s cluster", e.App.ServiceName, e.App.Cluster)
 	}
 
 	dtdo, err := svc.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
@@ -43,7 +42,7 @@ func (e *Manager) deployLocal(w io.Writer) error {
 	}
 
 	definitions, err := svc.ListTaskDefinitions(&ecs.ListTaskDefinitionsInput{
-		FamilyPrefix: &name,
+		FamilyPrefix: &e.App.ServiceName,
 		Sort:         aws.String(ecs.SortOrderDesc),
 	})
 	if err != nil {
@@ -66,7 +65,13 @@ func (e *Manager) deployLocal(w io.Writer) error {
 		oldTaskDef = *dtdo.TaskDefinition
 	}
 
-	pterm.Printfln("Deploying based on task definition: %s:%d", *oldTaskDef.Family, *oldTaskDef.Revision)
+	oldTaskDefJson, err := json.Marshal(oldTaskDef)
+	if err != nil {
+		return err
+	}
+
+	logrus.Debugf("oldTaskDef: %s", string(oldTaskDefJson))
+	pterm.Fprintln(w, fmt.Sprintf("Deploying based on task definition: %s:%d", *oldTaskDef.Family, *oldTaskDef.Revision))
 
 	var image string
 
@@ -82,12 +87,12 @@ func (e *Manager) deployLocal(w io.Writer) error {
 				image = e.App.Image
 			}
 
-			pterm.Printfln(`Changed image of container "%s" to : "%s" (was: "%s")`, *container.Name, image, *container.Image)
+			pterm.Fprintln(w, fmt.Sprintf(`Changed image of container "%s" to : "%s" (was: "%s")`, *container.Name, image, *container.Image))
 			container.Image = &image
 		}
 	}
 
-	pterm.Println("Creating new task definition revision")
+	pterm.Fprintln(w, "Creating new task definition revision")
 
 	rtdo, err := svc.RegisterTaskDefinition(&ecs.RegisterTaskDefinitionInput{
 		ContainerDefinitions:    oldTaskDef.ContainerDefinitions,
@@ -107,28 +112,37 @@ func (e *Manager) deployLocal(w io.Writer) error {
 
 	newTaskDef = *rtdo.TaskDefinition
 
-	pterm.Printfln("Successfully created revision: %s:%d", *rtdo.TaskDefinition.Family, *rtdo.TaskDefinition.Revision)
+	newTaskDefJson, err := json.Marshal(newTaskDef)
+	if err != nil {
+		return err
+	}
 
-	if err = e.updateTaskDefinition(&newTaskDef, &oldTaskDef, name, "Deploying new task definition"); err != nil {
-		err := e.getLastContainerLogs(fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name))
+	logrus.Debugf("newTaskDef: %s", string(newTaskDefJson))
+	pterm.Fprintln(w, fmt.Sprintf("Successfully created revision: %s:%d", *rtdo.TaskDefinition.Family, *rtdo.TaskDefinition.Revision))
+
+	if err = e.updateTaskDefinition(w, &newTaskDef, &oldTaskDef, e.App.ServiceName, "Deploying new task definition"); err != nil {
+		err := e.getLastContainerLogs(w, fmt.Sprintf("%s", e.App.ServiceName))
 		if err != nil {
-			pterm.Println("Failed to get logs:", err)
+			pterm.Fprintln(w, "Failed to get logs:", err)
 		}
 
-		sr, err := getStoppedReason(e.App.Cluster, name, svc)
+		sr, err := getStoppedReason(e.App.Cluster, e.App.ServiceName, svc)
 		if err != nil {
 			return err
 		}
 
-		pterm.Printfln("Container %s couldn't start: %s", name, sr)
+		pterm.Fprintln(w, fmt.Sprintf("Container %s couldn't start: %s", e.App.ServiceName, sr))
 
-		pterm.Printfln("Rolling back to old task definition: %s:%d", *oldTaskDef.Family, *oldTaskDef.Revision)
+		pterm.Fprintln(w, fmt.Sprintf("Rolling back to old task definition: %s:%d", *oldTaskDef.Family, *oldTaskDef.Revision))
+
 		e.App.Timeout = 600
-		if err = e.updateTaskDefinition(&oldTaskDef, &newTaskDef, name, "Deploying previous task definition"); err != nil {
+		logrus.Debugf("Setting timeout to %d seconds", e.App.Timeout)
+
+		if err = e.updateTaskDefinition(w, &oldTaskDef, &newTaskDef, e.App.ServiceName, "Deploying previous task definition"); err != nil {
 			return fmt.Errorf("unable to rollback to old task definition: %w", err)
 		}
 
-		pterm.Println("Rollback successful")
+		pterm.Fprintln(w, "Rollback successful")
 
 		return fmt.Errorf("deployment failed, but service has been rolled back to previous task definition: %s", *oldTaskDef.Family)
 	}
@@ -195,11 +209,11 @@ func (e *Manager) redeployLocal(w io.Writer) error {
 		}
 	}
 
-	if err = e.updateTaskDefinition(td, nil, name, "Redeploying new task definition"); err != nil {
-		pterm.Println(err)
-		err := e.getLastContainerLogs(fmt.Sprintf("%s-%s", e.Project.Env, e.App.Name))
+	if err = e.updateTaskDefinition(w, td, nil, name, "Redeploying new task definition"); err != nil {
+		pterm.Fprintln(w, err)
+		err := e.getLastContainerLogs(w, fmt.Sprintf("%s", e.App.ServiceName))
 		if err != nil {
-			pterm.Println("Failed to get logs:", err)
+			pterm.Fprintln(w, "Failed to get logs:", err)
 		}
 		return fmt.Errorf("redeployment failed")
 	}
@@ -222,8 +236,8 @@ func getService(name string, cluster string, svc ecsiface.ECSAPI) (*ecs.Describe
 	return dso, nil
 }
 
-func (e *Manager) updateTaskDefinition(newTD *ecs.TaskDefinition, oldTD *ecs.TaskDefinition, serviceName string, title string) error {
-	pterm.Println("Updating service")
+func (e *Manager) updateTaskDefinition(w io.Writer, newTD *ecs.TaskDefinition, oldTD *ecs.TaskDefinition, serviceName string, title string) error {
+	pterm.Fprintln(w, fmt.Sprintf("Updating ECS service: %s (timeout: %d)", e.App.ServiceName, e.App.Timeout))
 
 	svc := e.Project.AWSClient.ECSClient
 
@@ -259,8 +273,8 @@ func (e *Manager) updateTaskDefinition(newTD *ecs.TaskDefinition, oldTD *ecs.Tas
 		}
 	}
 
-	pterm.Printfln("Successfully changed task definition to: %s:%d", *newTD.Family, *newTD.Revision)
-	pterm.Println(title)
+	pterm.Fprintln(w, fmt.Sprintf("Successfully changed task definition to: %s:%d", *newTD.Family, *newTD.Revision))
+	pterm.Fprintln(w, title)
 
 	waitingTimeout := time.Now().Add(time.Duration(e.App.Timeout) * time.Second)
 	waiting := true
@@ -279,7 +293,7 @@ func (e *Manager) updateTaskDefinition(newTD *ecs.TaskDefinition, oldTD *ecs.Tas
 	}
 
 	if waiting && time.Now().After(waitingTimeout) {
-		pterm.Println("Deployment failed due to timeout")
+		pterm.Fprintln(w, "Deployment failed due to timeout")
 		return fmt.Errorf("deployment failed due to timeout")
 	}
 
@@ -297,7 +311,7 @@ func (e *Manager) updateTaskDefinition(newTD *ecs.TaskDefinition, oldTD *ecs.Tas
 	}
 
 	if oldTD != nil {
-		if err = deregisterTaskDefinition(svc, oldTD); err != nil {
+		if err = deregisterTaskDefinition(w, svc, oldTD); err != nil {
 			return err
 		}
 	}
@@ -389,8 +403,8 @@ func getStoppedReason(cluster string, name string, svc ecsiface.ECSAPI) (string,
 	return *dto.Tasks[0].StoppedReason, nil
 }
 
-func deregisterTaskDefinition(svc ecsiface.ECSAPI, td *ecs.TaskDefinition) error {
-	pterm.Println("Deregister task definition revision")
+func deregisterTaskDefinition(w io.Writer, svc ecsiface.ECSAPI, td *ecs.TaskDefinition) error {
+	pterm.Fprintln(w, "Deregister task definition revision")
 
 	_, err := svc.DeregisterTaskDefinition(&ecs.DeregisterTaskDefinitionInput{
 		TaskDefinition: td.TaskDefinitionArn,
@@ -399,12 +413,12 @@ func deregisterTaskDefinition(svc ecsiface.ECSAPI, td *ecs.TaskDefinition) error
 		return err
 	}
 
-	pterm.Printfln("Successfully deregistered revision: %s:%d", *td.Family, *td.Revision)
+	pterm.Fprintln(w, fmt.Sprintf("Successfully deregistered revision: %s:%d", *td.Family, *td.Revision))
 
 	return nil
 }
 
-func (e *Manager) getLastContainerLogs(logGroup string) error {
+func (e *Manager) getLastContainerLogs(w io.Writer, logGroup string) error {
 	cwl := e.Project.AWSClient.CloudWatchLogsClient
 	out, err := cwl.DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 		LogGroupName: &logGroup,
@@ -420,7 +434,7 @@ func (e *Manager) getLastContainerLogs(logGroup string) error {
 		return nil
 	}
 
-	pterm.Println("Container logs:")
+	pterm.Fprintln(w, "Container logs:")
 
 	for _, stream := range out.LogStreams {
 		out, err := cwl.GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
@@ -432,11 +446,11 @@ func (e *Manager) getLastContainerLogs(logGroup string) error {
 		}
 
 		for _, event := range out.Events {
-			pterm.Println("| " + *event.Message)
+			pterm.Fprintln(w, "| "+*event.Message)
 		}
 	}
 
-	pterm.Println()
+	pterm.Fprintln(w)
 
 	return nil
 }

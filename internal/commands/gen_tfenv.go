@@ -2,8 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -118,7 +116,7 @@ func GenerateTerraformFiles(name string, terraformStateBucketName string, projec
 
 	backendOpts := template.BackendOpts{
 		ENV:                            project.Env,
-		LOCALSTACK_ENDPOINT:            "",
+		LOCALSTACK_ENDPOINT:            project.EndpointUrl,
 		TERRAFORM_STATE_BUCKET_NAME:    tf.StateBucketName,
 		TERRAFORM_STATE_KEY:            stateKey,
 		TERRAFORM_STATE_REGION:         tf.StateBucketRegion,
@@ -147,15 +145,7 @@ func GenerateTerraformFiles(name string, terraformStateBucketName string, projec
 	)
 	if err != nil {
 		pterm.Error.Printfln("Generate terraform file for \"%s\" not completed", name)
-		return fmt.Errorf("can't generate backent.tf: %s", err)
-	}
-
-	home, _ := os.UserHomeDir()
-	key, err := ioutil.ReadFile(fmt.Sprintf("%s/.ssh/id_rsa.pub", home))
-	if err != nil {
-		pterm.Error.Printfln("Generate terraform file for \"%s\" not completed", name)
-		return fmt.Errorf("can't read public ssh key: %s", err)
-
+		return fmt.Errorf("can't generate backend.tf: %s", err)
 	}
 
 	varsOpts := template.VarsOpts{
@@ -164,7 +154,7 @@ func GenerateTerraformFiles(name string, terraformStateBucketName string, projec
 		AWS_REGION:        project.AwsRegion,
 		EC2_KEY_PAIR_NAME: fmt.Sprintf("%v-%v", project.Env, project.Namespace),
 		ROOT_DOMAIN_NAME:  tf.RootDomainName,
-		SSH_PUBLIC_KEY:    string(key)[:len(string(key))-1],
+		SSH_PUBLIC_KEY:    project.SshPublicKey,
 		NAMESPACE:         project.Namespace,
 	}
 

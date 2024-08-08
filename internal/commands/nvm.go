@@ -52,7 +52,11 @@ func NewCmdNvm(project *config.Project) *cobra.Command {
 		Long:              nvmLongDesc,
 		ValidArgsFunction: config.GetApps,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cmd.SilenceUsage = true
+			if o.Config.LogLevel != "debug" && o.Config.LogLevel != "trace" {
+				cmd.SilenceUsage = true
+			} else {
+				cmd.SilenceUsage = false
+			}
 
 			if len(cmd.Flags().Args()) == 0 {
 				return fmt.Errorf("app name must be specified")
