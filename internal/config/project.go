@@ -35,6 +35,7 @@ type Project struct {
 	EndpointUrl      string `mapstructure:"endpoint_url,omitempty"`
 	LocalStack       bool   `mapstructure:"localstack,omitempty"`
 	SshPublicKey     string `mapstructure:"ssh_public_key,omitempty"`
+	NvmVersion       string `mapstructure:"nvm_version"`
 
 	Home         string `mapstructure:"home,omitempty"`
 	RootDir      string `mapstructure:"root_dir,omitempty"`

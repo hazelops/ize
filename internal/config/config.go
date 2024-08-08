@@ -271,6 +271,7 @@ func InitConfig() {
 
 	// TODO: those static defaults should probably go to a separate package and/or function. Also would include image names and such.
 	viper.SetDefault("TERRAFORM_VERSION", "1.1.3")
+	viper.SetDefault("NVM_VERSION", "0.39.7")
 	viper.SetDefault("PREFER_RUNTIME", "native")
 	viper.SetDefault("CUSTOM_PROMPT", false)
 	viper.SetDefault("PLAIN_TEXT_OUTPUT", false)

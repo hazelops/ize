@@ -65,6 +65,10 @@
             "type": "string",
             "description": "(optional) Terraform version can be set here. 1.1.3 by default"
         },
+        "nvm_version": {
+            "type": "string",
+            "description": "(optional) Nvm version can be set here. 0.39.7 by default"
+        },
         "endpoint_url": {
             "type": "string",
             "description": "(optional) AWS Endpoint url (can be used with Localstack)"

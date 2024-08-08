@@ -41,25 +41,13 @@ func (sls *Manager) runNpmInstall(w io.Writer) error {
 }
 
 func (sls *Manager) nvm(w io.Writer, command string) error {
-	nvmDir := os.Getenv("NVM_DIR")
-	if len(nvmDir) == 0 {
-		nvmDir = "$HOME/.nvm"
-	}
 
-	// Check if nvm.sh exists in the nvmDir
-	nvmShPath := filepath.Join(nvmDir, "nvm.sh")
-	if _, err := os.Stat(nvmShPath); os.IsNotExist(err) {
-		logrus.Debugf("nvm.sh does not exist in the directory:", nvmDir)
-		return err
-	} else if err != nil {
-		logrus.Debugf("Error checking nvm.sh:", err)
+	nvmDir, err := sls.installNvm()
+	if err != nil {
 		return err
 	}
 
-	// TODO: If nvm.sh doesn't exist in the nvmDir, we should install it
-	// curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
-
-	err := sls.readNvmrc()
+	err = sls.readNvmrc()
 	if err != nil {
 		return err
 	}
@@ -390,4 +378,53 @@ func (sls *Manager) runRemoveDomain(w io.Writer) error {
 func npmToYarn(cmd string) string {
 	cmd = strings.ReplaceAll(cmd, "npm", "yarn")
 	return strings.ReplaceAll(cmd, "npx", "yarn")
+}
+
+func (sls *Manager) installNvm() (string, error) {
+	var err error
+
+	nvmDir := os.Getenv("NVM_DIR")
+	if len(nvmDir) == 0 {
+		nvmDir = "$HOME/.nvm"
+	}
+
+	// Check if nvm.sh exists in the nvmDir
+	nvmShPath := filepath.Join(nvmDir, "nvm.sh")
+	_, err = os.Stat(nvmShPath)
+	if !os.IsNotExist(err) {
+		logrus.Debug("nvm.sh found in the directory:", nvmDir)
+
+		//check if version is what we expect
+		cmd := exec.Command("bash", "-c", fmt.Sprintf("source %s/nvm.sh && nvm --version", nvmDir))
+		cmd.Dir = sls.Project.RootDir
+
+		var out bytes.Buffer
+		cmd.Stdout = &out
+		err = cmd.Run()
+		if err != nil {
+			logrus.Debug("Error checking nvm version:", err)
+			return "", err
+		}
+
+		if strings.TrimSpace(out.String()) == sls.Project.NvmVersion {
+			logrus.Debugf("nvm version is correct. Expected: %s, Found: %s", sls.Project.NvmVersion, strings.TrimSpace(out.String()))
+			return nvmDir, nil
+		}
+
+	}
+	logrus.Debugf("No correct nvm version found is incorrect, (re)installing nvm")
+
+	// Install nvm.
+	cmd := exec.Command("bash", "-c", fmt.Sprintf("curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v%s/install.sh | bash", sls.Project.NvmVersion))
+	cmd.Dir = sls.Project.RootDir
+	err = cmd.Run()
+	if err != nil {
+		logrus.Debugf("Error installing nvm:", err)
+		return "", err
+	}
+
+	// TODO: If nvm.sh doesn't exist in the nvmDir, we should install it
+	// curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+
+	return nvmDir, nil
 }
