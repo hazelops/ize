@@ -100,12 +100,12 @@ func (sls *Manager) readNvmrc() error {
 }
 
 func (sls *Manager) runNvm(w io.Writer) error {
-	nvmDir := os.Getenv("NVM_DIR")
-	if len(nvmDir) == 0 {
-		nvmDir = "$HOME/.nvm"
+	nvmDir, err := sls.installNvm()
+	if err != nil {
+		return err
 	}
 
-	err := sls.readNvmrc()
+	err = sls.readNvmrc()
 	if err != nil {
 		return err
 	}
@@ -139,9 +139,9 @@ func (sls *Manager) runNvm(w io.Writer) error {
 }
 
 func (sls *Manager) runDeploy(w io.Writer) error {
-	nvmDir := os.Getenv("NVM_DIR")
-	if len(nvmDir) == 0 {
-		nvmDir = "$HOME/.nvm"
+	nvmDir, err := sls.installNvm()
+	if err != nil {
+		return err
 	}
 	var command string
 
@@ -213,9 +213,9 @@ func (sls *Manager) runDeploy(w io.Writer) error {
 
 func (sls *Manager) runRemove(w io.Writer) error {
 
-	nvmDir := os.Getenv("NVM_DIR")
-	if len(nvmDir) == 0 {
-		nvmDir = "$HOME/.nvm"
+	nvmDir, err := sls.installNvm()
+	if err != nil {
+		return err
 	}
 
 	var command string
@@ -282,9 +282,9 @@ func (sls *Manager) runRemove(w io.Writer) error {
 }
 
 func (sls *Manager) runCreateDomain(w io.Writer) error {
-	nvmDir := os.Getenv("NVM_DIR")
-	if len(nvmDir) == 0 {
-		nvmDir = "$HOME/.nvm"
+	nvmDir, err := sls.installNvm()
+	if err != nil {
+		return err
 	}
 
 	command := fmt.Sprintf(
@@ -329,9 +329,9 @@ func (sls *Manager) runCreateDomain(w io.Writer) error {
 }
 
 func (sls *Manager) runRemoveDomain(w io.Writer) error {
-	nvmDir := os.Getenv("NVM_DIR")
-	if len(nvmDir) == 0 {
-		nvmDir = "$HOME/.nvm"
+	nvmDir, err := sls.installNvm()
+	if err != nil {
+		return err
 	}
 
 	command := fmt.Sprintf(
