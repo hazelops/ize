@@ -69,6 +69,8 @@ jobs:
           mkdir ~/.nvm/versions
           echo $NVM_DIR          
           tree -L 3 ~/.nvm/versions
+          bash -c "source ~/.nvm/nvm.sh && nvm --version"
           
+          echo "Debug:"
           bash -xvc "source ~/.nvm/nvm.sh && nvm --version"
           bash -xvc "source ~/.nvm/nvm.sh && nvm install"
