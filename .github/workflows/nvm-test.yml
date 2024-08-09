@@ -63,6 +63,7 @@ jobs:
         run: |
           node --version
           echo $NVM_DIR
+          mkdir ~/.nvm/versions
           tree -L 3 ~/.nvm/versions
           curl -I --compressed -v https://nodejs.org/dist/
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
