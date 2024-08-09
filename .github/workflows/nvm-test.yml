@@ -1,0 +1,72 @@
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+      - v2.x
+
+jobs:
+  nvm-0-39-7-1shell-lvl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Run 0.39.7 1 shell level
+        run: |
+          curl -I --compressed -v https://nodejs.org/dist/
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+          source ~/.nvm/nvm.sh && nvm --version
+          source ~/.nvm/nvm.sh && nvm install
+
+  nvm-0-40-0-1shell-lvl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Run 0.40.0 1 shell level
+        run: |
+          curl -I --compressed -v https://nodejs.org/dist/
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+          source ~/.nvm/nvm.sh && nvm --version
+          source ~/.nvm/nvm.sh && nvm install
+
+  nvm-0-39-7-2shell-lvls:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Run 0.39.7 2 shell levels
+        run: |
+          curl -I --compressed -v https://nodejs.org/dist/
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+          bash -c "source ~/.nvm/nvm.sh && nvm --version"
+          bash -c "source ~/.nvm/nvm.sh && nvm install"
+
+  nvm-0-40-0-2shell-lvls:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Run 0.40.0 2 shell levels
+        run: |
+          node --version
+          echo $NVM_DIR          
+          
+          curl -I --compressed -v https://nodejs.org/dist/
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+          mkdir ~/.nvm/versions
+          echo $NVM_DIR          
+          tree -L 3 ~/.nvm/versions
+          bash -c "source ~/.nvm/nvm.sh && nvm --version"
