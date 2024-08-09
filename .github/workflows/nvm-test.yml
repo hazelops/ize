@@ -63,5 +63,5 @@ jobs:
         run: |
           curl -I --compressed -v https://nodejs.org/dist/
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
-          bash -c "source ~/.nvm/nvm.sh && nvm --version"
-          bash -c "source ~/.nvm/nvm.sh && nvm install"
+          bash -xvc "source ~/.nvm/nvm.sh && nvm --version"
+          bash -xvc "source ~/.nvm/nvm.sh && nvm install"
