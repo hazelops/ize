@@ -62,10 +62,13 @@ jobs:
       - name: Run 0.40.0 2 shell levels
         run: |
           node --version
-          echo $NVM_DIR
-          mkdir ~/.nvm/versions
+          echo $NVM_DIR          
           tree -L 3 ~/.nvm/versions
           curl -I --compressed -v https://nodejs.org/dist/
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+          
+          echo $NVM_DIR          
+          tree -L 3 ~/.nvm/versions
+          
           bash -xvc "source ~/.nvm/nvm.sh && nvm --version"
           bash -xvc "source ~/.nvm/nvm.sh && nvm install"
