@@ -21,7 +21,7 @@ builds:
 
 brews:
   - name: ize
-    tap:
+    repository:
       owner: hazelops
       name: homebrew-ize
       branch: main
@@ -44,6 +44,7 @@ brews:
     # Custom install script for brew.
     install: |
       bin.install "ize"
+
 nfpms:
   # note that this is an array of nfpm configs
   -
@@ -90,7 +91,7 @@ scoop:
 #  url_template: "https://github.com/hazelops/ize/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
 
   # Repository to push the app manifest to.
-  bucket:
+  repository:
     owner: hazelops
     name: scoop-ize
 

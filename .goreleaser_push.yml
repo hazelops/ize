@@ -24,7 +24,7 @@ release:
 
 brews:
   - name: ize-dev
-    tap:
+    repository:
       owner: hazelops
       name: homebrew-ize
       branch: main
@@ -94,7 +94,7 @@ scoop:
 #  url_template: "https://github.com/hazelops/ize/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
 
   # Repository to push the app manifest to.
-  bucket:
+  repository:
     owner: hazelops
     name: scoop-ize
 
