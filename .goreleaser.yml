@@ -21,7 +21,7 @@ builds:
       - viper_toml1
 
 brews:
-   -
+  -
     name: ize
     repository:
       owner: hazelops
@@ -84,9 +84,9 @@ archives:
        - goos: windows
          format: zip
 
-# Repository to push the app manifest to.
+
 scoops:
-  -
+  - # Repository to push the app manifest to.
     repository:
       owner: hazelops
       name: scoop-ize
@@ -100,34 +100,34 @@ scoops:
 
       # Folder inside the repository to put the scoop.
       # Default is the root folder.
-      # directory: latest
+#      directory: latest
 
-  # Git author used to commit to the repository.
-  # Defaults are shown.
+    # Git author used to commit to the repository.
+    # Defaults are shown.
     commit_author:
       name: hazelops
       email: ize@hazelops.com
 
-  # The project name and current git tag are used in the format string.
+    # The project name and current git tag are used in the format string.
     commit_msg_template: "Ize update for {{ .ProjectName }} version {{ .Tag }}"
 
-  # Your app's homepage.
-  # Default is empty.
+    # Your app's homepage.
+    # Default is empty.
     homepage: "https://ize.sh/"
 
-  # Your app's description.
-  # Default is empty.
+    # Your app's description.
+    # Default is empty.
     description: "IZE is an opinionated infrastructure wrapper that allows to use multiple tools in one infra"
 
-  # Your app's license
-  # Default is empty.
+    # Your app's license
+    # Default is empty.
     license: Apache License 2.0
 
-  # Setting this will prevent goreleaser to actually try to commit the updated
-  # manifest leaving the responsibility of publishing it to the user.
-  # If set to auto, the release will not be uploaded to the scoop bucket
-  # in case there is an indicator for prerelease in the tag e.g. v1.0.0-rc1
-  # Default is false.
+    # Setting this will prevent goreleaser to actually try to commit the updated
+    # manifest leaving the responsibility of publishing it to the user.
+    # If set to auto, the release will not be uploaded to the scoop bucket
+    # in case there is an indicator for prerelease in the tag e.g. v1.0.0-rc1
+    # Default is false.
     skip_upload: false
 
   # Persist data between application updates
@@ -146,4 +146,3 @@ scoops:
   # GOAMD64 to specify which amd64 version to use if there are multiple versions
   # from the build section.
   # Default is v1.
-
