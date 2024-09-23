@@ -58,6 +58,52 @@ jobs:
         user_name: 'ize'
         commit_message: 'Add commands from Ize'
 
+  create_numbered_brew_version:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current repository
+        uses: actions/checkout@v2
+
+      - name: Checkout homebrew-ize repository
+        uses: actions/checkout@v2
+        with:
+          repository: hazelops/homebrew-ize  # Ize homebrew repo
+          path: ${{ github.workspace }}/homebrew-ize  # Local folder to copy file
+
+      - name: Extract version from ize.rb
+        id: extract_version
+        run: |
+          # Extract string with version
+          version=$(grep -Po 'version "\K[0-9.]+' ${{ github.workspace }}/homebrew-ize/ize.rb)
+          version_no_dots=$(echo $version | tr -d '.')
+          echo "Version extracted: $version, Version without dots: $version_no_dots"
+          # Set version as output
+          echo "::set-output name=version::$version"
+          echo "::set-output name=version_no_dots::$version_no_dots"
+
+      - name: Update class name in ize.rb
+        run: |
+          # Change string "class Ize < Formula" to "class Ize<version> < Formula" in the file
+          sed -i "s/class Ize < Formula/class Ize${{ steps.extract_version.outputs.version_no_dots }} < Formula/" ${{ github.workspace }}/homebrew-ize/ize.rb
+
+      - name: Rename file to include version
+        run: |
+          # Rename ize.rb to ize-<version>.rb
+          mv ${{ github.workspace }}/homebrew-ize/ize.rb ${{ github.workspace }}/homebrew-ize/ize-${{ steps.extract_version.outputs.version }}.rb
+
+      - name: Commit and Push changes
+        uses: dmnemec/copy_file_to_another_repo_action@main
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+        with:
+          source_file: '${{ github.workspace }}/homebrew-ize/ize-${{ steps.extract_version.outputs.version }}.rb'
+          destination_repo: 'hazelops/homebrew-ize'
+          destination_folder: '/'
+          user_email: 'ize@hazelops.com'
+          user_name: 'ize'
+          commit_message: 'Updated class name and renamed ize.rb to ize-${{ steps.extract_version.outputs.version }}.rb'
+
   create_jira_release:
     needs: build
     runs-on: ubuntu-latest
