@@ -164,6 +164,37 @@ func TestIzeTerraformVersion_1_2_7(t *testing.T) {
 	}
 }
 
+func TestIzeTerraformVersion_1_14_0(t *testing.T) {
+
+	terraformVersion := "1.14.0"
+
+	if examplesRootDir == "" {
+		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")
+	}
+
+	ize := NewBinary(t, izeBinary, examplesRootDir)
+
+	stdout, stderr, err := ize.RunRaw(fmt.Sprintf("--terraform-version=%s", terraformVersion), "terraform", "version")
+
+	if err != nil {
+		t.Errorf("error: %s", err)
+	}
+
+	if stderr != "" {
+		t.Errorf("unexpected stderr output ize terraform version: %s", err)
+	}
+
+	if !strings.Contains(stdout, fmt.Sprintf("Terraform v%s", terraformVersion)) {
+		t.Errorf("No success message detected after terraform version:\n%s", stdout)
+	} else {
+		t.Log(fmt.Sprintf("PASS: v%s: terraform version", terraformVersion))
+	}
+
+	if os.Getenv("RUNNER_DEBUG") == "1" {
+		t.Log(stdout)
+	}
+}
+
 func TestIzeTerraformInit(t *testing.T) {
 	if examplesRootDir == "" {
 		t.Fatalf("Missing required environment variable IZE_EXAMPLES_PATH")

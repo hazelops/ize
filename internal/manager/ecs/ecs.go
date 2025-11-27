@@ -60,6 +60,23 @@ func (e *Manager) prepare() {
 	}
 }
 
+// getPlatform returns the platform to use for Docker builds and pushes.
+// Priority: PreferRuntime=docker-arm64 (backward compatibility) > DOCKER_DEFAULT_PLATFORM env var > default (linux/amd64)
+func (e *Manager) getPlatform() string {
+	// First, check PreferRuntime for backward compatibility with existing configs
+	if e.Project.PreferRuntime == "docker-arm64" {
+		return "linux/arm64"
+	}
+
+	// Then check DOCKER_DEFAULT_PLATFORM environment variable
+	if platform := os.Getenv("DOCKER_DEFAULT_PLATFORM"); platform != "" {
+		return platform
+	}
+
+	// Default to linux/amd64
+	return "linux/amd64"
+}
+
 // Deploy deploys app container to ECS via ECS deploy
 func (e *Manager) Deploy(ui terminal.UI) error {
 	e.prepare()
@@ -236,10 +253,7 @@ func (e *Manager) Push(ui terminal.UI) error {
 
 	tagLatest := fmt.Sprintf("%s-latest", e.Project.Env)
 	imageUri := fmt.Sprintf("%s/%s", e.App.DockerRegistry, image)
-	platform := "linux/amd64"
-	if e.Project.PreferRuntime == "docker-arm64" {
-		platform = "linux/arm64"
-	}
+	platform := e.getPlatform()
 
 	r := docker.NewRegistry(*repository.RepositoryUri, token, platform)
 
@@ -293,10 +307,7 @@ func (e *Manager) Build(ui terminal.UI) error {
 
 	cache := []string{fmt.Sprintf("%s:%s", imageUri, fmt.Sprintf("%s-latest", e.Project.Env))}
 
-	platform := "linux/amd64"
-	if e.Project.PreferRuntime == "docker-arm64" {
-		platform = "linux/arm64"
-	}
+	platform := e.getPlatform()
 
 	b := docker.NewBuilder(
 		buildArgs,
