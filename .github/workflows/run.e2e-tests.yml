@@ -24,12 +24,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
           go-version: 1.18.x
 
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Build
         run: |
@@ -37,7 +37,7 @@ jobs:
           make bin
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ize-${{ matrix.os }}-${{ github.sha }}
           path: ${{ github.workspace }}/ize
@@ -62,24 +62,26 @@ jobs:
           echo "ENV=${{ github.job }}-$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
           aws-region: ${{ env.AWS_REGION }}
+        env:
+          AWS_PROFILE:  # This is required due to a bug https://stackoverflow.com/a/77731682
 
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
           go-version: 1.18.x
 
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Prepare Test Environment
         run: mv "${{ env.IZE_EXAMPLES_PATH }}/.ize/env/testnut" "${{ env.IZE_EXAMPLES_PATH }}/.ize/env/${{ env.ENV }}"
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: ize-${{ matrix.os }}-${{ github.sha }}
           path: bin
@@ -126,24 +128,26 @@ jobs:
           echo "ENV=${{ github.job }}-$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
           aws-region: ${{ env.AWS_REGION }}
+        env:
+          AWS_PROFILE:  # This is required due to a bug https://stackoverflow.com/a/77731682
 
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
           go-version: 1.18.x
 
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Prepare Test Environment
         run: mv "${{ env.IZE_EXAMPLES_PATH }}/.ize/env/testnut" "${{ env.IZE_EXAMPLES_PATH }}/.ize/env/${{ env.ENV }}"
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: ize-${{ matrix.os }}-${{ github.sha }}
           path: bin
@@ -197,24 +201,26 @@ jobs:
           echo "ENV=${{ github.job }}-$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
           aws-region: ${{ env.AWS_REGION }}
+        env:
+          AWS_PROFILE:  # This is required due to a bug https://stackoverflow.com/a/77731682
 
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
           go-version: 1.18.x
 
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Prepare Test Environment
         run: mv "${{ env.IZE_EXAMPLES_PATH }}/.ize/env/testnut" "${{ env.IZE_EXAMPLES_PATH }}/.ize/env/${{ env.ENV }}"
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: ize-${{ matrix.os }}-${{ github.sha }}
           path: bin

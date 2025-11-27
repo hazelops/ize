@@ -34,7 +34,7 @@ module "vpc" {
 
 module "nat_instance" {
   source                 = "hazelops/ec2-nat/aws"
-  version                = "~> 2.0"
+  version                = "~> 3.0"
   enabled                = true
   env                    = var.env
   vpc_id                 = module.vpc.vpc_id
@@ -79,7 +79,7 @@ module "ec2_profile" {
 
 module "bastion" {
   source  = "hazelops/ec2-openvpn-connector/aws"
-  version = "~>0.2"
+  version = "~> 0.4"
 
   vpn_enabled         = false
   env                 = var.env
