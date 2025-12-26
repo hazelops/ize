@@ -17,7 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/registry"
 	"github.com/hazelops/ize/internal/docker"
 	"github.com/hazelops/ize/pkg/terminal"
 	"github.com/pterm/pterm"
@@ -242,7 +242,7 @@ func (e *Manager) Push(ui terminal.UI) error {
 		return fmt.Errorf("unable to decode authorization token: %w", err)
 	}
 
-	auth := types.AuthConfig{
+	auth := registry.AuthConfig{
 		Username: "AWS",
 		Password: string(data[4:]),
 	}

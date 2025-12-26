@@ -6,8 +6,9 @@ CGO_ENABLED?=0
 
 .PHONY: install
 install: bin
-		mv ./ize $(GOPATH)/bin/ize
+		mkdir -p $(HOME)/.local/bin
+		mv ./ize $(HOME)/.local/bin
 
 .PHONY: bin
-bin: 
+bin:
 	CGO_ENABLED=$(CGO_ENABLED) go build -tags=viper_toml1 -ldflags $(GOLDFLAGS) -o ./ize ./cmd
