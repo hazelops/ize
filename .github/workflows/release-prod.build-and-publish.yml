@@ -4,7 +4,7 @@ concurrency:
   cancel-in-progress: false
 on:
   release:
-    types: [created]
+    types: [published]
 
 jobs:
   build:
