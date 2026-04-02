@@ -38,3 +38,20 @@ type Alias struct {
 	Icon      string   `mapstructure:"icon,omitempty"`
 	DependsOn []string `mapstructure:"depends_on"`
 }
+
+type EcsCron struct {
+	Name           string   `mapstructure:",omitempty"`
+	Path           string   `mapstructure:",omitempty"`
+	Image          string   `mapstructure:",omitempty"`
+	Cluster        string   `mapstructure:",omitempty"`
+	Schedule       string   `mapstructure:",omitempty"`
+	TaskDefinition string   `mapstructure:"task_definition,omitempty"`
+	DockerRegistry string   `mapstructure:"docker_registry,omitempty"`
+	Timeout        int      `mapstructure:",omitempty"`
+	SkipDeploy     bool     `mapstructure:"skip_deploy,omitempty"`
+	Icon           string   `mapstructure:"icon,omitempty"`
+	AwsProfile     string   `mapstructure:"aws_profile,omitempty"`
+	AwsRegion      string   `mapstructure:"aws_region,omitempty"`
+	DependsOn      []string `mapstructure:"depends_on,omitempty"`
+	Enabled        *bool    `mapstructure:"enabled,omitempty"`
+}

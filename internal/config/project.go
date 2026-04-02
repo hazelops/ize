@@ -8,6 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr/ecriface"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
+	"github.com/aws/aws-sdk-go/service/eventbridge"
+	"github.com/aws/aws-sdk-go/service/eventbridge/eventbridgeiface"
 	"github.com/aws/aws-sdk-go/service/elbv2"
 	"github.com/aws/aws-sdk-go/service/elbv2/elbv2iface"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -49,6 +51,7 @@ type Project struct {
 	Ecs        map[string]*Ecs        `mapstructure:",omitempty"`
 	Serverless map[string]*Serverless `mapstructure:",omitempty"`
 	Alias      map[string]*Alias      `mapstructure:",omitempty"`
+	EcsCron    map[string]*EcsCron    `mapstructure:"ecs_cron,omitempty"`
 }
 
 type awsClient struct {
@@ -60,6 +63,7 @@ type awsClient struct {
 	SSMClient            ssmiface.SSMAPI
 	ELBV2Client          elbv2iface.ELBV2API
 	ECRClient            ecriface.ECRAPI
+	EventBridgeClient    eventbridgeiface.EventBridgeAPI
 }
 
 type Option func(*awsClient)
@@ -112,6 +116,12 @@ func WithECRClient(api ecriface.ECRAPI) Option {
 	}
 }
 
+func WithEventBridgeClient(api eventbridgeiface.EventBridgeAPI) Option {
+	return func(r *awsClient) {
+		r.EventBridgeClient = api
+	}
+}
+
 func NewAWSClient(options ...Option) *awsClient {
 	r := awsClient{}
 	for _, opt := range options {
@@ -131,6 +141,7 @@ func (p *Project) SettingAWSClient(sess *session.Session) {
 		WithSSMClient(ssm.New(sess)),
 		WithELBV2Client(elbv2.New(sess)),
 		WithECRClient(ecr.New(sess)),
+		WithEventBridgeClient(eventbridge.New(sess)),
 	)
 }
 
@@ -154,6 +165,14 @@ func (p *Project) GetApps() map[string]*interface{} {
 	}
 
 	for name, body := range p.Alias {
+		var v interface{}
+		v = map[string]interface{}{
+			"depends_on": body.DependsOn,
+		}
+		apps[name] = &v
+	}
+
+	for name, body := range p.EcsCron {
 		var v interface{}
 		v = map[string]interface{}{
 			"depends_on": body.DependsOn,

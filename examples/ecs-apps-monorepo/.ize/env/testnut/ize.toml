@@ -48,6 +48,10 @@ timeout = 0                        	# (optional) ECS deployment timeout can be s
 # task_definition_revision = ""       	# (optional) Task definition revision can be specified here. By default latest revision is used to perform a deployment. Normally this parameter can be used via cli during specific deployment needs.
 
 
+[ecs_cron.cronjob]
+# schedule not set — rule is created by Terraform
+# deploy will only update the task definition target
+
 # [serverless.<name>]
 # node_version = "16"                   # (optional) Node version that will be used by nvm can be specified here that. Default is v14.
 # path = ""                           	# (optional) Path to the serverless app directory can be specified here. Normally it's derived from app directory and app name.

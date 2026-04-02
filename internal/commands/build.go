@@ -7,6 +7,7 @@ import (
 	"github.com/hazelops/ize/internal/manager"
 	"github.com/hazelops/ize/internal/manager/alias"
 	"github.com/hazelops/ize/internal/manager/ecs"
+	ecscron "github.com/hazelops/ize/internal/manager/ecscron"
 	"github.com/hazelops/ize/internal/manager/serverless"
 	"github.com/hazelops/ize/pkg/templates"
 	"github.com/hazelops/ize/pkg/terminal"
@@ -119,6 +120,13 @@ func (o *BuildOptions) Run() error {
 	if app, ok := o.Config.Ecs[o.AppName]; ok {
 		app.Name = o.AppName
 		m = &ecs.Manager{
+			Project: o.Config,
+			App:     app,
+		}
+	}
+	if app, ok := o.Config.EcsCron[o.AppName]; ok {
+		app.Name = o.AppName
+		m = &ecscron.Manager{
 			Project: o.Config,
 			App:     app,
 		}

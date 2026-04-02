@@ -163,6 +163,17 @@
             "description": "(optional) Alias mode can be enabled here. This can be used to combine various apps via depends_on parameter.",
             "additionalProperties": false
         },
+        "ecs_cron": {
+            "id": "#/properties/ecs_cron",
+            "type": "object",
+            "patternProperties": {
+                "^[a-zA-Z0-9._-]+$": {
+                    "$ref": "#/definitions/ecs_cron"
+                }
+            },
+            "description": "ECS Cron (scheduled tasks) configuration.",
+            "additionalProperties": false
+        },
         "terraform": {
             "id": "#/properties/terraform",
             "type": "object",
@@ -373,6 +384,66 @@
                 }
             },
             "description": "Ecs app configuration.",
+            "additionalProperties": false
+        },
+        "ecs_cron": {
+            "id": "#/definitions/ecs_cron",
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "(optional) Path to ecs cron app folder."
+                },
+                "image": {
+                    "type": "string",
+                    "description": "(optional) Docker image for the scheduled task."
+                },
+                "cluster": {
+                    "type": "string",
+                    "description": "(optional) ECS cluster. Defaults to env-namespace."
+                },
+                "schedule": {
+                    "type": "string",
+                    "description": "(optional) EventBridge schedule expression: rate() or cron(). Required only when creating a new rule. If omitted and rule already exists, the existing schedule is preserved."
+                },
+                "task_definition": {
+                    "type": "string",
+                    "description": "(optional) Existing task definition family to use."
+                },
+                "docker_registry": {
+                    "type": "string",
+                    "description": "(optional) Docker registry. Defaults to ECR."
+                },
+                "timeout": {
+                    "type": "integer",
+                    "description": "(optional) Task timeout in seconds."
+                },
+                "skip_deploy": {
+                    "type": "boolean",
+                    "description": "(optional) Skip deploy."
+                },
+                "icon": {
+                    "type": "string",
+                    "description": "(optional) Icon."
+                },
+                "enabled": {
+                    "type": "boolean",
+                    "description": "(optional) Whether the schedule is enabled. Default true."
+                },
+                "aws_region": {
+                    "type": "string",
+                    "description": "(optional) AWS region override."
+                },
+                "aws_profile": {
+                    "type": "string",
+                    "description": "(optional) AWS profile override."
+                },
+                "depends_on": {
+                    "type": "array",
+                    "description": "(optional) Startup/shutdown dependencies."
+                }
+            },
+            "description": "ECS Cron (scheduled task) configuration.",
             "additionalProperties": false
         },
         "serverless": {
