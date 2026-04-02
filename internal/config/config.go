@@ -452,6 +452,7 @@ func readConfigFile(path string) (*Config, error) {
 func ConvertApps() error {
 	ecs := map[string]interface{}{}
 	serverless := map[string]interface{}{}
+	ecsCron := map[string]interface{}{}
 
 	apps := viper.GetStringMap("app")
 	for name, app := range apps {
@@ -474,6 +475,14 @@ func ConvertApps() error {
 			}
 
 			serverless[name] = structToMap(slsApp)
+		case "ecs-cron":
+			ecsCronApp := EcsCron{}
+			err := mapstructure.Decode(&body, &ecsCronApp)
+			if err != nil {
+				return err
+			}
+
+			ecsCron[name] = structToMap(ecsCronApp)
 		default:
 			return fmt.Errorf("does not support %s type", t)
 		}
@@ -483,6 +492,7 @@ func ConvertApps() error {
 	err := viper.MergeConfigMap(map[string]interface{}{
 		"ecs":        ecs,
 		"serverless": serverless,
+		"ecs_cron":   ecsCron,
 	})
 	if err != nil {
 		return err

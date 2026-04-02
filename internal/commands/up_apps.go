@@ -9,6 +9,7 @@ import (
 	"github.com/hazelops/ize/internal/manager"
 	"github.com/hazelops/ize/internal/manager/alias"
 	"github.com/hazelops/ize/internal/manager/ecs"
+	ecscron "github.com/hazelops/ize/internal/manager/ecscron"
 	"github.com/hazelops/ize/internal/manager/serverless"
 	"github.com/hazelops/ize/internal/requirements"
 	"github.com/hazelops/ize/pkg/templates"
@@ -147,6 +148,13 @@ func deployApp(name string, ui terminal.UI, cfg *config.Project, isExplain bool)
 	if app, ok := cfg.Ecs[name]; ok {
 		app.Name = name
 		m = &ecs.Manager{
+			Project: cfg,
+			App:     app,
+		}
+	}
+	if app, ok := cfg.EcsCron[name]; ok {
+		app.Name = name
+		m = &ecscron.Manager{
 			Project: cfg,
 			App:     app,
 		}

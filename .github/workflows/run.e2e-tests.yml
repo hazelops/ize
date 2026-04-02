@@ -107,6 +107,69 @@ jobs:
           cd "${{ env.IZE_EXAMPLES_PATH }}"
           ize down --auto-approve
 
+  test-ecs-cron:
+    name: ECS Cron Tasks
+    needs: build
+    strategy:
+      max-parallel: 1
+      matrix:
+        os:
+          - ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      IZE_EXAMPLES_PATH: ${{ github.workspace }}/examples/ecs-apps-monorepo
+    steps:
+      - name: Configure Environment Variables
+        run: |
+          echo "${{ github.workspace }}/bin/" >> $GITHUB_PATH
+          echo "ENV=${{ github.job }}-$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+        env:
+          AWS_PROFILE:  # This is required due to a bug https://stackoverflow.com/a/77731682
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.18.x
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Prepare Test Environment
+        run: mv "${{ env.IZE_EXAMPLES_PATH }}/.ize/env/testnut" "${{ env.IZE_EXAMPLES_PATH }}/.ize/env/${{ env.ENV }}"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: ize-${{ matrix.os }}-${{ github.sha }}
+          path: bin
+
+      - name: Make Executable
+        run: |
+          chmod +rx "${{ github.workspace }}/bin/ize"
+          ize --version
+
+      - name: Create AWS Profile
+        run: ize gen aws-profile
+
+      - name: Generate Test SSH Key
+        run: ssh-keygen -q -f ~/.ssh/id_rsa
+
+      - name: Run Tests
+        run: |
+          go test -v --timeout 0 --tags="e2e ecs_cron" ./tests/e2e
+
+      - name: Cleanup Infra
+        if: ${{ always() }}
+        run: |
+          cd "${{ env.IZE_EXAMPLES_PATH }}"
+          ize down --auto-approve
+
   test-tunnel:
     name: Bastion Tunnel Monorepo
     needs: build

@@ -10,6 +10,7 @@ import (
 	"github.com/hazelops/ize/internal/manager"
 	"github.com/hazelops/ize/internal/manager/alias"
 	"github.com/hazelops/ize/internal/manager/ecs"
+	ecscron "github.com/hazelops/ize/internal/manager/ecscron"
 	"github.com/hazelops/ize/internal/manager/serverless"
 	"github.com/hazelops/ize/internal/requirements"
 	"github.com/hazelops/ize/internal/terraform"
@@ -336,6 +337,14 @@ func destroyApp(name string, cfg *config.Project, autoApprove bool, ui terminal.
 	if app, ok := cfg.Ecs[name]; ok {
 		app.Name = name
 		m = &ecs.Manager{
+			Project: cfg,
+			App:     app,
+		}
+		icon = app.Icon
+	}
+	if app, ok := cfg.EcsCron[name]; ok {
+		app.Name = name
+		m = &ecscron.Manager{
 			Project: cfg,
 			App:     app,
 		}
